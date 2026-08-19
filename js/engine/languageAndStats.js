@@ -266,7 +266,7 @@ class AuraLanguageAndStats {
     if (w.endsWith('mente')) {
       const base = w.replace(/mente$/, '');
       if (synonymMap[base]) return synonymMap[base].map(s => s + 'mente');
-      return ['de maneira análoga', 'de modo correspondente', 'sob tal prisma'];
+      return ['sob tal prisma', 'de modo correspondente', 'de maneira análoga'];
     }
     if (w.endsWith('ção') || w.endsWith('cao')) {
       return ['sistemática', 'procedimento', 'dinâmica', 'mecanismo', 'abordagem'];
@@ -274,11 +274,17 @@ class AuraLanguageAndStats {
     if (w.endsWith('ções') || w.endsWith('coes')) {
       return ['sistemáticas', 'procedimentos', 'dinâmicas', 'mecanismos', 'abordagens'];
     }
+    if (w.endsWith('dade') || w.endsWith('dades')) {
+      return ['natureza', 'característica', 'propriedade', 'dimensão'];
+    }
+    if (w.endsWith('ivo') || w.endsWith('ivos') || w.endsWith('iva') || w.endsWith('ivas')) {
+      return ['pertinente', 'qualificado', 'relevante', 'preponderante'];
+    }
     if (w.endsWith('ar') || w.endsWith('er') || w.endsWith('ir')) {
       return ['conduzir', 'proceder a', 'executar', 'viabilizar', 'efetuar'];
     }
 
-    return ['expressão análoga', 'termo correspondente', 'variante conceitual'];
+    return ['termo análogo', 'expressão equivalente', 'variante conceitual'];
   }
 
   /**

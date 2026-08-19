@@ -541,7 +541,7 @@ class AuraEditorView {
                     <i data-lucide="repeat" class="w-3.5 h-3.5"></i> Palavras Repetidas Detectadas
                   </span>
                   <div class="flex items-center gap-2">
-                    <button onclick="event.stopPropagation(); AURA.refreshRepeatedWords()" class="text-[10px] text-aura-400 hover:underline">Atualizar</button>
+                    <button onclick="event.stopPropagation(); AURA.refreshRepeatedWords(true)" class="text-[10px] text-aura-400 hover:underline">Atualizar</button>
                     <i data-lucide="chevron-down" class="w-4 h-4 text-purple-400 transition-transform duration-200" id="repeated-words-chevron"></i>
                   </div>
                 </div>

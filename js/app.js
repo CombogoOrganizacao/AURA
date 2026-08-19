@@ -857,7 +857,7 @@ class AuraApp {
     }
   }
 
-  refreshRepeatedWords() {
+  refreshRepeatedWords(isManualTrigger = false) {
     const container = document.getElementById('repeated-words-container');
     if (!container || !this.activeDocument) return;
 
@@ -865,25 +865,36 @@ class AuraApp {
     const repeats = window.auraLanguage.detectRepeatedWords(fullText, 2);
 
     if (repeats.length === 0) {
-      container.innerHTML = `<div class="text-slate-500 text-[11px] p-2">Nenhuma repetição excessiva identificada.</div>`;
+      container.innerHTML = `<div class="text-emerald-400 text-[11px] p-2 flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> Nenhuma palavra repetida detectada! Vocabulário diversificado.</div>`;
+      lucide.createIcons();
+      if (isManualTrigger) {
+        this.showToast('✅ Excelente! Nenhuma repetição excessiva encontrada no documento.', 'success');
+      }
       return;
     }
 
-    container.innerHTML = repeats.slice(0, 5).map((r, rIdx) => `
+    if (isManualTrigger) {
+      this.showToast(`Foram detectadas ${repeats.length} palavras repetidas com sugestões de sinônimos.`, 'info');
+    }
+
+    container.innerHTML = repeats.slice(0, 6).map((r, rIdx) => `
       <div class="p-2.5 rounded-lg bg-slate-900/80 border border-purple-900/40 hover:border-purple-500/50 transition-all flex flex-col gap-2">
         <div class="flex items-center justify-between">
-          <span class="font-bold text-purple-300 flex items-center gap-1 cursor-pointer" onclick="AURA.highlightAndScrollToText('${r.word}')">
+          <span class="font-bold text-purple-300 flex items-center gap-1 cursor-pointer hover:underline" onclick="AURA.highlightAndScrollToText('${r.word}')" title="Clique para localizar no texto">
             <i data-lucide="repeat" class="w-3 h-3 text-purple-400"></i> "${r.word}"
           </span>
           <span class="px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 text-[10px] font-mono font-bold">${r.count}x</span>
         </div>
         
-        <!-- Lista de Sinônimos Sugeridos com 1-Click Replacement -->
+        <!-- Lista de Sinônimos Sugeridos com 1-Click Replacement (Substitui apenas 1 ocorrência para variar vocabulário) -->
         <div class="flex flex-col gap-1 text-[10px] bg-slate-950/60 p-2 rounded border border-slate-800">
-          <div class="text-slate-400 font-semibold mb-0.5">Sugestões de Substituição:</div>
+          <div class="text-slate-400 font-semibold mb-0.5 flex items-center justify-between">
+            <span>Trocar próxima ocorrência:</span>
+            <span class="text-[9px] text-purple-400 font-normal">1 ocorrência</span>
+          </div>
           <div class="flex flex-wrap gap-1">
             ${r.synonyms.map(syn => `
-              <button onclick="AURA.replaceRepeatedWord('${r.word}', '${syn}')" class="px-2 py-0.5 rounded bg-purple-900/40 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-700/50 transition-all flex items-center gap-1">
+              <button onclick="AURA.replaceRepeatedWord('${r.word}', '${syn}')" title="Substituir 1 ocorrência de '${r.word}' por '${syn}'" class="px-2 py-0.5 rounded bg-purple-900/40 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-700/50 transition-all flex items-center gap-1">
                 <span>${syn}</span>
                 <i data-lucide="arrow-right" class="w-2.5 h-2.5"></i>
               </button>
@@ -897,9 +908,11 @@ class AuraApp {
 
   replaceRepeatedWord(oldWord, newWord) {
     this.saveStateToHistory();
+    // Substitui apenas 1 ocorrência para não substituir todo o texto de uma só vez
     this.executeGlobalReplace(oldWord, newWord, false);
-    this.showToast(`Palavra "${oldWord}" substituída por "${newWord}".`, 'success');
-    this.refreshRepeatedWords();
+    this.showToast(`1 ocorrência de "${oldWord}" foi substituída por "${newWord}".`, 'success');
+    this.refreshRepeatedWords(false);
+    this.refreshLiveState();
   }
 
   refreshSpellCheck() {

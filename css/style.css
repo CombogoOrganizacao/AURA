@@ -286,9 +286,11 @@ body {
 @media (min-width: 768px) {
   .editor-sticky-sidebar {
     position: sticky;
-    top: 96px; /* Below header and document tabs */
-    height: calc(100vh - 156px);
+    top: 57px; /* Top below topbar */
+    height: calc(100vh - 120px);
+    max-height: calc(100vh - 120px);
     overflow-y: auto;
+    z-index: 30;
   }
 }
 
