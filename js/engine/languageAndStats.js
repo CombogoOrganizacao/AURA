@@ -100,40 +100,120 @@ class AuraLanguageAndStats {
   }
 
   getSynonymsForWord(word) {
-    const w = word.toLowerCase();
+    const w = word.toLowerCase().trim();
     const synonymMap = {
-      'pesquisa': ['investigação', 'estudo', 'inquérito científico', 'levantamento', 'trabalho investigativo'],
-      'importante': ['relevante', 'preponderante', 'significativo', 'fundamental', 'essencial', 'basilar'],
+      // Metodologia e Investigação
+      'pesquisa': ['investigação', 'estudo científico', 'inquérito', 'levantamento', 'trabalho investigativo'],
+      'pesquisas': ['investigações', 'estudos científicos', 'inquéritos', 'levantamentos'],
       'metodologia': ['método', 'procedimento', 'delineamento', 'sistemática', 'abordagem metodológica'],
+      'metodologias': ['métodos', 'procedimentos', 'delineamentos', 'sistemáticas', 'abordagens'],
+      'estudo': ['investigação', 'exame', 'análise', 'ensaio científico', 'trabalho'],
+      'estudos': ['investigações', 'exames', 'análises', 'ensaios científicos'],
+      'analise': ['exame crítico', 'apreciação', 'investigação', 'decomposição analítica', 'avaliação'],
+      'análise': ['exame crítico', 'apreciação', 'investigação', 'decomposição analítica', 'avaliação'],
+      'analises': ['exames críticos', 'apreciações', 'investigações', 'avaliações'],
+      'análises': ['exames críticos', 'apreciações', 'investigações', 'avaliações'],
+      'experimento': ['ensaio', 'teste empírico', 'prova laboratorial', 'procedimento experimental'],
+      'experimentos': ['ensaios', 'testes empíricos', 'provas laboratoriais', 'procedimentos experimentais'],
+      'amostra': ['amostragem', 'grupo amostral', 'coorte investigada', 'conjunto de dados'],
+      'amostras': ['amostragens', 'grupos amostrais', 'coortes investigadas', 'conjuntos de dados'],
+      'dados': ['informações empíricas', 'evidências', 'amostras', 'registros', 'indicadores'],
+
+      // Resultados e Conclusões
       'resultado': ['desfecho', 'achado', 'constatação', 'conclusão empírica', 'dado obtido'],
-      'resultados': ['achados', 'desfechos', 'dados empíricos', 'evidências obtidas'],
-      'analise': ['exame crítico', 'apreciação', 'investigação', 'decomposição analítica'],
-      'análise': ['exame crítico', 'apreciação', 'investigação', 'decomposição analítica'],
+      'resultados': ['achados', 'desfechos', 'dados empíricos', 'evidências obtidas', 'constatações'],
+      'conclusao': ['desfecho', 'inferência', 'dedução', 'arremate teórico', 'síntese final'],
+      'conclusão': ['desfecho', 'inferência', 'dedução', 'arremate teórico', 'síntese final'],
+      'conclusoes': ['desfechos', 'inferências', 'deduções', 'sínteses finais'],
+      'conclusões': ['desfechos', 'inferências', 'deduções', 'sínteses finais'],
+      'impacto': ['repercussão', 'desdobramento', 'influência', 'relevância prática', 'efeito'],
+      'impactos': ['repercussões', 'desdobramentos', 'influências', 'efeitos'],
+
+      // Verbos Acadêmicos Comuns
       'demonstra': ['evidencia', 'comprova', 'revela', 'indica', 'atesta', 'elucida'],
-      'problema': ['questão de pesquisa', 'objeto de estudo', 'desafio', 'problemática'],
+      'demonstram': ['evidenciam', 'comprovam', 'revelam', 'indicam', 'atestam', 'elucidam'],
+      'mostra': ['evidencia', 'aponta', 'revela', 'denota', 'expressa'],
+      'mostram': ['evidenciam', 'apontam', 'revelam', 'denotam', 'expressam'],
+      'apresenta': ['exibe', 'introduz', 'expõe', 'demonstra', 'manifesta'],
+      'apresentam': ['exibem', 'introduzem', 'expõem', 'demonstram', 'manifestam'],
+      'identifica': ['reconhece', 'detecta', 'discrimina', 'diagnostica', 'mapeia'],
+      'identificam': ['reconhecem', 'detectam', 'discriminam', 'diagnosticam', 'mapeiam'],
+      'observa': ['constata', 'verifica', 'vislumbra', 'percebe', 'aferese'],
+      'observam': ['constatam', 'verificam', 'vislumbram', 'percebem'],
+      'utiliza': ['emprega', 'adota', 'faz uso de', 'recorre a', 'mobiliza'],
+      'utilizam': ['empregam', 'adotam', 'fazem uso de', 'recorrem a', 'mobilizam'],
+      'realiza': ['conduz', 'executa', 'efetua', 'concretiza', 'desenvolve'],
+      'realizam': ['conduzem', 'executam', 'efetuam', 'concretizam', 'desenvolvem'],
+      'desenvolve': ['elabora', 'constrói', 'projeta', 'estrutura', 'concebe'],
+      'desenvolvem': ['elaboram', 'constroem', 'projetam', 'estruturam', 'concebem'],
+
+      // Conceitos e Qualificadores
+      'importante': ['relevante', 'preponderante', 'significativo', 'fundamental', 'essencial', 'basilar'],
+      'importantes': ['relevantes', 'preponderantes', 'significativos', 'fundamentais', 'essenciais'],
+      'relevante': ['preponderante', 'significativo', 'fulcral', 'essencial', 'pertinente'],
+      'relevantes': ['preponderantes', 'significativos', 'fulcrais', 'essenciais', 'pertinentes'],
+      'problema': ['questão de pesquisa', 'objeto de estudo', 'desafio', 'problemática', 'óbice'],
+      'problemas': ['questões de pesquisa', 'objetos de estudo', 'desafios', 'problemáticas', 'óbices'],
       'objetivo': ['finalidade', 'escopo', 'propósito', 'meta', 'intento'],
+      'objetivos': ['finalidades', 'escopos', 'propósitos', 'metas', 'intentos'],
+      'processo': ['fluxo', 'tramitação', 'dinâmica', 'encadeamento', 'procedimento'],
+      'processos': ['fluxos', 'tramitações', 'dinâmicas', 'encadeamentos', 'procedimentos'],
+      'sistema': ['plataforma', 'mecanismo', 'estrutura', 'aparato', 'framework'],
+      'sistemas': ['plataformas', 'mecanismos', 'estruturas', 'aparatos', 'frameworks'],
+      'modelo': ['paradigma', 'arquitetura', 'formulação teórica', 'esquema', 'framework'],
+      'modelos': ['paradigmas', 'arquiteturas formulações teóricas', 'esquemas'],
       'documento': ['manuscrito', 'texto acadêmico', 'trabalho', 'produção textual'],
-      'processo': ['fluxo', 'tramitação', 'dinâmica', 'encadeamento'],
-      'dados': ['informações empíricas', 'evidências', 'amostras', 'registros'],
-      'sistema': ['plataforma', 'mecanismo', 'estrutura', 'aparato'],
-      'modelo': ['paradigma', 'arquitetura', 'formulação teórica', 'esquema'],
-      'development': ['advancement', 'evolution', 'progression', 'enhancement'],
+      'documentos': ['manuscritos', 'textos acadêmicos', 'trabalhos', 'produções textuais'],
+      'artigo': ['manuscrito', 'paper científico', 'estudo', 'ensaio'],
+      'artigos': ['manuscritos', 'papers científicos', 'estudos', 'ensaios'],
+      'trabalho': ['investigação', 'obra', 'pesquisa', 'estudo científico'],
+      'trabalhos': ['investigações', 'obras', 'pesquisas', 'estudos científicos'],
+      'proposta': ['iniciativa', 'abordagem sugerida', 'projeto', 'formulação'],
+      'propostas': ['iniciativas', 'abordagens sugeridas', 'projetos', 'formulações'],
+      'projeto': ['proposta investigativa', 'plano de trabalho', 'empreendimento científico'],
+      'projetos': ['propostas investigativas', 'planos de trabalho', 'empreendimentos'],
+      'inovacao': ['avanço tecnológico', 'disrupção', 'originalidade', 'novidade científica'],
+      'inovação': ['avanço tecnológico', 'disrupção', 'originalidade', 'novidade científica'],
+      'literatura': ['estado da arte', 'produção bibliográfica', 'corpo teórico', 'acervo científico'],
+      'revisao': ['síntese crítica', 'levantamento bibliográfico', 'exame panorâmico'],
+      'revisão': ['síntese crítica', 'levantamento bibliográfico', 'exame panorâmico'],
+      'teoria': ['fundamentação conceitual', 'arcabouço teórico', 'paradigma epistemológico'],
+      'teorias': ['fundamentações conceituais', 'arcabouços teóricos', 'paradigmas'],
+
+      // Inglês Acadêmico
+      'research': ['investigation', 'scientific inquiry', 'study', 'exploration'],
       'method': ['approach', 'procedure', 'framework', 'technique'],
+      'methods': ['approaches', 'procedures', 'frameworks', 'techniques'],
       'results': ['findings', 'outcomes', 'empirical evidence', 'observations'],
-      'significant': ['notable', 'substantial', 'considerable', 'paramount']
+      'result': ['finding', 'outcome', 'empirical observation'],
+      'analysis': ['critical examination', 'assessment', 'evaluation', 'investigation'],
+      'significant': ['notable', 'substantial', 'considerable', 'paramount', 'marked'],
+      'demonstrate': ['evince', 'substantiate', 'illustrate', 'corroborate', 'reveal'],
+      'demonstrates': ['evinces', 'substantiates', 'illustrates', 'corroborates', 'reveals'],
+      'development': ['advancement', 'evolution', 'progression', 'enhancement', 'formulation'],
+      'paper': ['manuscript', 'scientific article', 'study', 'work'],
+      'data': ['empirical evidence', 'records', 'observations', 'dataset']
     };
 
     if (synonymMap[w]) return synonymMap[w];
 
-    // Fallbacks inteligentes baseados em radicais comuns
-    if (w.endsWith('ar') || w.endsWith('er') || w.endsWith('ir')) {
-      return ['executar', 'proceder à análise de', 'conduzir', 'efetuar'];
+    // Sufixos e derivações regulares
+    if (w.endsWith('mente')) {
+      const base = w.replace(/mente$/, '');
+      if (synonymMap[base]) return synonymMap[base].map(s => s + 'mente');
+      return ['de maneira análoga', 'de modo correspondente', 'sob tal prisma'];
     }
-    if (w.endsWith('cao') || w.endsWith('ção')) {
-      return ['procedimento', 'sistemática', 'abordagem', 'iniciativa'];
+    if (w.endsWith('ção') || w.endsWith('cao')) {
+      return ['sistemática', 'procedimento', 'dinâmica', 'mecanismo', 'abordagem'];
+    }
+    if (w.endsWith('ções') || w.endsWith('coes')) {
+      return ['sistemáticas', 'procedimentos', 'dinâmicas', 'mecanismos', 'abordagens'];
+    }
+    if (w.endsWith('ar') || w.endsWith('er') || w.endsWith('ir')) {
+      return ['conduzir', 'proceder a', 'executar', 'viabilizar', 'efetuar'];
     }
 
-    return ['termo análogo', 'variante conceitual', 'expressão equivalente'];
+    return ['termo correlato', 'expressão análoga', 'conceito equivalente'];
   }
 
   /**

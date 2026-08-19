@@ -460,7 +460,24 @@ class AuraNoticesView {
 
       </div>
     `;
+    lucide.createIcons();
+  }
+
+  setCategory(cat) {
+    this.currentCategory = cat;
+    if (window.AURA) window.AURA.navigate('notices');
+  }
+
+  setStatus(stat) {
+    this.currentStatus = stat;
+    if (window.AURA) window.AURA.navigate('notices');
+  }
+
+  setSearch(query) {
+    this.searchTerm = query;
+    if (window.AURA) window.AURA.navigate('notices');
   }
 }
 
 window.auraNoticesView = new AuraNoticesView();
+

@@ -291,6 +291,45 @@ class AuraEditorView {
 
             </div>
 
+            <!-- FLOATING STATS PILL & ZOOM / AUDIO CONTROLS (CANTO INFERIOR ESQUERDO) -->
+            <div class="fixed bottom-6 left-6 z-40 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 shadow-2xl rounded-2xl p-2 sm:px-3 sm:py-2 flex items-center gap-3 text-xs text-slate-300 animate-fade-in">
+              <!-- Métricas Reais -->
+              <div class="flex items-center gap-2 font-mono">
+                <span class="flex items-center gap-1">
+                  <strong id="float-stat-words" class="text-white font-bold">${stats.words}</strong> pal.
+                </span>
+                <span class="text-slate-600">•</span>
+                <span class="flex items-center gap-1">
+                  <strong id="float-stat-chars" class="text-white font-bold">${stats.charsWithSpaces}</strong> car.
+                </span>
+                <span class="text-slate-600">•</span>
+                <span class="flex items-center gap-1">
+                  <strong id="float-stat-pages" class="text-white font-bold">~${stats.estimatedPages}</strong> pág.
+                </span>
+              </div>
+
+              <div class="h-4 w-px bg-slate-700"></div>
+
+              <!-- Botões de Zoom (+ / -) -->
+              <div class="flex items-center gap-1">
+                <button onclick="AURA.adjustSheetZoom(-0.1)" title="Diminuir Zoom / Tamanho (-)" class="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center font-bold text-sm transition-all">
+                  -
+                </button>
+                <span id="sheet-zoom-level" class="text-[10px] font-mono text-slate-400 w-8 text-center">100%</span>
+                <button onclick="AURA.adjustSheetZoom(0.1)" title="Aumentar Zoom / Tamanho (+)" class="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center font-bold text-sm transition-all">
+                  +
+                </button>
+              </div>
+
+              <div class="h-4 w-px bg-slate-700"></div>
+
+              <!-- Botão de Acessibilidade: Leitura em Voz Didática Feminina (Apresentação Oral) -->
+              <button onclick="AURA.toggleSpeechPresentation()" id="btn-speech-read" title="Apresentação do Artigo com Voz Suave e Didática" class="px-2.5 py-1 rounded-xl bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-500/50 flex items-center gap-1.5 font-bold transition-all shadow-md">
+                <i data-lucide="volume-2" class="w-3.5 h-3.5 text-purple-300" id="speech-icon"></i>
+                <span class="hidden sm:inline" id="speech-label">Apresentar por Voz</span>
+              </button>
+            </div>
+
           </div>
 
           <!-- RIGHT CONTEXT PANEL (ASSISTENTE IA, ANÁLISE, LOCALIZAR/SUBSTITUIR) -->
@@ -341,15 +380,18 @@ class AuraEditorView {
                 </div>
               </div>
 
-              <!-- Detector de Repetições e Sinônimos -->
-              <div class="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60 flex flex-col gap-2">
-                <div class="flex items-center justify-between">
-                  <span class="font-bold text-purple-300 flex items-center gap-1.5">
+              <!-- Detector de Repetições e Sinônimos (Retrátil com Toggle) -->
+              <div class="bg-slate-800/60 rounded-xl border border-slate-700/60 flex flex-col overflow-hidden">
+                <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-slate-800/80 transition-colors" onclick="AURA.toggleRepeatedWordsBox()">
+                  <span class="font-bold text-purple-300 flex items-center gap-1.5 select-none">
                     <i data-lucide="repeat" class="w-3.5 h-3.5"></i> Palavras Repetidas Detectadas
                   </span>
-                  <button onclick="AURA.refreshRepeatedWords()" class="text-[10px] text-aura-400 hover:underline">Atualizar</button>
+                  <div class="flex items-center gap-2">
+                    <button onclick="event.stopPropagation(); AURA.refreshRepeatedWords()" class="text-[10px] text-aura-400 hover:underline">Atualizar</button>
+                    <i data-lucide="chevron-down" class="w-4 h-4 text-purple-400 transition-transform duration-200" id="repeated-words-chevron"></i>
+                  </div>
                 </div>
-                <div id="repeated-words-container" class="flex flex-col gap-1.5">
+                <div id="repeated-words-container" class="p-3 pt-0 flex flex-col gap-1.5">
                   <!-- Gerado dinamicamente -->
                 </div>
               </div>

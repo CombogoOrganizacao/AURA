@@ -57,10 +57,21 @@ class AuraApp {
   }
 
   init() {
+    this.clearCorruptStorage();
     this.applyI18n();
     this.navigate('home');
     this.refreshLiveState();
     this.setupKeyboardShortcuts();
+  }
+
+  clearCorruptStorage() {
+    try {
+      // Limpa chaves antigas de mockup e cache obsoleto
+      const keysToClean = ['aura_mock', 'aura_stale_data', 'aura_temp_docs', 'aura_cached_stats'];
+      keysToClean.forEach(k => localStorage.removeItem(k));
+    } catch (e) {
+      console.warn('Storage cleanup:', e);
+    }
   }
 
   setLanguage(lang = 'pt') {
@@ -388,12 +399,13 @@ class AuraApp {
     this.showToast('Configurações de cabeçalho, numeração e rodapé aplicadas à folha!', 'success');
   }
 
-  // --- STATS, REPEATS, GRAMMAR & COMPLIANCE ---
+  // --- STATS, REPEATS, GRAMMAR, SPEECH & ZOOM CONTROLS ---
 
   refreshLiveState() {
     const fullText = window.auraEditorView.getFullDocumentText(this.activeDocument);
     const stats = window.auraLanguage.calculateStats(fullText);
 
+    // Toolbar Indicators
     const wordsEl = document.getElementById('stat-words');
     const charsEl = document.getElementById('stat-chars');
     const pagesEl = document.getElementById('stat-pages');
@@ -401,6 +413,115 @@ class AuraApp {
     if (wordsEl) wordsEl.innerText = stats.words;
     if (charsEl) charsEl.innerText = stats.charsWithSpaces;
     if (pagesEl) pagesEl.innerText = `~${stats.estimatedPages}`;
+
+    // Floating Bottom-Left Badge Indicators
+    const floatWords = document.getElementById('float-stat-words');
+    const floatChars = document.getElementById('float-stat-chars');
+    const floatPages = document.getElementById('float-stat-pages');
+
+    if (floatWords) floatWords.innerText = stats.words;
+    if (floatChars) floatChars.innerText = stats.charsWithSpaces;
+    if (floatPages) floatPages.innerText = `~${stats.estimatedPages}`;
+  }
+
+  // Zoom da folha (+ e -)
+  adjustSheetZoom(delta) {
+    if (!this.sheetZoom) this.sheetZoom = 1.0;
+    this.sheetZoom = Math.max(0.7, Math.min(1.6, this.sheetZoom + delta));
+    
+    const sheet = document.getElementById('academic-active-sheet');
+    const zoomDisplay = document.getElementById('sheet-zoom-level');
+    
+    if (sheet) {
+      sheet.style.transform = `scale(${this.sheetZoom})`;
+      sheet.style.transformOrigin = 'top center';
+    }
+    if (zoomDisplay) {
+      zoomDisplay.innerText = `${Math.round(this.sheetZoom * 100)}%`;
+    }
+  }
+
+  // Acessibilidade: Leitura em Voz Didática Feminina (Apresentação Oral)
+  toggleSpeechPresentation() {
+    if (!('speechSynthesis' in window)) {
+      this.showToast('Síntese de voz não suportada pelo seu navegador.', 'warning');
+      return;
+    }
+
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      this.updateSpeechUI(false);
+      this.showToast('Apresentação de áudio pausada/encerrada.', 'info');
+      return;
+    }
+
+    const doc = this.activeDocument;
+    if (!doc) return;
+
+    // Constrói o roteiro didático de apresentação oral do trabalho
+    const isEn = this.currentLang === 'en';
+    const presentationText = isEn
+      ? `Welcome to the scientific presentation of the paper: ${doc.title || 'Untitled'}. Authored by: ${doc.authors || 'Candidate'}. Abstract: ${doc.abstract || 'Not provided.'}. Objectives and methodology: ${(doc.sections || []).map(s => s.title + '. ' + s.content).join('. ')}`
+      : `Seja bem-vindo(a) à apresentação acadêmica do trabalho: ${doc.title || 'Trabalho Científico'}. De autoria de: ${doc.authors || 'Pesquisador'}. Resumo da pesquisa: ${doc.abstract || ''}. Estrutura do trabalho: ${(doc.sections || []).map(s => s.title + '. ' + s.content).join('. ')}`;
+
+    const utterance = new SpeechSynthesisUtterance(presentationText);
+    utterance.lang = isEn ? 'en-US' : 'pt-BR';
+    utterance.rate = 0.95; // Cadência didática clara e pausada
+    utterance.pitch = 1.15; // Tom suave e feminino
+
+    // Tentar selecionar voz feminina em português ou inglês
+    const voices = window.speechSynthesis.getVoices();
+    const femaleVoice = voices.find(v => 
+      (isEn ? v.lang.startsWith('en') : v.lang.startsWith('pt')) && 
+      (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('luciana') || v.name.toLowerCase().includes('francisca') || v.name.toLowerCase().includes('maria') || v.name.toLowerCase().includes('victoria') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('google português'))
+    ) || voices.find(v => isEn ? v.lang.startsWith('en') : v.lang.startsWith('pt'));
+
+    if (femaleVoice) {
+      utterance.voice = femaleVoice;
+    }
+
+    utterance.onstart = () => {
+      this.updateSpeechUI(true);
+      this.showToast(isEn ? 'Scientific audio presentation started.' : 'Apresentação com voz didática iniciada!', 'success');
+    };
+
+    utterance.onend = () => {
+      this.updateSpeechUI(false);
+      this.showToast(isEn ? 'Presentation completed.' : 'Apresentação concluída com sucesso.', 'info');
+    };
+
+    utterance.onerror = () => {
+      this.updateSpeechUI(false);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  updateSpeechUI(isPlaying) {
+    const btn = document.getElementById('btn-speech-read');
+    const label = document.getElementById('speech-label');
+    const icon = document.getElementById('speech-icon');
+    if (btn && label) {
+      if (isPlaying) {
+        btn.className = 'px-2.5 py-1 rounded-xl bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 flex items-center gap-1.5 font-bold transition-all shadow-lg animate-pulse';
+        label.innerText = 'Parar Leitura';
+      } else {
+        btn.className = 'px-2.5 py-1 rounded-xl bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-500/50 flex items-center gap-1.5 font-bold transition-all shadow-md';
+        label.innerText = 'Apresentar por Voz';
+      }
+    }
+  }
+
+  // Toggle do container retrátil de palavras repetidas
+  toggleRepeatedWordsBox() {
+    const container = document.getElementById('repeated-words-container');
+    const chevron = document.getElementById('repeated-words-chevron');
+    if (container) {
+      const isHidden = container.classList.toggle('hidden');
+      if (chevron) {
+        chevron.style.transform = isHidden ? 'rotate(-90deg)' : 'rotate(0deg)';
+      }
+    }
   }
 
   refreshRepeatedWords() {
@@ -1286,7 +1407,8 @@ class AuraApp {
   updateBudgetItem(idx, field, value) {
     if (this.activeDocument && this.activeDocument.budget && this.activeDocument.budget[idx]) {
       this.activeDocument.budget[idx][field] = value;
-      this.showToast('Item orçamentário atualizado!', 'info');
+      this.navigate('notices');
+      this.showToast('Item orçamentário e Total atualizados!', 'info');
     }
   }
 
