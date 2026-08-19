@@ -27,26 +27,26 @@ class AuraEditorView {
     const currentDoc = docData;
     const stdId = currentDoc.standardId || 'abnt';
     const std = window.AURA_STANDARDS[stdId] || window.AURA_STANDARDS.abnt;
-    const stats = window.auraLanguage.calculateStats(this.getFullDocumentText(currentDoc));
+    const t = (key) => window.AURA ? window.AURA.t(key) : key;
 
     container.innerHTML = `
       <div class="flex-1 flex flex-col h-[calc(100vh-61px)] overflow-hidden bg-slate-950">
         
-        <!-- EDITOR TOP TOOLBAR -->
-        <div class="bg-slate-900 border-b border-slate-800 px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-xs z-20">
+        <!-- EDITOR TOP TOOLBAR (Mobile-First Responsive with horizontal scroll) -->
+        <div class="bg-slate-900 border-b border-slate-800 px-3 sm:px-4 py-2 flex items-center justify-between gap-2 overflow-x-auto text-xs z-20 whitespace-nowrap scrollbar-none">
           
           <!-- Formatting Buttons -->
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-1 flex-shrink-0">
             <button onclick="AURA.execCommand('bold')" title="Negrito" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="bold" class="w-4 h-4"></i></button>
             <button onclick="AURA.execCommand('italic')" title="Itálico" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="italic" class="w-4 h-4"></i></button>
             <button onclick="AURA.execCommand('underline')" title="Sublinhado" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="underline" class="w-4 h-4"></i></button>
             <div class="h-4 w-px bg-slate-700 mx-1"></div>
 
             <button onclick="AURA.insertLongQuote()" title="Citação Longa ABNT (Recuo 4cm)" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
-              <i data-lucide="quote" class="w-3.5 h-3.5 text-aura-400"></i> Citação Longa
+              <i data-lucide="quote" class="w-3.5 h-3.5 text-aura-400"></i> <span class="hidden sm:inline">${t('long_quote')}</span>
             </button>
             <button onclick="AURA.openCitationDialog()" title="Inserir Citação (Autor-Data ou Numérica)" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
-              <i data-lucide="bookmark" class="w-3.5 h-3.5 text-indigo-400"></i> Citação (NBR 10520)
+              <i data-lucide="bookmark" class="w-3.5 h-3.5 text-indigo-400"></i> <span class="hidden sm:inline">${t('citation_nbr')}</span>
             </button>
             <button onclick="AURA.insertTable()" title="Inserir Tabela Acadêmica" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="table" class="w-4 h-4"></i></button>
             <button onclick="AURA.insertEquation()" title="Inserir Equação Matemática" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="sigma" class="w-4 h-4"></i></button>
@@ -54,37 +54,37 @@ class AuraEditorView {
 
             <!-- Find & Replace Button -->
             <button onclick="AURA.openFindReplace()" title="Localizar e Substituir (Ctrl+F)" class="px-2.5 py-1 rounded bg-slate-800/80 hover:bg-slate-700 text-amber-300 flex items-center gap-1.5 font-medium">
-              <i data-lucide="search" class="w-3.5 h-3.5"></i> Localizar & Substituir
+              <i data-lucide="search" class="w-3.5 h-3.5"></i> <span class="hidden md:inline">${t('find_replace')}</span>
             </button>
           </div>
 
           <!-- Document Limits & Live Stats Indicators -->
-          <div class="flex items-center gap-3 text-slate-400">
-            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800/60 border border-slate-700/50">
+          <div class="flex items-center gap-2 sm:gap-3 text-slate-400 flex-shrink-0">
+            <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800/60 border border-slate-700/50">
               <i data-lucide="file-text" class="w-3.5 h-3.5 text-aura-400"></i>
-              <span id="stat-words" class="text-slate-200 font-bold">${stats.words}</span> palavras
+              <span id="stat-words" class="text-slate-200 font-bold">${stats.words}</span> <span class="hidden md:inline">${t('words')}</span>
               <span class="text-slate-600">|</span>
-              <span id="stat-chars" class="text-slate-200 font-bold">${stats.charsWithSpaces}</span> caracteres
+              <span id="stat-chars" class="text-slate-200 font-bold">${stats.charsWithSpaces}</span> <span class="hidden md:inline">${t('characters')}</span>
               <span class="text-slate-600">|</span>
-              <span id="stat-pages" class="text-slate-200 font-bold">~${stats.estimatedPages}</span> págs
+              <span id="stat-pages" class="text-slate-200 font-bold">~${stats.estimatedPages}</span> ${t('pages')}
             </div>
 
             <!-- Standard Selector Quick Switch -->
             <div class="flex items-center gap-1.5">
-              <span class="text-slate-400">Norma:</span>
+              <span class="text-slate-400 hidden sm:inline">${t('standard')}:</span>
               <select onchange="AURA.changeDocumentStandard(this.value)" class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white font-medium focus:outline-none focus:border-aura-500">
-                <option value="abnt" ${stdId === 'abnt' ? 'selected' : ''}>ABNT (Brasil)</option>
-                <option value="apa" ${stdId === 'apa' ? 'selected' : ''}>APA 7th (Internacional)</option>
-                <option value="ieee" ${stdId === 'ieee' ? 'selected' : ''}>IEEE (2 Colunas)</option>
-                <option value="vancouver" ${stdId === 'vancouver' ? 'selected' : ''}>Vancouver (Medicina)</option>
-                <option value="chicago" ${stdId === 'chicago' ? 'selected' : ''}>Chicago 17th</option>
-                <option value="mla" ${stdId === 'mla' ? 'selected' : ''}>MLA 9th</option>
+                <option value="abnt" ${stdId === 'abnt' ? 'selected' : ''}>ABNT</option>
+                <option value="apa" ${stdId === 'apa' ? 'selected' : ''}>APA 7th</option>
+                <option value="ieee" ${stdId === 'ieee' ? 'selected' : ''}>IEEE</option>
+                <option value="vancouver" ${stdId === 'vancouver' ? 'selected' : ''}>Vancouver</option>
+                <option value="chicago" ${stdId === 'chicago' ? 'selected' : ''}>Chicago</option>
+                <option value="mla" ${stdId === 'mla' ? 'selected' : ''}>MLA</option>
               </select>
             </div>
 
             <!-- Export Button -->
-            <button onclick="AURA.openExportModal()" class="px-3 py-1 rounded bg-aura-600 hover:bg-aura-500 text-white font-semibold flex items-center gap-1 transition-all">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i> Exportar
+            <button onclick="AURA.openExportModal()" class="px-2.5 sm:px-3 py-1 rounded bg-aura-600 hover:bg-aura-500 text-white font-semibold flex items-center gap-1 transition-all">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">${t('export')}</span>
             </button>
           </div>
 

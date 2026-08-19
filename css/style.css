@@ -51,55 +51,82 @@ body {
     radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.08) 0px, transparent 50%);
 }
 
-/* A4 Sheet Simulation */
+/* A4 Sheet Simulation (Mobile First Responsive) */
 .academic-sheet {
   background: #ffffff;
   color: #1a202c;
   box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0,0,0,0.05);
   transition: all 0.3s ease;
-  min-height: 297mm;
-  width: 210mm;
+  min-height: auto;
+  width: 100%;
+  max-width: 210mm;
   margin: 0 auto;
   position: relative;
   box-sizing: border-box;
 }
 
+@media (min-width: 768px) {
+  .academic-sheet {
+    min-height: 297mm;
+  }
+}
+
 /* ABNT Sheet Margins (Superior 3cm, Esquerda 3cm, Inferior 2cm, Direita 2cm) */
 .sheet-standard-abnt {
-  padding-top: 30mm;
-  padding-left: 30mm;
-  padding-bottom: 20mm;
-  padding-right: 20mm;
+  padding: 18px 16px;
   font-family: 'Lora', 'Times New Roman', serif;
-  font-size: 12pt;
+  font-size: 11pt;
   line-height: 1.5;
   text-align: justify;
 }
 
+@media (min-width: 768px) {
+  .sheet-standard-abnt {
+    padding-top: 30mm;
+    padding-left: 30mm;
+    padding-bottom: 20mm;
+    padding-right: 20mm;
+    font-size: 12pt;
+  }
+}
+
 /* APA Sheet Margins (1 inch / 2.54cm em todos os lados) */
 .sheet-standard-apa {
-  padding: 25.4mm;
+  padding: 18px 16px;
   font-family: 'Lora', 'Times New Roman', serif;
-  font-size: 12pt;
-  line-height: 2.0;
+  font-size: 11pt;
+  line-height: 1.8;
   text-align: left;
+}
+
+@media (min-width: 768px) {
+  .sheet-standard-apa {
+    padding: 25.4mm;
+    font-size: 12pt;
+    line-height: 2.0;
+  }
 }
 
 /* IEEE Sheet (2 colunas, margens específicas) */
 .sheet-standard-ieee {
-  padding-top: 19mm;
-  padding-bottom: 25.4mm;
-  padding-left: 14.3mm;
-  padding-right: 14.3mm;
+  padding: 16px 14px;
   font-family: 'Lora', 'Times New Roman', serif;
   font-size: 10pt;
   line-height: 1.15;
   text-align: justify;
 }
 
-.sheet-standard-ieee .document-body-content {
-  column-count: 2;
-  column-gap: 6.3mm;
+@media (min-width: 768px) {
+  .sheet-standard-ieee {
+    padding-top: 19mm;
+    padding-bottom: 25.4mm;
+    padding-left: 14.3mm;
+    padding-right: 14.3mm;
+  }
+  .sheet-standard-ieee .document-body-content {
+    column-count: 2;
+    column-gap: 6.3mm;
+  }
 }
 
 /* Academic Elements Rendering */

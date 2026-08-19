@@ -8,134 +8,133 @@
 
 class AuraHomeView {
   render(container) {
-    container.innerHTML = `
-      <div class="max-w-7xl mx-auto px-4 lg:px-8 py-10 flex flex-col gap-12">
-        
-        <!-- HERO BANNER -->
-        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800/90 via-slate-900/90 to-aura-950/80 border border-slate-700/60 p-8 lg:p-12 shadow-2xl">
-          <div class="absolute -right-20 -top-20 w-96 h-96 bg-aura-500/10 rounded-full blur-3xl pointer-events-none"></div>
-          <div class="absolute -left-20 -bottom-20 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    const t = (key) => window.AURA ? window.AURA.t(key) : key;
 
-          <div class="relative z-10 max-w-3xl flex flex-col gap-4">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-aura-500/10 border border-aura-500/30 text-aura-300 text-xs font-semibold w-fit">
-              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Motor de Regras Acadêmicas & Editais Integrado
+    container.innerHTML = `
+      <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 flex flex-col gap-8 sm:gap-12">
+        
+        <!-- HERO BANNER (Mobile-First Responsive) -->
+        <div class="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-800/90 via-slate-900/90 to-aura-950/80 border border-slate-700/60 p-5 sm:p-8 lg:p-12 shadow-2xl">
+          <div class="absolute -right-20 -top-20 w-72 sm:w-96 h-72 sm:h-96 bg-aura-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="absolute -left-20 -bottom-20 w-72 sm:w-96 h-72 sm:h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div class="relative z-10 max-w-3xl flex flex-col gap-3 sm:gap-4">
+            <div class="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-aura-500/10 border border-aura-500/30 text-aura-300 text-[11px] sm:text-xs font-semibold w-fit">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 flex-shrink-0"></i> <span>${t('hero_badge')}</span>
             </div>
-            <h1 class="text-3xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
-              A inteligência definitiva para sua <span class="bg-gradient-to-r from-aura-400 via-indigo-300 to-sky-300 bg-clip-text text-transparent">produção e aprovação científica</span>.
+            <h1 class="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
+              ${t('hero_title_1')} <span class="bg-gradient-to-r from-aura-400 via-indigo-300 to-sky-300 bg-clip-text text-transparent">${t('hero_title_highlight')}</span>.
             </h1>
-            <p class="text-slate-300 text-base lg:text-lg font-light leading-relaxed">
-              Escreva do zero, formate em ABNT/APA/IEEE ou prepare seu projeto para editais de pós-graduação, bolsas e financiamento com verificação automática de conformidade.
+            <p class="text-slate-300 text-sm sm:text-base lg:text-lg font-light leading-relaxed">
+              ${t('hero_description')}
             </p>
             
             <!-- Flow Tagline -->
-            <div class="mt-2 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-400">
-              <span class="px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-200">Pesquisa</span>
+            <div class="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-medium text-slate-400">
+              <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-200">${t('step_research')}</span>
               <i data-lucide="arrow-right" class="w-3 h-3 text-slate-500"></i>
-              <span class="px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-200">Escrita</span>
+              <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-200">${t('step_writing')}</span>
               <i data-lucide="arrow-right" class="w-3 h-3 text-slate-500"></i>
-              <span class="px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-200">Formatação</span>
+              <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-200">${t('step_formatting')}</span>
               <i data-lucide="arrow-right" class="w-3 h-3 text-slate-500"></i>
-              <span class="px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-200">Adequação</span>
+              <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-200">${t('step_adaptation')}</span>
+              <i data-lucide="arrow-right" class="w-3 h-3 text-slate-500 hidden sm:inline"></i>
+              <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-200 hidden sm:inline">${t('step_verification')}</span>
               <i data-lucide="arrow-right" class="w-3 h-3 text-slate-500"></i>
-              <span class="px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-200">Verificação</span>
-              <i data-lucide="arrow-right" class="w-3 h-3 text-slate-500"></i>
-              <span class="px-2.5 py-1 rounded-md bg-aura-500/20 border border-aura-500/40 text-aura-300 font-bold">Submissão Aprovada</span>
+              <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md bg-aura-500/20 border border-aura-500/40 text-aura-300 font-bold">${t('step_approved')}</span>
             </div>
           </div>
         </div>
 
         <!-- 4 MAIN PATHS (OS 4 CAMINHOS CENTRAIS) -->
         <div>
-          <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center justify-between mb-4 sm:mb-6">
             <div>
-              <h2 class="text-xl font-bold text-white flex items-center gap-2">
-                <i data-lucide="compass" class="w-5 h-5 text-aura-400"></i> Escolha seu objetivo acadêmico
+              <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                <i data-lucide="compass" class="w-5 h-5 text-aura-400"></i> ${t('choose_objective')}
               </h2>
-              <p class="text-sm text-slate-400">Todos os caminhos utilizam o mesmo motor unificado de regras e estruturação.</p>
+              <p class="text-xs sm:text-sm text-slate-400 mt-0.5">${t('choose_objective_sub')}</p>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             
             <!-- Caminho 1: Começar um Trabalho -->
-            <div onclick="AURA.openNewDocModal()" class="glass-panel glass-card-hover rounded-2xl p-6 flex flex-col justify-between cursor-pointer border border-slate-800 hover:border-aura-500/50 group relative">
-              <div class="flex flex-col gap-4">
-                <div class="w-12 h-12 rounded-xl bg-aura-500/10 border border-aura-500/30 flex items-center justify-center text-aura-400 group-hover:scale-110 group-hover:bg-aura-500 group-hover:text-white transition-all">
-                  <i data-lucide="pen-tool" class="w-6 h-6"></i>
+            <div onclick="AURA.openNewDocModal()" class="glass-panel glass-card-hover rounded-2xl p-5 sm:p-6 flex flex-col justify-between cursor-pointer border border-slate-800 hover:border-aura-500/50 group relative">
+              <div class="flex flex-col gap-3 sm:gap-4">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-aura-500/10 border border-aura-500/30 flex items-center justify-center text-aura-400 group-hover:scale-110 group-hover:bg-aura-500 group-hover:text-white transition-all">
+                  <i data-lucide="pen-tool" class="w-5 h-5 sm:w-6 sm:h-6"></i>
                 </div>
                 <div>
-                  <div class="text-xs uppercase font-bold tracking-wider text-aura-400 mb-1">Criação do Zero</div>
-                  <h3 class="text-lg font-bold text-white group-hover:text-aura-300 transition-colors">Começar um trabalho</h3>
+                  <div class="text-[10px] sm:text-xs uppercase font-bold tracking-wider text-aura-400 mb-1">${t('card_1_tag')}</div>
+                  <h3 class="text-base sm:text-lg font-bold text-white group-hover:text-aura-300 transition-colors">${t('card_1_title')}</h3>
                   <p class="text-xs text-slate-400 mt-2 leading-relaxed">
-                    Escreva seu artigo, TCC, dissertação ou tese diretamente na plataforma com templates guiados e normas integradas.
+                    ${t('card_1_desc')}
                   </p>
                 </div>
               </div>
-              <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-aura-400">
-                <span>Criar documento</span>
+              <div class="mt-5 sm:mt-6 pt-3 sm:pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-aura-400">
+                <span>${t('card_1_btn')}</span>
                 <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
               </div>
             </div>
 
             <!-- Caminho 2: Formatar um Documento -->
-            <div onclick="AURA.openUploadModal('format')" class="glass-panel glass-card-hover rounded-2xl p-6 flex flex-col justify-between cursor-pointer border border-slate-800 hover:border-indigo-500/50 group relative">
-              <div class="flex flex-col gap-4">
-                <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all">
-                  <i data-lucide="file-up" class="w-6 h-6"></i>
+            <div onclick="AURA.openUploadModal('format')" class="glass-panel glass-card-hover rounded-2xl p-5 sm:p-6 flex flex-col justify-between cursor-pointer border border-slate-800 hover:border-indigo-500/50 group relative">
+              <div class="flex flex-col gap-3 sm:gap-4">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all">
+                  <i data-lucide="file-up" class="w-5 h-5 sm:w-6 sm:h-6"></i>
                 </div>
                 <div>
-                  <div class="text-xs uppercase font-bold tracking-wider text-indigo-400 mb-1">Upload & Diagnóstico</div>
-                  <h3 class="text-lg font-bold text-white group-hover:text-indigo-300 transition-colors">Formatar um documento</h3>
+                  <div class="text-[10px] sm:text-xs uppercase font-bold tracking-wider text-indigo-400 mb-1">${t('card_2_tag')}</div>
+                  <h3 class="text-base sm:text-lg font-bold text-white group-hover:text-indigo-300 transition-colors">${t('card_2_title')}</h3>
                   <p class="text-xs text-slate-400 mt-2 leading-relaxed">
-                    Envie seu DOCX, PDF ou texto existente. A IA detecta títulos, seções e citações, aplicando ABNT/APA em 1 clique.
+                    ${t('card_2_desc')}
                   </p>
                 </div>
               </div>
-              <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-indigo-400">
-                <span>Enviar arquivo</span>
+              <div class="mt-5 sm:mt-6 pt-3 sm:pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-indigo-400">
+                <span>${t('card_2_btn')}</span>
                 <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
               </div>
             </div>
 
             <!-- Caminho 3: Adequar a uma Publicação -->
-            <div onclick="AURA.openPublicationModal()" class="glass-panel glass-card-hover rounded-2xl p-6 flex flex-col justify-between cursor-pointer border border-slate-800 hover:border-emerald-500/50 group relative">
-              <div class="flex flex-col gap-4">
-                <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all">
-                  <i data-lucide="newspaper" class="w-6 h-6"></i>
+            <div onclick="AURA.openPublicationModal()" class="glass-panel glass-card-hover rounded-2xl p-5 sm:p-6 flex flex-col justify-between cursor-pointer border border-slate-800 hover:border-emerald-500/50 group relative">
+              <div class="flex flex-col gap-3 sm:gap-4">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                  <i data-lucide="newspaper" class="w-5 h-5 sm:w-6 sm:h-6"></i>
                 </div>
                 <div>
-                  <div class="text-xs uppercase font-bold tracking-wider text-emerald-400 mb-1">Periódicos & Congressos</div>
-                  <h3 class="text-lg font-bold text-white group-hover:text-emerald-300 transition-colors">Adequar a publicação</h3>
+                  <div class="text-[10px] sm:text-xs uppercase font-bold tracking-wider text-emerald-400 mb-1">${t('card_3_tag')}</div>
+                  <h3 class="text-base sm:text-lg font-bold text-white group-hover:text-emerald-300 transition-colors">${t('card_3_title')}</h3>
                   <p class="text-xs text-slate-400 mt-2 leading-relaxed">
-                    Prepare seu paper para revistas e conferências (IEEE, SBC, Elsevier, Springer) com limites de páginas e referências.
+                    ${t('card_3_desc')}
                   </p>
                 </div>
               </div>
-              <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-emerald-400">
-                <span>Selecionar evento</span>
+              <div class="mt-5 sm:mt-6 pt-3 sm:pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-emerald-400">
+                <span>${t('card_3_btn')}</span>
                 <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
               </div>
             </div>
 
             <!-- Caminho 4: Adequar a um Edital -->
-            <div onclick="AURA.openNoticeModal()" class="glass-panel glass-card-hover rounded-2xl p-6 flex flex-col justify-between cursor-pointer border border-slate-800 hover:border-amber-500/50 group relative">
-              <div class="absolute -top-3 right-4 px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-extrabold uppercase tracking-wider shadow-lg">
-                Módulo Central
-              </div>
-              <div class="flex flex-col gap-4">
-                <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-slate-950 transition-all">
-                  <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+            <div onclick="AURA.openNoticeModal()" class="glass-panel glass-card-hover rounded-2xl p-5 sm:p-6 flex flex-col justify-between cursor-pointer border border-slate-800 hover:border-amber-500/50 group relative">
+              <div class="flex flex-col gap-3 sm:gap-4">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-slate-950 transition-all">
+                  <i data-lucide="graduation-cap" class="w-5 h-5 sm:w-6 sm:h-6"></i>
                 </div>
                 <div>
-                  <div class="text-xs uppercase font-bold tracking-wider text-amber-400 mb-1">Mestrado, Doutorado & Bolsas</div>
-                  <h3 class="text-lg font-bold text-white group-hover:text-amber-300 transition-colors">Adequar a um edital</h3>
+                  <div class="text-[10px] sm:text-xs uppercase font-bold tracking-wider text-amber-400 mb-1">${t('card_4_tag')}</div>
+                  <h3 class="text-base sm:text-lg font-bold text-white group-hover:text-amber-300 transition-colors">${t('card_4_title')}</h3>
                   <p class="text-xs text-slate-400 mt-2 leading-relaxed">
-                    Envie o edital em PDF/DOCX. O sistema extrai critérios de avaliação, checklist de documentos, cronograma e orçamento.
+                    ${t('card_4_desc')}
                   </p>
                 </div>
               </div>
-              <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-amber-400">
-                <span>Interpretar edital</span>
+              <div class="mt-5 sm:mt-6 pt-3 sm:pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-amber-400">
+                <span>${t('card_4_btn')}</span>
                 <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
               </div>
             </div>

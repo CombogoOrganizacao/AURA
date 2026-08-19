@@ -10,18 +10,63 @@ class AuraApp {
     this.activeNotice = window.AURA_SAMPLE_NOTICES[0];
     this.pendingAIDiff = null;
     this.spellLanguage = 'pt';
+    this.currentLang = localStorage.getItem('aura_lang') || 'pt';
   }
 
   init() {
+    this.applyI18n();
     this.navigate('home');
     this.refreshLiveState();
     this.setupKeyboardShortcuts();
   }
 
+  setLanguage(lang = 'pt') {
+    this.currentLang = lang;
+    this.spellLanguage = lang;
+    localStorage.setItem('aura_lang', lang);
+    
+    // Atualizar botões de idioma no header
+    const ptBtn = document.getElementById('lang-btn-pt');
+    const enBtn = document.getElementById('lang-btn-en');
+    if (ptBtn && enBtn) {
+      if (lang === 'pt') {
+        ptBtn.className = 'px-2 py-1 rounded-md text-white bg-aura-600 shadow-sm transition-all';
+        enBtn.className = 'px-2 py-1 rounded-md text-slate-400 hover:text-white transition-all';
+      } else {
+        enBtn.className = 'px-2 py-1 rounded-md text-white bg-aura-600 shadow-sm transition-all';
+        ptBtn.className = 'px-2 py-1 rounded-md text-slate-400 hover:text-white transition-all';
+      }
+    }
+
+    this.applyI18n();
+    this.navigate(this.currentView);
+    this.showToast(lang === 'pt' ? 'Idioma alterado para Português (Brasil)' : 'Language switched to English (US)', 'info');
+  }
+
+  t(key) {
+    const dict = window.AURA_TRANSLATIONS ? (window.AURA_TRANSLATIONS[this.currentLang] || window.AURA_TRANSLATIONS.pt) : {};
+    return dict[key] || key;
+  }
+
+  applyI18n() {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      const text = this.t(key);
+      if (text) {
+        el.innerText = text;
+      }
+    });
+
+    const subtitleEl = document.getElementById('app-header-subtitle');
+    if (subtitleEl) {
+      subtitleEl.innerText = this.t('app_subtitle');
+    }
+  }
+
   navigate(viewName) {
     this.currentView = viewName;
     
-    // Atualizar Tabs de Navegação
+    // Atualizar Tabs de Navegação Desktop
     document.querySelectorAll('.nav-tab').forEach(tab => {
       tab.classList.remove('bg-slate-700/80', 'text-white');
       tab.classList.add('text-slate-300');
@@ -30,6 +75,17 @@ class AuraApp {
     if (activeNav) {
       activeNav.classList.add('bg-slate-700/80', 'text-white');
       activeNav.classList.remove('text-slate-300');
+    }
+
+    // Atualizar Tabs Mobile Bottom Bar
+    document.querySelectorAll('.mob-nav-item').forEach(item => {
+      item.classList.remove('text-aura-400');
+      item.classList.add('text-slate-400');
+    });
+    const activeMob = document.getElementById(`mob-nav-${viewName}`);
+    if (activeMob) {
+      activeMob.classList.add('text-aura-400');
+      activeMob.classList.remove('text-slate-400');
     }
 
     // Alternar Visualizações
