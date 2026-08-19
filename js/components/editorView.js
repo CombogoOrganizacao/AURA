@@ -668,57 +668,6 @@ class AuraEditorView {
                 <!-- Injetado dinamicamente por AURA.renderSidebarHistory() -->
               </div>
             </div>
-              <div class="font-bold text-slate-200 flex items-center justify-between">
-                <span class="flex items-center gap-1.5">
-                  <i data-lucide="search" class="w-4 h-4 text-amber-400"></i> Localizar e Substituir
-                </span>
-                <span id="find-counter-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 font-mono hidden">0/0</span>
-              </div>
-
-              <div class="flex flex-col gap-3 bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
-                <div>
-                  <div class="flex items-center justify-between mb-1">
-                    <label class="text-slate-400 text-[11px]">Localizar termo:</label>
-                    <div class="flex items-center gap-1">
-                      <button onclick="AURA.findPrevMatch()" title="Ocorrência Anterior (Shift+F3)" class="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">
-                        <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
-                      </button>
-                      <button onclick="AURA.findNextMatch()" title="Próxima Ocorrência (F3)" class="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">
-                        <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
-                      </button>
-                    </div>
-                  </div>
-                  <input type="text" id="find-input" oninput="AURA.onFindInputChange(this.value)" placeholder="Digite o termo para destacar na folha..." class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-none focus:border-amber-400">
-                </div>
-
-                <div>
-                  <label class="block text-slate-400 text-[11px] mb-1">Substituir por:</label>
-                  <input type="text" id="replace-input" placeholder="Novo texto substituto..." class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-none focus:border-emerald-400">
-                </div>
-
-                <div class="flex flex-col gap-1.5 text-slate-300 text-[11px]">
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="find-opt-case" onchange="AURA.onFindInputChange(document.getElementById('find-input').value)" class="rounded bg-slate-900 border-slate-700 text-amber-500">
-                    Diferenciar maiúsculas/minúsculas
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="find-opt-word" onchange="AURA.onFindInputChange(document.getElementById('find-input').value)" class="rounded bg-slate-900 border-slate-700 text-amber-500">
-                    Apenas palavras inteiras
-                  </label>
-                </div>
-
-                <div class="flex items-center gap-2 pt-2 border-t border-slate-700">
-                  <button onclick="AURA.execFindAndReplace(false)" class="flex-1 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-white font-medium text-center">
-                    Substituir Esta
-                  </button>
-                  <button onclick="AURA.execFindAndReplace(true)" class="flex-1 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-white font-bold text-center">
-                    Substituir Tudo
-                  </button>
-                </div>
-              </div>
-
-              <div id="find-replace-results" class="text-slate-400 text-center text-xs"></div>
-            </div>
 
             <!-- Tab 3: Conformidade e Diagnóstico -->
             <div id="panel-tab-compliance" class="hidden flex-1 overflow-y-auto p-4 flex flex-col gap-4 text-xs">

@@ -369,11 +369,18 @@ class AuraApp {
           this.redo();
         }
       }
-      // Ctrl+F para abrir o Localizar lateral
+      // Ctrl+F para focar na busca da barra de ferramentas
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
         if (this.currentView === 'editor') {
           e.preventDefault();
           this.openFindReplace();
+        }
+      }
+      // Ctrl+H para abrir o modal avançado de Localizar e Substituir
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'h') {
+        if (this.currentView === 'editor') {
+          e.preventDefault();
+          this.openAdvancedFindReplaceModal();
         }
       }
       // F3 para proxima busca
@@ -1357,10 +1364,10 @@ class AuraApp {
   // --- LOCALIZAR E SUBSTITUIR COM NAVEGAÇÃO E HIGHLIGHT EM TEMPO REAL ---
 
   openFindReplace() {
-    this.setRightTab('find_replace');
-    const input = document.getElementById('find-input');
+    const input = document.getElementById('toolbar-find-input');
     if (input) {
       input.focus();
+      input.select();
       if (input.value) this.onFindInputChange(input.value);
     }
   }
