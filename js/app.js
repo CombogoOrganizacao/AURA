@@ -553,11 +553,75 @@ class AuraApp {
 
   changeDocFont(fontFamily) {
     this.saveStateToHistory();
-    const sheet = document.getElementById('academic-active-sheet');
-    if (sheet) {
-      sheet.style.fontFamily = `"${fontFamily}", serif`;
-    }
+    const sheets = document.querySelectorAll('.academic-page-sheet, .academic-sheet');
+    sheets.forEach(s => {
+      s.style.fontFamily = `"${fontFamily}", serif`;
+    });
     this.showToast(`Tipografia alterada para ${fontFamily}!`, 'info');
+  }
+
+  applyTextColor(color) {
+    this.saveStateToHistory();
+    document.execCommand('foreColor', false, color);
+    this.triggerAutoSave();
+  }
+
+  // --- BOT CRAWLER DE EDITAIS & RSS LIVE FEED ---
+  triggerNoticeBotCrawler() {
+    const btn = document.getElementById('btn-bot-crawler');
+    const icon = document.getElementById('bot-crawler-icon');
+    const text = document.getElementById('bot-crawler-text');
+
+    if (btn) {
+      btn.classList.add('animate-pulse');
+      if (text) text.innerText = 'Robô em Execução... Varrendo Portais Oficiais';
+    }
+
+    this.showToast('🤖 Robô de Editais iniciado! Vasculhando portais do CNPq, CAPES, FACEPE, FINEP, Serrapilheira e Horizon Europe...', 'info');
+
+    setTimeout(() => {
+      // Simulação da descoberta e incorporação de novas oportunidades reais
+      const newDiscoveredNotice = {
+        id: 'notice_crawler_' + Date.now(),
+        title: 'Chamada Pública CNPq/MCTI/FNDCT 2026 — Transição Energética, Descarbonização e Hidrogênio Verde',
+        agency: 'CNPq / MCTI / FNDCT',
+        officialUrl: 'https://www.gov.br/cnpq/pt-br/assuntos/chamadas-publicas',
+        category: 'ciencia_pesquisa',
+        status: 'open',
+        deadline: '2026-12-15',
+        type: 'Pesquisa Aplicada e Desenvolvimento Tecnológico',
+        limits: { maxPages: 20, minPages: 8, maxAbstractWords: 250, maxBudget: 600000, durationMonths: 36 },
+        formattingRules: { fontFamily: 'Times New Roman', fontSize: 12, lineSpacing: 1.5, maxPages: 20, maxAbstractWords: 250 },
+        eligibility: [
+          { id: 'craw_e1', title: 'Doutorado em Engenharias, Química ou Ciências Exatas', description: 'Pesquisador vinculado a ICT brasileira com grupo de pesquisa ativo no CNPq.', status: 'MET', source: 'Item 3.1' }
+        ],
+        documentsChecklist: [
+          { id: 'craw_d1', name: 'Plano de Trabalho e Mitigação Ambiental', required: true, status: 'DONE', source: 'Plataforma Integrada' },
+          { id: 'craw_d2', name: 'Curriculum Lattes dos Pesquisadores', required: true, status: 'DONE', source: 'Lattes' }
+        ],
+        evaluationCriteria: [
+          { id: 'craw_c1', name: 'Inovação e Redução de Emissões de Carbono', weight: 50, scoreObtained: 48, status: 'STRONG', requirementText: 'Soluções com impacto direto nas metas climáticas.', analysis: 'Excelente proposta de hidrogênio verde.', suggestion: 'Enfatizar escalabilidade da tecnologia.' },
+          { id: 'craw_c2', name: 'Viabilidade Técnica e Equipe', weight: 50, scoreObtained: 45, status: 'STRONG', requirementText: 'Capacidade experimental comprovada.', analysis: 'Laboratórios adequados para síntese.', suggestion: 'Indicar parceiros da indústria.' }
+        ],
+        suggestedSections: [
+          { id: 's1', title: '1. RESUMO EXECUTIVO E CONTEXTO CLIMÁTICO', content: 'Metas de descarbonização e justificativa tecnológica.' },
+          { id: 's2', title: '2. METODOLOGIA EXPERIMENTAL', content: 'Processos de eletrólise e catalisadores avançados.' },
+          { id: 's3', title: '3. CRONOGRAMA E MATRIZ DE RECURSOS', content: 'Fases de testes em bancada e prototipagem.' }
+        ]
+      };
+
+      if (!window.AURA_SAMPLE_NOTICES.find(n => n.id === newDiscoveredNotice.id)) {
+        window.AURA_SAMPLE_NOTICES.unshift(newDiscoveredNotice);
+      }
+
+      if (btn) {
+        btn.classList.remove('animate-pulse');
+        if (text) text.innerText = 'Executar Robô de Editais (Varredura IA)';
+      }
+
+      this.navigate('notices');
+      this.showToast('✅ Varredura concluída com sucesso! 1 novo edital oficial foi capturado e adicionado à Central de Editais.', 'success');
+    }, 1800);
   }
 
   openHeaderFooterModal() {

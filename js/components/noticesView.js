@@ -47,10 +47,17 @@ class AuraNoticesView {
               <p class="text-xs text-slate-400 mt-0.5">Editais oficiais centralizados: CNPq, CAPES, FINEP, MCTI, FACEPE, 27 FAPs, Serrapilheira, EMBRAPII, BNDES, MinC, Horizon Europe, MSCA, DAAD, Fulbright e outros.</p>
             </div>
 
-            <!-- Upload Custom Notice -->
-            <button onclick="AURA.openNoticeUploadModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold border border-slate-700 flex items-center gap-2 shadow-lg transition-all self-start md:self-auto">
-              <i data-lucide="file-up" class="w-4 h-4 text-amber-400"></i> Importar / Analisar Outro Edital (PDF/Texto)
-            </button>
+            <!-- Bot Crawler Sync & Upload Custom Notice -->
+            <div class="flex items-center gap-2 self-start md:self-auto flex-wrap">
+              <button onclick="AURA.triggerNoticeBotCrawler()" id="btn-bot-crawler" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-slate-950 text-xs font-black shadow-lg shadow-amber-600/30 flex items-center gap-2 transition-all">
+                <i data-lucide="bot" class="w-4 h-4 text-slate-950" id="bot-crawler-icon"></i>
+                <span id="bot-crawler-text">Executar Robô de Editais (Varredura IA)</span>
+              </button>
+              
+              <button onclick="AURA.openNoticeUploadModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold border border-slate-700 flex items-center gap-2 shadow-lg transition-all">
+                <i data-lucide="file-up" class="w-4 h-4 text-amber-400"></i> Importar PDF/Texto
+              </button>
+            </div>
           </div>
 
           <!-- Filtros de Categoria e Status -->
@@ -98,6 +105,7 @@ class AuraNoticesView {
             ${filteredNotices.map(n => {
               const isSelected = n.id === notice.id;
               const statusBadge = n.status === 'open' ? '<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-[10px]">Aberto</span>' : (n.status === 'in_progress' ? '<span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-[10px]">Em Progresso</span>' : '<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold text-[10px]">Fechado</span>');
+              const linkUrl = n.officialUrl || 'https://www.gov.br/cnpq/pt-br/assuntos/chamadas-publicas';
               return `
                 <div class="p-4 rounded-xl transition-all border ${isSelected ? 'bg-amber-950/20 border-amber-500/80 shadow-lg ring-1 ring-amber-500/40' : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'} flex flex-col justify-between gap-3">
                   <div>
@@ -118,7 +126,7 @@ class AuraNoticesView {
                     <button onclick="AURA.showNoticeSummaryModal('${n.id}')" class="px-2 py-1 rounded bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border border-amber-800/40 flex items-center gap-1 font-semibold transition-all">
                       <i data-lucide="file-check" class="w-3 h-3 text-amber-400"></i> Resumo Rápido
                     </button>
-                    <a href="https://www.gov.br/cnpq/pt-br/assuntos/chamadas-publicas" target="_blank" rel="noopener noreferrer" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center gap-1 transition-all">
+                    <a href="${linkUrl}" target="_blank" rel="noopener noreferrer" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center gap-1 transition-all">
                       <i data-lucide="external-link" class="w-3 h-3 text-aura-400"></i> Ler Edital Oficial
                     </a>
                   </div>
