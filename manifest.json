@@ -1,0 +1,18 @@
+{
+  "name": "AURA — Ambiente Unificado de Revisão Acadêmica",
+  "short_name": "AURA",
+  "description": "Plataforma Inteligente de Produção, Formatação Científica (ABNT/APA/IEEE) e Adequação a Editais de Fomento.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#026bc9",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%23026bc9'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='260' fill='white'>🎓</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

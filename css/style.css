@@ -315,6 +315,51 @@ body {
   }
 }
 
+/* Mobile Drawer Overlay for Small Devices */
+@media (max-width: 767px) {
+  .editor-drawer-mobile {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    width: 85%;
+    max-width: 320px;
+    z-index: 50;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .editor-drawer-left {
+    left: 0;
+    transform: translateX(-100%);
+  }
+  .editor-drawer-left.drawer-open {
+    transform: translateX(0);
+  }
+  .editor-drawer-right {
+    right: 0;
+    transform: translateX(100%);
+  }
+  .editor-drawer-right.drawer-open {
+    transform: translateX(0);
+  }
+  .drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 15, 26, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 45;
+  }
+}
+
+/* Auto-Save Pulse Indicator */
+@keyframes savePulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.save-indicator-active {
+  animation: savePulse 1.2s ease infinite;
+}
+
 /* Custom Scrollbar for Sleek Panels */
 ::-webkit-scrollbar {
   width: 6px;
@@ -331,20 +376,33 @@ body {
   background: rgba(99, 102, 241, 0.8);
 }
 
-/* Printable Styles */
+/* Printable Styles for Clean Vector PDF */
 @media print {
   body {
-    background: white;
-    color: black;
+    background: #ffffff !important;
+    color: #000000 !important;
   }
-  #app-header, .no-print, .fixed {
+  #app-header, 
+  #bottom-nav-mobile, 
+  #toast-container,
+  .editor-sticky-toolbar, 
+  .editor-sticky-sidebar, 
+  .no-print, 
+  .fixed,
+  .drawer-backdrop {
     display: none !important;
   }
+  #editor-sheet-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
   .academic-sheet {
-    box-shadow: none;
-    margin: 0;
-    width: 100%;
-    min-height: auto;
+    box-shadow: none !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
   }
 }
 

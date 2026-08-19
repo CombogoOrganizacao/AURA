@@ -109,6 +109,18 @@ class AuraEditorView {
 
             <!-- Standard Selector & Export Action -->
             <div class="flex items-center gap-2 sm:gap-3 text-slate-400 flex-shrink-0">
+              <!-- Mobile Drawer Toggle: Estrutura -->
+              <button onclick="AURA.toggleMobileDrawer('left')" class="md:hidden p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center gap-1 text-[11px]" title="Ver Estrutura do Trabalho">
+                <i data-lucide="list-tree" class="w-4 h-4 text-aura-400"></i>
+                <span>Estrutura</span>
+              </button>
+
+              <!-- Mobile Drawer Toggle: IA / Conformidade -->
+              <button onclick="AURA.toggleMobileDrawer('right')" class="md:hidden p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-white flex items-center gap-1 text-[11px]" title="Ver Assistente IA e Conformidade">
+                <i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i>
+                <span>IA</span>
+              </button>
+
               <div class="flex items-center gap-1.5">
                 <span class="text-slate-400 hidden sm:inline">${t('standard')}:</span>
                 <select onchange="AURA.changeDocumentStandard(this.value)" class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white font-medium focus:outline-none focus:border-aura-500">
@@ -167,16 +179,24 @@ class AuraEditorView {
         <!-- WORKSPACE (SIDEBAR + MAIN CANVAS + CONTEXT PANEL) -->
         <div class="flex-1 flex flex-col md:flex-row relative">
           
-          <!-- LEFT SIDEBAR: STRUCTURE TREE (ESTRUTURA DO TRABALHO - FIXO E ACOMPANHA A PÁGINA) -->
-          <aside class="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col flex-shrink-0 editor-sticky-sidebar">
+          <!-- MOBILE BACKDROP -->
+          <div id="editor-mobile-backdrop" onclick="AURA.closeMobileDrawers()" class="hidden drawer-backdrop md:hidden"></div>
+
+          <!-- LEFT SIDEBAR: STRUCTURE TREE (ESTRUTURA DO TRABALHO - FIXO NO DESKTOP, DRAWER NO MOBILE) -->
+          <aside id="editor-left-sidebar" class="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col flex-shrink-0 editor-sticky-sidebar editor-drawer-mobile editor-drawer-left">
             <div>
               <div class="p-3 border-b border-slate-800 flex items-center justify-between">
                 <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                   <i data-lucide="list-tree" class="w-4 h-4 text-aura-400"></i> ${t('structure_title')}
                 </span>
-                <button onclick="AURA.addSection()" title="Adicionar Seção" class="p-1 rounded bg-slate-800 hover:bg-slate-700 text-aura-400">
-                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                </button>
+                <div class="flex items-center gap-1">
+                  <button onclick="AURA.addSection()" title="Adicionar Seção" class="p-1 rounded bg-slate-800 hover:bg-slate-700 text-aura-400">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button onclick="AURA.closeMobileDrawers()" class="md:hidden p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                  </button>
+                </div>
               </div>
 
               <!-- Quick Action: Auto-Format 1-Click (Próximo da estrutura do trabalho) -->
@@ -345,7 +365,15 @@ class AuraEditorView {
             </div>
 
             <!-- FLOATING STATS PILL & ZOOM / AUDIO CONTROLS (CENTRALIZADO COM A PÁGINA) -->
-            <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 shadow-2xl rounded-2xl px-4 py-2 flex items-center gap-3 text-xs text-slate-300 animate-fade-in no-print">
+            <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 shadow-2xl rounded-2xl px-4 py-2 flex items-center gap-3 text-xs text-slate-300 animate-fade-in no-print max-w-[95vw] overflow-x-auto">
+              <!-- Auto-Save Status Indicator -->
+              <div class="flex items-center gap-1.5 font-medium text-[11px] text-emerald-400" id="auto-save-badge" title="Salvamento automático local ativo">
+                <i data-lucide="check" class="w-3.5 h-3.5" id="auto-save-icon"></i>
+                <span class="hidden sm:inline" id="auto-save-text">Salvo</span>
+              </div>
+
+              <div class="h-4 w-px bg-slate-700 hidden sm:block"></div>
+
               <!-- Métricas Reais -->
               <div class="flex items-center gap-2 font-mono">
                 <span class="flex items-center gap-1">
@@ -384,9 +412,19 @@ class AuraEditorView {
 
           </div>
 
-          <!-- RIGHT CONTEXT PANEL (ASSISTENTE IA, ANÁLISE, LOCALIZAR/SUBSTITUIR - FIXO E ACOMPANHA A PÁGINA) -->
-          <aside class="w-full md:w-80 lg:w-96 bg-slate-900 border-l border-slate-800 flex flex-col flex-shrink-0 editor-sticky-sidebar" id="editor-right-panel">
+          <!-- RIGHT CONTEXT PANEL (ASSISTENTE IA, ANÁLISE, LOCALIZAR/SUBSTITUIR - FIXO NO DESKTOP, DRAWER NO MOBILE) -->
+          <aside class="w-full md:w-80 lg:w-96 bg-slate-900 border-l border-slate-800 flex flex-col flex-shrink-0 editor-sticky-sidebar editor-drawer-mobile editor-drawer-right" id="editor-right-panel">
             
+            <!-- Mobile Close Header -->
+            <div class="md:hidden p-2.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+              <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                <i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i> Assistente IA & Conformidade
+              </span>
+              <button onclick="AURA.closeMobileDrawers()" class="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+
             <!-- Panel Tabs -->
             <div class="flex items-center border-b border-slate-800 text-xs font-semibold bg-slate-950/60 p-1 gap-1">
               <button onclick="AURA.setRightTab('ai')" id="tab-btn-ai" class="flex-1 py-1.5 px-2 rounded text-center transition-all bg-aura-600 text-white flex items-center justify-center gap-1">

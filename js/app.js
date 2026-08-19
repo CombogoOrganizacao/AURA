@@ -6,7 +6,9 @@
 class AuraApp {
   constructor() {
     this.currentView = 'home';
-    this.openDocuments = [...(window.AURA_SAMPLE_DOCUMENTS || [])];
+    
+    // Carregar documentos salvos pelo usuário no localStorage (ou sample inicial)
+    this.openDocuments = this.loadSavedDocuments();
     this.activeDocument = this.openDocuments[0] || window.AURA_SAMPLE_DOCUMENTS[0];
     this.activeNotice = window.AURA_SAMPLE_NOTICES[0];
     this.pendingAIDiff = null;
@@ -21,6 +23,94 @@ class AuraApp {
     // Find & Replace Search Navigation State
     this.searchMatches = [];
     this.currentSearchIndex = -1;
+
+    // Auto-Save Debounce Timer
+    this.autoSaveTimer = null;
+  }
+
+  loadSavedDocuments() {
+    try {
+      const saved = localStorage.getItem('aura_saved_documents');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar documentos salvos:', e);
+    }
+    return [...(window.AURA_SAMPLE_DOCUMENTS || [])];
+  }
+
+  persistDocuments() {
+    try {
+      if (this.openDocuments && this.openDocuments.length > 0) {
+        localStorage.setItem('aura_saved_documents', JSON.stringify(this.openDocuments));
+      }
+      this.updateAutoSaveBadge('saved');
+    } catch (e) {
+      console.warn('Erro ao persistir no localStorage:', e);
+      this.updateAutoSaveBadge('error');
+    }
+  }
+
+  triggerAutoSave() {
+    this.updateAutoSaveBadge('saving');
+    if (this.autoSaveTimer) clearTimeout(this.autoSaveTimer);
+    this.autoSaveTimer = setTimeout(() => {
+      this.persistDocuments();
+    }, 800);
+  }
+
+  updateAutoSaveBadge(status = 'saved') {
+    const badge = document.getElementById('auto-save-badge');
+    const icon = document.getElementById('auto-save-icon');
+    const text = document.getElementById('auto-save-text');
+    if (!badge || !icon || !text) return;
+
+    if (status === 'saving') {
+      badge.className = 'flex items-center gap-1.5 font-medium text-[11px] text-amber-400 save-indicator-active';
+      text.innerText = this.currentLang === 'en' ? 'Saving...' : 'Salvando...';
+      icon.setAttribute('data-lucide', 'refresh-cw');
+    } else if (status === 'saved') {
+      badge.className = 'flex items-center gap-1.5 font-medium text-[11px] text-emerald-400';
+      text.innerText = this.currentLang === 'en' ? 'Saved' : 'Salvo';
+      icon.setAttribute('data-lucide', 'check');
+    } else if (status === 'error') {
+      badge.className = 'flex items-center gap-1.5 font-medium text-[11px] text-rose-400';
+      text.innerText = this.currentLang === 'en' ? 'Save error' : 'Erro ao salvar';
+      icon.setAttribute('data-lucide', 'alert-circle');
+    }
+    lucide.createIcons();
+  }
+
+  // --- MOBILE DRAWER MANAGEMENT ---
+  toggleMobileDrawer(side = 'left') {
+    const leftDrawer = document.getElementById('editor-left-sidebar');
+    const rightDrawer = document.getElementById('editor-right-panel');
+    const backdrop = document.getElementById('editor-mobile-backdrop');
+
+    if (side === 'left') {
+      if (rightDrawer) rightDrawer.classList.remove('drawer-open');
+      if (leftDrawer) {
+        const isOpen = leftDrawer.classList.toggle('drawer-open');
+        if (backdrop) backdrop.classList.toggle('hidden', !isOpen);
+      }
+    } else {
+      if (leftDrawer) leftDrawer.classList.remove('drawer-open');
+      if (rightDrawer) {
+        const isOpen = rightDrawer.classList.toggle('drawer-open');
+        if (backdrop) backdrop.classList.toggle('hidden', !isOpen);
+      }
+    }
+  }
+
+  closeMobileDrawers() {
+    const leftDrawer = document.getElementById('editor-left-sidebar');
+    const rightDrawer = document.getElementById('editor-right-panel');
+    const backdrop = document.getElementById('editor-mobile-backdrop');
+    if (leftDrawer) leftDrawer.classList.remove('drawer-open');
+    if (rightDrawer) rightDrawer.classList.remove('drawer-open');
+    if (backdrop) backdrop.classList.add('hidden');
   }
 
   // --- MULTI-DOCUMENT TAB MANAGEMENT (DRAGGABLE TABS) ---
@@ -37,6 +127,7 @@ class AuraApp {
     if (doc) {
       this.activeDocument = doc;
       this.saveStateToHistory();
+      this.persistDocuments();
       this.navigate('editor');
     }
   }
@@ -55,6 +146,7 @@ class AuraApp {
         this.activeDocument = this.openDocuments[Math.max(0, idx - 1)];
         this.saveStateToHistory();
       }
+      this.persistDocuments();
       this.navigate('editor');
       this.showToast('Aba fechada.', 'info');
     }
@@ -72,6 +164,7 @@ class AuraApp {
 
     const [moved] = this.openDocuments.splice(sourceIdx, 1);
     this.openDocuments.splice(targetIdx, 0, moved);
+    this.persistDocuments();
     this.navigate('editor');
   }
 
@@ -85,12 +178,14 @@ class AuraApp {
     this.historyStack.push(snapshot);
     if (this.historyStack.length > 50) this.historyStack.shift();
     this.historyIndex = this.historyStack.length - 1;
+    this.triggerAutoSave();
   }
 
   undo() {
     if (this.historyIndex > 0) {
       this.historyIndex--;
       this.activeDocument = JSON.parse(this.historyStack[this.historyIndex]);
+      this.persistDocuments();
       this.navigate('editor');
       this.showToast(this.currentLang === 'en' ? 'Action undone.' : 'Ação desfeita (Desfazer).', 'info');
     } else {
@@ -102,6 +197,7 @@ class AuraApp {
     if (this.historyIndex < this.historyStack.length - 1) {
       this.historyIndex++;
       this.activeDocument = JSON.parse(this.historyStack[this.historyIndex]);
+      this.persistDocuments();
       this.navigate('editor');
       this.showToast(this.currentLang === 'en' ? 'Action redone.' : 'Ação refeita (Refazer).', 'info');
     } else {
@@ -112,9 +208,18 @@ class AuraApp {
   init() {
     this.clearCorruptStorage();
     this.applyI18n();
+    this.registerServiceWorker();
     this.navigate('home');
     this.refreshLiveState();
     this.setupKeyboardShortcuts();
+  }
+
+  registerServiceWorker() {
+    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('AURA PWA ServiceWorker registrado com sucesso!'))
+        .catch(err => console.log('ServiceWorker PWA opcional:', err));
+    }
   }
 
   clearCorruptStorage() {
@@ -222,6 +327,19 @@ class AuraApp {
 
   setupKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
+      // Ctrl+S / Cmd+S para salvar imediatamente
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        this.persistDocuments();
+        this.showToast(this.currentLang === 'en' ? 'Document saved successfully!' : 'Documento salvo com sucesso!', 'success');
+      }
+      // Ctrl+P / Cmd+P para imprimir/exportar PDF
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
+        if (this.currentView === 'editor') {
+          e.preventDefault();
+          this.downloadPdf();
+        }
+      }
       // Ctrl+Z / Cmd+Z para desfazer
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         if (this.currentView === 'editor' && !document.activeElement.isContentEditable) {
@@ -267,11 +385,15 @@ class AuraApp {
       this.updateHeaderBadge();
       const sidebarTitle = document.getElementById('sidebar-title-display');
       if (sidebarTitle) sidebarTitle.innerText = title.trim() || (this.currentLang === 'en' ? 'Title & Authors' : 'Título & Autoria');
+      this.triggerAutoSave();
     }
   }
 
   updateDocAuthors(authors) {
-    if (this.activeDocument) this.activeDocument.authors = authors;
+    if (this.activeDocument) {
+      this.activeDocument.authors = authors;
+      this.triggerAutoSave();
+    }
   }
 
   updateDocAbstract(abstractText) {
@@ -279,6 +401,7 @@ class AuraApp {
       this.activeDocument.abstract = abstractText;
       this.refreshLiveState();
       this.refreshCompliancePanel();
+      this.triggerAutoSave();
     }
   }
 
@@ -286,6 +409,7 @@ class AuraApp {
     if (this.activeDocument) {
       this.activeDocument.keywords = keywordsText.split(';').map(k => k.trim()).filter(k => k.length > 0);
       this.refreshCompliancePanel();
+      this.triggerAutoSave();
     }
   }
 
@@ -296,6 +420,7 @@ class AuraApp {
       sec.title = title;
       const sidebarSec = document.getElementById(`sidebar-sec-${secId}`);
       if (sidebarSec) sidebarSec.innerText = title.trim() || 'Nova Seção';
+      this.triggerAutoSave();
     }
   }
 
@@ -307,6 +432,7 @@ class AuraApp {
       tempDiv.innerHTML = html;
       sec.content = tempDiv.innerText;
       this.refreshLiveState();
+      this.triggerAutoSave();
     }
   }
 
@@ -314,6 +440,7 @@ class AuraApp {
     if (this.activeDocument && this.activeDocument.references) {
       this.activeDocument.references[idx] = text;
       this.refreshCompliancePanel();
+      this.triggerAutoSave();
     }
   }
 
