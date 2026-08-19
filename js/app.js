@@ -15,10 +15,12 @@ class AuraApp {
     this.spellLanguage = 'pt';
     this.currentLang = localStorage.getItem('aura_lang') || 'pt';
     
-    // State History for Undo / Redo
-    this.historyStack = [];
-    this.historyIndex = -1;
-    this.saveStateToHistory();
+    // State History for Undo / Redo (Persistente por Documento)
+    this.historyStack = this.loadDocumentHistory(this.activeDocument ? this.activeDocument.id : null);
+    this.historyIndex = this.historyStack.length > 0 ? this.historyStack.length - 1 : -1;
+    if (this.historyStack.length === 0 && this.activeDocument) {
+      this.saveStateToHistory('Versão Inicial');
+    }
 
     // Find & Replace Search Navigation State
     this.searchMatches = [];
@@ -26,6 +28,31 @@ class AuraApp {
 
     // Auto-Save Debounce Timer
     this.autoSaveTimer = null;
+  }
+
+  loadDocumentHistory(docId) {
+    if (!docId) return [];
+    try {
+      const key = `aura_history_${docId}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar histórico:', e);
+    }
+    return [];
+  }
+
+  persistDocumentHistory() {
+    if (!this.activeDocument || !this.historyStack) return;
+    try {
+      const key = `aura_history_${this.activeDocument.id}`;
+      localStorage.setItem(key, JSON.stringify(this.historyStack));
+    } catch (e) {
+      console.warn('Erro ao salvar histórico:', e);
+    }
   }
 
   loadSavedDocuments() {
@@ -46,6 +73,7 @@ class AuraApp {
       if (this.openDocuments && this.openDocuments.length > 0) {
         localStorage.setItem('aura_saved_documents', JSON.stringify(this.openDocuments));
       }
+      this.persistDocumentHistory();
       this.updateAutoSaveBadge('saved');
     } catch (e) {
       console.warn('Erro ao persistir no localStorage:', e);
@@ -126,8 +154,11 @@ class AuraApp {
     }
     if (doc) {
       this.activeDocument = doc;
-      this.historyStack = [];
-      this.saveStateToHistory('Versão Inicial');
+      this.historyStack = this.loadDocumentHistory(doc.id);
+      this.historyIndex = this.historyStack.length > 0 ? this.historyStack.length - 1 : -1;
+      if (this.historyStack.length === 0) {
+        this.saveStateToHistory('Versão Inicial');
+      }
       this.persistDocuments();
       this.navigate('editor');
     }
@@ -193,6 +224,7 @@ class AuraApp {
     this.historyStack.push(snapshot);
     if (this.historyStack.length > 50) this.historyStack.shift();
     this.historyIndex = this.historyStack.length - 1;
+    this.persistDocumentHistory();
     this.triggerAutoSave();
     this.renderSidebarHistory();
   }
@@ -407,7 +439,7 @@ class AuraApp {
       }
     });
 
-    // Rastrear e salvar seleção ativa em contenteditable
+    // Rastrear e salvar seleção ativa em contenteditable + atualizar contador em tempo real
     document.addEventListener('selectionchange', () => {
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
@@ -415,6 +447,9 @@ class AuraApp {
         if (anchorNode && anchorNode.parentElement && anchorNode.parentElement.closest && anchorNode.parentElement.closest('.academic-page-sheet')) {
           this.savedSelectionRange = sel.getRangeAt(0).cloneRange();
         }
+      }
+      if (this.currentView === 'editor') {
+        this.refreshLiveState();
       }
     });
 
@@ -798,16 +833,33 @@ class AuraApp {
   // --- STATS, REPEATS, GRAMMAR, SPEECH & ZOOM CONTROLS ---
 
   refreshLiveState() {
-    const fullText = window.auraEditorView.getFullDocumentText(this.activeDocument);
-    const stats = window.auraLanguage.calculateStats(fullText);
+    let textToCalculate = '';
+    let isSelected = false;
+
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+      const selectedStr = sel.toString().trim();
+      const anchorNode = sel.anchorNode;
+      if (selectedStr && anchorNode && anchorNode.parentElement && anchorNode.parentElement.closest && anchorNode.parentElement.closest('.academic-page-sheet')) {
+        textToCalculate = selectedStr;
+        isSelected = true;
+      }
+    }
+
+    if (!isSelected) {
+      textToCalculate = window.auraEditorView.getFullDocumentText(this.activeDocument);
+    }
+
+    const stats = window.auraLanguage.calculateStats(textToCalculate);
+    const suffix = isSelected ? ' (seleção)' : '';
 
     // Toolbar Indicators
     const wordsEl = document.getElementById('stat-words');
     const charsEl = document.getElementById('stat-chars');
     const pagesEl = document.getElementById('stat-pages');
 
-    if (wordsEl) wordsEl.innerText = stats.words;
-    if (charsEl) charsEl.innerText = stats.charsWithSpaces;
+    if (wordsEl) wordsEl.innerText = `${stats.words}${suffix}`;
+    if (charsEl) charsEl.innerText = `${stats.charsWithSpaces}${suffix}`;
     if (pagesEl) pagesEl.innerText = `~${stats.estimatedPages}`;
 
     // Floating Bottom-Left Badge Indicators
@@ -815,9 +867,9 @@ class AuraApp {
     const floatChars = document.getElementById('float-stat-chars');
     const floatPages = document.getElementById('float-stat-pages');
 
-    if (floatWords) floatWords.innerText = stats.words;
-    if (floatChars) floatChars.innerText = stats.charsWithSpaces;
-    if (floatPages) floatPages.innerText = `~${stats.estimatedPages}`;
+    if (floatWords) floatWords.innerText = `${stats.words}${suffix}`;
+    if (floatChars) floatChars.innerText = `${stats.charsWithSpaces}${suffix}`;
+    if (floatPages) floatPages.innerText = isSelected ? `~${Math.max(1, Math.round(stats.words / 250))}` : `~${stats.estimatedPages}`;
 
     // Recalcular altura e indicadores visuais das quebras de folha A4
     this.recalculateA4PageBreaks();
@@ -1191,27 +1243,21 @@ class AuraApp {
       return;
     }
 
+    // Primeiro limpa os highlights para que o texto original esteja limpo na árvore
+    this.clearSearchHighlights();
+
     this.saveStateToHistory(replaceAll ? `Substituir tudo "${findTerm}"` : `Substituir 1 "${findTerm}"`);
 
+    const count = this.executeGlobalReplace(findTerm, replaceTerm, replaceAll, { matchCase, wholeWord });
+
     if (replaceAll) {
-      const count = this.searchMatches ? this.searchMatches.length : 0;
-      this.executeGlobalReplace(findTerm, replaceTerm, true, { matchCase, wholeWord });
       this.onFindInputChange('');
-      if (resultBox) resultBox.innerText = `✓ ${count} ocorrência(s) substituída(s).`;
-      this.showToast(`${count} ocorrência(s) de "${findTerm}" substituída(s) por "${replaceTerm}"!`, 'success');
+      if (resultBox) resultBox.innerText = `✓ ${count} ocorrência(s) substituída(s) com sucesso.`;
+      this.showToast(`${count} ocorrência(s) de "${findTerm}" substituída(s) por "${replaceTerm}"!`, count > 0 ? 'success' : 'info');
     } else {
-      const currentHighlight = document.querySelector('.search-highlight-current') || (this.searchMatches && this.searchMatches[0]);
-      if (currentHighlight) {
-        currentHighlight.innerText = replaceTerm;
-        currentHighlight.classList.remove('search-highlight-current', 'search-highlight');
-        this.syncActiveDocumentFromDOM();
-        if (resultBox) resultBox.innerText = `✓ Ocorrência substituída por "${replaceTerm}".`;
-        this.showToast(`Ocorrência substituída!`, 'success');
-        this.onFindInputChange(findTerm);
-      } else {
-        this.executeGlobalReplace(findTerm, replaceTerm, false, { matchCase, wholeWord });
-        this.showToast(`Ocorrência substituída por "${replaceTerm}"!`, 'success');
-      }
+      if (resultBox) resultBox.innerText = count > 0 ? `✓ 1 ocorrência substituída por "${replaceTerm}".` : `Nenhuma ocorrência encontrada.`;
+      this.showToast(count > 0 ? `Ocorrência substituída por "${replaceTerm}"!` : `Nenhuma ocorrência encontrada.`, count > 0 ? 'success' : 'warning');
+      this.onFindInputChange(findTerm);
     }
     this.refreshLiveState();
   }
@@ -1570,15 +1616,18 @@ class AuraApp {
 
   executeGlobalReplace(searchTerm, replaceTerm, replaceAll = true, options = { matchCase: false, wholeWord: false }) {
     let totalCount = 0;
-    if (!this.activeDocument) return 0;
+    if (!this.activeDocument || !searchTerm) return 0;
 
+    // 1. Sincroniza primeiro o activeDocument a partir dos elementos visíveis caso existam edições não salvas
+    this.syncActiveDocumentFromDOM();
+
+    // 2. Substitui no modelo de dados
     if (this.activeDocument.abstract) {
       const res = window.auraLanguage.findAndReplace(this.activeDocument.abstract, searchTerm, replaceTerm, { ...options, replaceAll });
       this.activeDocument.abstract = res.updatedText;
       totalCount += res.replacementsCount;
     }
 
-    // Substituir nas seções
     (this.activeDocument.sections || []).forEach(sec => {
       if (sec.content) {
         const res = window.auraLanguage.findAndReplace(sec.content, searchTerm, replaceTerm, { ...options, replaceAll });
@@ -1587,7 +1636,29 @@ class AuraApp {
       }
     });
 
-    this.navigate('editor');
+    if (this.activeDocument.references && Array.isArray(this.activeDocument.references)) {
+      this.activeDocument.references = this.activeDocument.references.map(ref => {
+        const res = window.auraLanguage.findAndReplace(ref, searchTerm, replaceTerm, { ...options, replaceAll });
+        totalCount += res.replacementsCount;
+        return res.updatedText;
+      });
+    }
+
+    // 3. Atualiza diretamente o DOM dos elementos contenteditable para reflexo visual imediato
+    const abstractEl = document.getElementById('doc-abstract-input');
+    if (abstractEl && this.activeDocument.abstract) {
+      abstractEl.innerText = this.activeDocument.abstract;
+    }
+
+    (this.activeDocument.sections || []).forEach(sec => {
+      const secEl = document.getElementById(`content-${sec.id}`);
+      if (secEl && sec.content) {
+        secEl.innerHTML = sec.content;
+      }
+    });
+
+    this.persistDocuments();
+    this.refreshLiveState();
     return totalCount;
   }
 

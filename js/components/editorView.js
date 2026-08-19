@@ -673,7 +673,7 @@ class AuraEditorView {
               </div>
 
               <!-- 2. Detector de Repetições e Sinônimos (Retrátil com Toggle - Agora abaixo de Gramática) -->
-              <div class="bg-slate-800/60 rounded-xl border border-slate-700/60 flex flex-col overflow-hidden">
+              <div class="bg-slate-800/60 rounded-xl border border-slate-700/60 flex flex-col">
                 <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-slate-800/80 transition-colors" onclick="AURA.toggleRepeatedWordsBox()">
                   <span class="font-bold text-purple-300 flex items-center gap-1.5 select-none">
                     <i data-lucide="repeat" class="w-3.5 h-3.5"></i> Palavras Repetidas Detectadas
@@ -683,7 +683,7 @@ class AuraEditorView {
                     <i data-lucide="chevron-down" class="w-4 h-4 text-purple-400 transition-transform duration-200" id="repeated-words-chevron"></i>
                   </div>
                 </div>
-                <div id="repeated-words-container" class="p-3 pt-0 flex flex-col gap-1.5">
+                <div id="repeated-words-container" class="p-3 pt-0 flex flex-col gap-2 max-h-80 overflow-y-auto">
                   <!-- Gerado dinamicamente -->
                 </div>
               </div>

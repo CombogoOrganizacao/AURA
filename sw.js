@@ -1,5 +1,5 @@
 // AURA Service Worker — Offline Cache & Instant Load
-const CACHE_NAME = 'aura-cache-v3.8.0';
+const CACHE_NAME = 'aura-cache-v3.8.5';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
