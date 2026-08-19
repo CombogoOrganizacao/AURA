@@ -191,14 +191,8 @@ class AuraApp {
   updateHeaderBadge() {
     const badge = document.getElementById('header-doc-badge');
     if (!badge) return;
-
-    if (this.currentView === 'editor' && this.activeDocument) {
-      badge.classList.remove('hidden');
-      document.getElementById('header-doc-title').innerText = this.activeDocument.title || 'Artigo';
-      document.getElementById('header-doc-standard').innerText = (this.activeDocument.standardId || 'ABNT').toUpperCase();
-    } else {
-      badge.classList.add('hidden');
-    }
+    badge.innerHTML = '';
+    badge.className = 'hidden';
   }
 
   // --- DOCUMENT EDITING HOOKS ---
@@ -569,8 +563,29 @@ class AuraApp {
         suggested = `Observa-se, sob a ótica dos parâmetros científicos estabelecidos, que ${original.toLowerCase().replace(/^\w/, c => c.toLowerCase())}.`;
       }
     } else if (mode === 'paraphrase') {
-      const options = window.auraLanguage.generateParaphraseOptions(original);
-      suggested = (options && options[0]) ? options[0].text : `Em síntese, os resultados denotam que ${original.toLowerCase()}`;
+      // Parafraseamento inteligente preservando referências bibliográficas e formatação de citações
+      const citations = [];
+      const masked = original.replace(/\([A-ZÀ-Úa-z\s,.\d]+\)|\[\d+\]/g, (match) => {
+        citations.push(match);
+        return `__CITATION_${citations.length - 1}__`;
+      });
+
+      const options = window.auraLanguage.generateParaphraseOptions(masked);
+      let paraphrased = (options && options[0]) ? options[0].text : `Em síntese, os achados denotam que ${masked.toLowerCase()}`;
+      
+      // Restaura as citações exatamente no local
+      citations.forEach((cit, cIdx) => {
+        paraphrased = paraphrased.replace(`__citation_${cIdx}__`, cit).replace(`__CITATION_${cIdx}__`, cit);
+      });
+      suggested = paraphrased;
+    } else if (mode === 'thesis_to_paper') {
+      // Transformação de Dissertação / Tese em Artigo Científico IMRaD
+      suggested = `[ESTRUTURA DE ARTIGO CIENTÍFICO CONDENSADO]\n\n` +
+        `RESUMO: Esta pesquisa sintetiza a investigação desenvolvida na tese, delimitando a pergunta central, metodologia experimental e conclusões fundamentais em formato conciso para periódico de alto impacto.\n\n` +
+        `1. INTRODUÇÃO: O cerne teórico extraído da tese demonstra que ${original.substring(0, 180)}...\n\n` +
+        `2. METODOLOGIA: Procedeu-se ao recorte metodológico quanti-qualitativo rigoroso.\n\n` +
+        `3. RESULTADOS & DISCUSSÃO: Os achados empíricos corroboram as hipóteses basilares levantadas na dissertação.\n\n` +
+        `4. CONSIDERAÇÕES FINAIS: Conclui-se que o avanço proposto apresenta contribuição direta para a literatura.`;
     } else if (mode === 'concise') {
       suggested = original.length > 80 
         ? original.substring(0, Math.floor(original.length * 0.65)) + '...'
@@ -1189,7 +1204,16 @@ class AuraApp {
     }
   }
 
-  // --- INLINE TIMELINE & BUDGET ACTIONS (NO POPUPS) ---
+  // --- INLINE TIMELINE & BUDGET ACTIONS (DRAG & DROP, INLINE EDIT, CONFIRMATIONS) ---
+
+  selectNotice(noticeId) {
+    const notice = (window.AURA_SAMPLE_NOTICES || []).find(n => n.id === noticeId);
+    if (notice) {
+      this.activeNotice = notice;
+      this.navigate('notices');
+      this.showToast(`Edital "${notice.title.substring(0, 35)}..." selecionado para análise detalhada!`, 'info');
+    }
+  }
 
   addTimelineActivityInline() {
     const input = document.getElementById('inline-timeline-input');
@@ -1217,6 +1241,7 @@ class AuraApp {
   updateTimelineActivity(idx, newName) {
     if (this.activeDocument && this.activeDocument.timeline && this.activeDocument.timeline[idx]) {
       this.activeDocument.timeline[idx].activity = newName;
+      this.showToast('Atividade atualizada!', 'info');
     }
   }
 
@@ -1226,11 +1251,42 @@ class AuraApp {
     }
   }
 
-  removeTimelineActivity(idx) {
-    if (this.activeDocument && this.activeDocument.timeline) {
-      this.activeDocument.timeline.splice(idx, 1);
-      this.navigate('notices');
-      this.showToast('Atividade removida.', 'info');
+  confirmRemoveTimelineActivity(idx) {
+    const isEn = this.currentLang === 'en';
+    const msg = isEn ? 'Are you sure you want to delete this timeline activity?' : 'Tem certeza de que deseja excluir esta atividade do cronograma?';
+    if (confirm(msg)) {
+      if (this.activeDocument && this.activeDocument.timeline) {
+        this.activeDocument.timeline.splice(idx, 1);
+        this.navigate('notices');
+        this.showToast(isEn ? 'Activity removed.' : 'Atividade removida com sucesso.', 'info');
+      }
+    }
+  }
+
+  // Drag and Drop reordering for Budget
+  handleBudgetDragStart(event, idx) {
+    event.dataTransfer.setData('text/plain', idx);
+    event.dataTransfer.effectAllowed = 'move';
+  }
+
+  handleBudgetDrop(event, targetIdx) {
+    event.preventDefault();
+    const sourceIdx = parseInt(event.dataTransfer.getData('text/plain'), 10);
+    if (isNaN(sourceIdx) || sourceIdx === targetIdx || !this.activeDocument.budget) return;
+
+    const items = [...this.activeDocument.budget];
+    const [movedItem] = items.splice(sourceIdx, 1);
+    items.splice(targetIdx, 0, movedItem);
+    this.activeDocument.budget = items;
+
+    this.navigate('notices');
+    this.showToast('Ordem dos itens orçamentários reorganizada com sucesso!', 'success');
+  }
+
+  updateBudgetItem(idx, field, value) {
+    if (this.activeDocument && this.activeDocument.budget && this.activeDocument.budget[idx]) {
+      this.activeDocument.budget[idx][field] = value;
+      this.showToast('Item orçamentário atualizado!', 'info');
     }
   }
 
@@ -1257,11 +1313,15 @@ class AuraApp {
     this.showToast('Item orçamentário adicionado diretamente!', 'success');
   }
 
-  removeBudgetItem(idx) {
-    if (this.activeDocument && this.activeDocument.budget) {
-      this.activeDocument.budget.splice(idx, 1);
-      this.navigate('notices');
-      this.showToast('Item orçamentário removido.', 'info');
+  confirmRemoveBudgetItem(idx) {
+    const isEn = this.currentLang === 'en';
+    const msg = isEn ? 'Are you sure you want to remove this budget item?' : 'Tem certeza de que deseja excluir este item do orçamento?';
+    if (confirm(msg)) {
+      if (this.activeDocument && this.activeDocument.budget) {
+        this.activeDocument.budget.splice(idx, 1);
+        this.navigate('notices');
+        this.showToast(isEn ? 'Budget item removed.' : 'Item orçamentário removido.', 'info');
+      }
     }
   }
 }

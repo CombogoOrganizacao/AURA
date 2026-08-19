@@ -326,15 +326,17 @@ class AuraEditorView {
                   </button>
                   <button onclick="AURA.runAIAssist('paraphrase')" class="p-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-left border border-slate-700/60 flex flex-col gap-1">
                     <span class="font-bold text-indigo-300">Parafrasear</span>
-                    <span class="text-[10px] text-slate-400">Gera 4 variações</span>
+                    <span class="text-[10px] text-slate-400">Preserva citações</span>
                   </button>
                   <button onclick="AURA.runAIAssist('concise')" class="p-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-left border border-slate-700/60 flex flex-col gap-1">
                     <span class="font-bold text-emerald-300">Resumir / Enxugar</span>
                     <span class="text-[10px] text-slate-400">Adequar a limites</span>
                   </button>
-                  <button onclick="AURA.runAIAssist('alignment')" class="p-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-left border border-slate-700/60 flex flex-col gap-1">
-                    <span class="font-bold text-amber-300">Alinhamento Lógico</span>
-                    <span class="text-[10px] text-slate-400">Problema ↔ Método</span>
+                  <button onclick="AURA.runAIAssist('thesis_to_paper')" class="p-2 rounded bg-gradient-to-br from-indigo-950/80 to-purple-950/80 hover:from-indigo-900 hover:to-purple-900 text-slate-200 text-left border border-indigo-500/50 flex flex-col gap-1 shadow-md">
+                    <span class="font-bold text-indigo-300 flex items-center gap-1">
+                      <i data-lucide="book-open-check" class="w-3.5 h-3.5 text-indigo-400"></i> Tese/Dissertação → Artigo
+                    </span>
+                    <span class="text-[10px] text-slate-300">Condensa em artigo IMRaD</span>
                   </button>
                 </div>
               </div>
