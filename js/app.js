@@ -610,10 +610,85 @@ class AuraApp {
     this.showToast('Template do Edital gerado com sucesso no editor!', 'success');
   }
 
+  createNewPreset() {
+    this.openPresetModal();
+  }
+
+  editPreset(presetId) {
+    const preset = window.auraRulesEngine.presets.find(p => p.id === presetId);
+    if (preset) {
+      this.openPresetModal(preset);
+    }
+  }
+
+  deletePreset(presetId) {
+    const isEn = this.currentLang === 'en';
+    if (confirm(isEn ? 'Are you sure you want to delete this preset?' : 'Tem certeza de que deseja excluir este preset?')) {
+      window.auraRulesEngine.deletePreset(presetId);
+      this.navigate('dashboard');
+      this.showToast(isEn ? 'Preset deleted.' : 'Preset removido.', 'info');
+    }
+  }
+
+  resetDefaultPresets() {
+    const isEn = this.currentLang === 'en';
+    if (confirm(isEn ? 'Reset all presets to default institutional standards?' : 'Deseja restaurar todos os presets para os padrões institucionais de fábrica?')) {
+      window.auraRulesEngine.resetDefaultPresets();
+      this.navigate('dashboard');
+      this.showToast(isEn ? 'Default presets restored!' : 'Presets restaurados para os padrões institucionais!', 'success');
+    }
+  }
+
+  applyPreset(presetId) {
+    const preset = window.auraRulesEngine.presets.find(p => p.id === presetId);
+    if (preset) {
+      this.activeDocument.standardId = preset.standardId;
+      this.navigate('editor');
+      this.applyAutomaticFormat();
+      this.showToast(`Preset "${preset.name}" aplicado ao editor!`, 'success');
+    }
+  }
+
+  openPresetModal(preset = null) {
+    window.auraModals.showPresetModal(preset);
+  }
+
+  savePresetFromModal(presetId) {
+    const name = document.getElementById('modal-preset-name').value.trim();
+    const standardId = document.getElementById('modal-preset-standard').value;
+    const fontFamily = document.getElementById('modal-preset-font').value;
+    const fontSize = parseInt(document.getElementById('modal-preset-size').value, 10) || 12;
+    const lineSpacing = parseFloat(document.getElementById('modal-preset-spacing').value) || 1.5;
+    const topMargin = parseFloat(document.getElementById('modal-preset-mtop').value) || 3.0;
+    const leftMargin = parseFloat(document.getElementById('modal-preset-mleft').value) || 3.0;
+    const bottomMargin = parseFloat(document.getElementById('modal-preset-mbottom').value) || 2.0;
+    const rightMargin = parseFloat(document.getElementById('modal-preset-mright').value) || 2.0;
+
+    if (!name) {
+      this.showToast(this.currentLang === 'en' ? 'Please provide a name for the preset.' : 'Por favor, informe o nome do preset.', 'warning');
+      return;
+    }
+
+    const presetData = {
+      id: presetId || ('preset_' + Date.now()),
+      name,
+      standardId,
+      fontFamily,
+      fontSize,
+      lineSpacing,
+      margins: { top: topMargin, left: leftMargin, bottom: bottomMargin, right: rightMargin }
+    };
+
+    window.auraRulesEngine.savePreset(presetData);
+    this.closeModal();
+    this.navigate('dashboard');
+    this.showToast(this.currentLang === 'en' ? 'Preset saved successfully!' : 'Preset salvo com sucesso!', 'success');
+  }
+
   applyAutomaticFormat() {
     const stdId = this.activeDocument.standardId || 'abnt';
     this.changeDocumentStandard(stdId);
-    this.showToast('Formatação automática de margens, fontes e espaçamento aplicada!', 'success');
+    this.showToast(this.currentLang === 'en' ? 'Automatic formatting of margins, typography and line spacing applied!' : 'Formatação automática de margens, fontes e espaçamento aplicada!', 'success');
   }
 
   // --- EXPORT TRIGGERS ---

@@ -169,6 +169,106 @@ class AuraModals {
     lucide.createIcons();
   }
 
+  showPresetModal(preset = null) {
+    const container = document.getElementById('modal-container');
+    const isEn = window.AURA && window.AURA.currentLang === 'en';
+    const isEditing = !!preset;
+    const p = preset || {
+      id: '',
+      name: '',
+      standardId: 'abnt',
+      fontFamily: 'Arial',
+      fontSize: 12,
+      lineSpacing: 1.5,
+      margins: { top: 3.0, left: 3.0, bottom: 2.0, right: 2.0 }
+    };
+
+    container.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div class="glass-panel w-full max-w-lg rounded-2xl p-5 sm:p-6 border border-slate-700 shadow-2xl flex flex-col gap-5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="sliders" class="w-5 h-5 text-purple-400"></i> ${isEditing ? (isEn ? 'Edit Formatting Preset' : 'Editar Preset de Formatação') : (isEn ? 'Create Custom Preset' : 'Criar Novo Preset de Formatação')}
+            </h3>
+            <button onclick="AURA.closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+
+          <div class="flex flex-col gap-3 text-xs">
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">${isEn ? 'Preset Name:' : 'Nome do Preset / Padrão:'}</label>
+              <input type="text" id="modal-preset-name" value="${p.name || ''}" placeholder="${isEn ? 'Ex: PPGCC Standard ABNT 2026' : 'Ex: Padrão PPGCC / Dissertação UNICAP'}" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-aura-500">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-300 font-medium mb-1">${isEn ? 'Base Standard:' : 'Norma de Referência:'}</label>
+                <select id="modal-preset-standard" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-aura-500">
+                  <option value="abnt" ${p.standardId === 'abnt' ? 'selected' : ''}>ABNT (Brasil)</option>
+                  <option value="apa" ${p.standardId === 'apa' ? 'selected' : ''}>APA 7th (Internacional)</option>
+                  <option value="ieee" ${p.standardId === 'ieee' ? 'selected' : ''}>IEEE (2 Colunas)</option>
+                  <option value="vancouver" ${p.standardId === 'vancouver' ? 'selected' : ''}>Vancouver (Medicina)</option>
+                  <option value="chicago" ${p.standardId === 'chicago' ? 'selected' : ''}>Chicago 17th</option>
+                  <option value="mla" ${p.standardId === 'mla' ? 'selected' : ''}>MLA 9th</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-slate-300 font-medium mb-1">${isEn ? 'Typography Family:' : 'Família Tipográfica:'}</label>
+                <select id="modal-preset-font" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-aura-500">
+                  <option value="Times New Roman" ${p.fontFamily === 'Times New Roman' ? 'selected' : ''}>Times New Roman (Serif)</option>
+                  <option value="Arial" ${p.fontFamily === 'Arial' ? 'selected' : ''}>Arial (Sans-serif)</option>
+                  <option value="Calibri" ${p.fontFamily === 'Calibri' ? 'selected' : ''}>Calibri</option>
+                  <option value="Helvetica" ${p.fontFamily === 'Helvetica' ? 'selected' : ''}>Helvetica</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-300 font-medium mb-1">${isEn ? 'Font Size (pt):' : 'Tamanho do Corpo (pt):'}</label>
+                <input type="number" id="modal-preset-size" value="${p.fontSize || 12}" min="8" max="18" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-aura-500">
+              </div>
+
+              <div>
+                <label class="block text-slate-300 font-medium mb-1">${isEn ? 'Line Spacing:' : 'Espaçamento Entrelinhas:'}</label>
+                <select id="modal-preset-spacing" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-aura-500">
+                  <option value="1.0" ${p.lineSpacing === 1.0 ? 'selected' : ''}>1.0 (Simples)</option>
+                  <option value="1.15" ${p.lineSpacing === 1.15 ? 'selected' : ''}>1.15 (IEEE)</option>
+                  <option value="1.5" ${p.lineSpacing === 1.5 ? 'selected' : ''}>1.5 (ABNT Padrão)</option>
+                  <option value="2.0" ${p.lineSpacing === 2.0 ? 'selected' : ''}>2.0 (APA Duplo)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">${isEn ? 'Margins (cm) — Top / Left / Bottom / Right:' : 'Margens da Página (cm) — Sup / Esq / Inf / Dir:'}</label>
+              <div class="grid grid-cols-4 gap-2">
+                <input type="number" step="0.1" id="modal-preset-mtop" value="${(p.margins && p.margins.top) || 3.0}" class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-center">
+                <input type="number" step="0.1" id="modal-preset-mleft" value="${(p.margins && p.margins.left) || 3.0}" class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-center">
+                <input type="number" step="0.1" id="modal-preset-mbottom" value="${(p.margins && p.margins.bottom) || 2.0}" class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-center">
+                <input type="number" step="0.1" id="modal-preset-mright" value="${(p.margins && p.margins.right) || 2.0}" class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-center">
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-3 border-t border-slate-800">
+            ${isEditing ? `
+              <button onclick="AURA.deletePreset('${p.id}')" class="text-rose-400 hover:text-rose-300 text-xs font-semibold flex items-center gap-1">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> ${isEn ? 'Delete' : 'Excluir Preset'}
+              </button>
+            ` : '<div></div>'}
+
+            <div class="flex items-center gap-2">
+              <button onclick="AURA.closeModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">${isEn ? 'Cancel' : 'Cancelar'}</button>
+              <button onclick="AURA.savePresetFromModal('${p.id || ''}')" class="px-5 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30">${isEn ? 'Save Preset' : 'Salvar Preset'}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    lucide.createIcons();
+  }
+
   close() {
     document.getElementById('modal-container').innerHTML = '';
   }

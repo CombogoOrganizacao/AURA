@@ -97,28 +97,42 @@ class AuraDashboardView {
 
         <!-- PRESETS DE FORMATAÇÃO E NORMAS SALVAS -->
         <div class="glass-panel rounded-2xl p-5 sm:p-6 border border-slate-800">
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div>
               <h3 class="text-base font-bold text-white flex items-center gap-2">
                 <i data-lucide="sliders" class="w-4 h-4 text-purple-400"></i> ${t('dash_presets_title')}
               </h3>
               <p class="text-xs text-slate-400 mt-0.5">${t('dash_presets_desc')}</p>
             </div>
-            <button onclick="AURA.createNewPreset()" class="text-xs text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-1">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i> ${t('dash_new_preset')}
-            </button>
+            
+            <div class="flex items-center gap-2">
+              <button onclick="AURA.resetDefaultPresets()" title="${isEn ? 'Reset to factory defaults' : 'Restaurar padrões de fábrica'}" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition-all">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-amber-400"></i> ${isEn ? 'Reset Defaults' : 'Restaurar Padrões'}
+              </button>
+              <button onclick="AURA.createNewPreset()" class="px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 flex items-center gap-1.5 transition-all">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> ${t('dash_new_preset')}
+              </button>
+            </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             ${(window.auraRulesEngine.presets || []).map(pr => `
-              <div class="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 flex flex-col justify-between gap-3">
+              <div class="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 flex flex-col justify-between gap-3 hover:border-purple-500/40 transition-all">
                 <div>
-                  <div class="font-bold text-white text-xs">${pr.name}</div>
-                  <div class="text-[10px] text-slate-400 mt-1">${t('standard')}: ${pr.standardId.toUpperCase()}</div>
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="font-bold text-white text-xs leading-snug">${pr.name}</div>
+                    <button onclick="AURA.editPreset('${pr.id}')" title="${isEn ? 'Edit Preset' : 'Editar Preset'}" class="text-slate-400 hover:text-purple-300 p-0.5">
+                      <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                  <div class="text-[10px] text-slate-400 mt-1.5 flex flex-wrap gap-1">
+                    <span class="px-1.5 py-0.5 rounded bg-slate-800 text-purple-300 font-mono">${pr.standardId.toUpperCase()}</span>
+                    <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">${pr.fontFamily || 'Times/Arial'}</span>
+                  </div>
                 </div>
-                <div class="flex items-center justify-between pt-2 border-t border-slate-700 text-[10px] text-slate-400">
+                <div class="flex items-center justify-between pt-2 border-t border-slate-700/60 text-[10px] text-slate-400">
                   <span>${t('dash_ready_use')}</span>
-                  <button onclick="AURA.applyPreset('${pr.id}')" class="text-aura-400 font-bold hover:underline">${t('dash_apply')}</button>
+                  <button onclick="AURA.applyPreset('${pr.id}')" class="text-purple-400 font-bold hover:underline">${t('dash_apply')}</button>
                 </div>
               </div>
             `).join('')}

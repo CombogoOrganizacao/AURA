@@ -8,13 +8,50 @@ class AuraRulesEngine {
     this.presets = this.loadPresets();
   }
 
-  loadPresets() {
-    const defaultPresets = [
-      { id: 'unicap_abnt', name: 'Minha ABNT — UNICAP', standardId: 'abnt', customFont: 'Arial', customSpacing: 1.5 },
-      { id: 'sbc_paper', name: 'Artigo — SBC (Soc. Bras. Comp.)', standardId: 'abnt', customFont: 'Times New Roman', customMargins: { top: 3.5, left: 3.0, bottom: 2.5, right: 3.0 } },
-      { id: 'ieee_transactions', name: 'IEEE Transactions Format', standardId: 'ieee', customFont: 'Times New Roman' },
-      { id: 'fapesp_proposal', name: 'Projeto FAPESP / Bolsas', standardId: 'abnt', maxPages: 20, font: 'Times New Roman 12pt' }
+  getDefaultPresets() {
+    return [
+      { 
+        id: 'unicap_abnt', 
+        name: 'ABNT — Institucional UNICAP', 
+        standardId: 'abnt', 
+        fontFamily: 'Arial', 
+        fontSize: 12,
+        lineSpacing: 1.5,
+        margins: { top: 3.0, left: 3.0, bottom: 2.0, right: 2.0 }
+      },
+      { 
+        id: 'sbc_paper', 
+        name: 'Artigo — SBC (Sociedade Brasileira de Computação)', 
+        standardId: 'abnt', 
+        fontFamily: 'Times New Roman', 
+        fontSize: 12,
+        lineSpacing: 1.5,
+        margins: { top: 3.5, left: 3.0, bottom: 2.5, right: 3.0 } 
+      },
+      { 
+        id: 'ieee_transactions', 
+        name: 'IEEE Transactions (Duas Colunas)', 
+        standardId: 'ieee', 
+        fontFamily: 'Times New Roman',
+        fontSize: 10,
+        lineSpacing: 1.15,
+        margins: { top: 1.9, left: 1.43, bottom: 2.54, right: 1.43 }
+      },
+      { 
+        id: 'fapesp_proposal', 
+        name: 'Projeto de Pesquisa FAPESP / Bolsas', 
+        standardId: 'abnt', 
+        fontFamily: 'Times New Roman',
+        fontSize: 12,
+        lineSpacing: 1.5,
+        maxPages: 20,
+        margins: { top: 3.0, left: 3.0, bottom: 2.0, right: 2.0 }
+      }
     ];
+  }
+
+  loadPresets() {
+    const defaultPresets = this.getDefaultPresets();
     try {
       const stored = localStorage.getItem('aura_presets');
       return stored ? JSON.parse(stored) : defaultPresets;
@@ -24,8 +61,34 @@ class AuraRulesEngine {
   }
 
   savePreset(preset) {
-    this.presets.push(preset);
+    const existingIndex = this.presets.findIndex(p => p.id === preset.id);
+    if (existingIndex >= 0) {
+      this.presets[existingIndex] = preset;
+    } else {
+      this.presets.push(preset);
+    }
     localStorage.setItem('aura_presets', JSON.stringify(this.presets));
+  }
+
+  updatePreset(presetId, updatedData) {
+    const idx = this.presets.findIndex(p => p.id === presetId);
+    if (idx >= 0) {
+      this.presets[idx] = { ...this.presets[idx], ...updatedData };
+      localStorage.setItem('aura_presets', JSON.stringify(this.presets));
+      return this.presets[idx];
+    }
+    return null;
+  }
+
+  deletePreset(presetId) {
+    this.presets = this.presets.filter(p => p.id !== presetId);
+    localStorage.setItem('aura_presets', JSON.stringify(this.presets));
+  }
+
+  resetDefaultPresets() {
+    this.presets = this.getDefaultPresets();
+    localStorage.setItem('aura_presets', JSON.stringify(this.presets));
+    return this.presets;
   }
 
   /**
