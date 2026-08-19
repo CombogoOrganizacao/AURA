@@ -1857,6 +1857,9 @@ class AuraApp {
     if (type === 'direct') {
       const pageStr = page ? `, p. ${page}` : '';
       citationHtml = `<span>"${text}" (${author.toUpperCase()}, ${year}${pageStr})</span>&nbsp;`;
+    } else if (type === 'long') {
+      const pageStr = page ? `, p. ${page}` : '';
+      citationHtml = `<div class="academic-long-quote">${text} (${author.toUpperCase()}, ${year}${pageStr})</div><p class="academic-paragraph"></p>`;
     } else if (type === 'indirect') {
       const pageStr = page ? `, p. ${page}` : '';
       citationHtml = `<span>(${author.toUpperCase()}, ${year}${pageStr})</span>&nbsp;`;
@@ -1864,7 +1867,7 @@ class AuraApp {
       citationHtml = `<span>(${author.toUpperCase()}, ${year} apud ${apud.toUpperCase()})</span>&nbsp;`;
     }
 
-    this.saveStateToHistory();
+    this.saveStateToHistory('Inserção de Citação');
     this.closeModal();
     document.execCommand('insertHTML', false, citationHtml);
     this.refreshCompliancePanel();
@@ -1872,11 +1875,8 @@ class AuraApp {
   }
 
   insertLongQuote() {
-    const quote = prompt('Insira o texto da citação longa (ABNT: + de 3 linhas com recuo 4cm e corpo 10pt):');
-    if (quote) {
-      this.saveStateToHistory();
-      document.execCommand('insertHTML', false, `<div class="academic-long-quote">${quote}</div><p class="academic-paragraph"></p>`);
-    }
+    this.toggleCitationMenu();
+    window.auraModals.showCitationModal('long');
   }
 
   insertImageModal() {

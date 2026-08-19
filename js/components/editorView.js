@@ -32,10 +32,10 @@ class AuraEditorView {
     const t = (key) => window.AURA ? window.AURA.t(key) : key;
 
     container.innerHTML = `
-      <div class="flex-1 flex flex-col min-h-[calc(100vh-61px)] bg-slate-950">
+      <div class="flex-1 flex flex-col min-h-[calc(100vh-61px)] md:h-[calc(100vh-61px)] bg-slate-950 md:overflow-hidden">
         
         <!-- EDITOR TOP TOOLBAR (Header, Ferramentas & Abas de Documentos - FIXO) -->
-        <div class="editor-sticky-toolbar bg-slate-900 border-b border-slate-800 shadow-md">
+        <div class="editor-sticky-toolbar bg-slate-900 border-b border-slate-800 shadow-md flex-shrink-0">
           
           <!-- Toolbar Principal de Formatação -->
           <div class="px-3 sm:px-4 py-2 flex items-center justify-between gap-2 text-xs z-40 whitespace-nowrap overflow-x-auto relative border-b border-slate-800/80">
@@ -232,13 +232,13 @@ class AuraEditorView {
         </div>
 
         <!-- WORKSPACE (SIDEBAR + MAIN CANVAS + CONTEXT PANEL) -->
-        <div class="flex-1 flex flex-col md:flex-row relative">
+        <div class="flex-1 flex flex-col md:flex-row relative md:overflow-hidden">
           
           <!-- MOBILE BACKDROP -->
           <div id="editor-mobile-backdrop" onclick="AURA.closeMobileDrawers()" class="hidden drawer-backdrop md:hidden"></div>
 
           <!-- LEFT SIDEBAR: STRUCTURE TREE (ESTRUTURA DO TRABALHO - FIXO NO DESKTOP, DRAWER NO MOBILE) -->
-          <aside id="editor-left-sidebar" class="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col flex-shrink-0 editor-sticky-sidebar editor-drawer-mobile editor-drawer-left">
+          <aside id="editor-left-sidebar" class="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col flex-shrink-0 md:h-full md:overflow-y-auto editor-sticky-sidebar editor-drawer-mobile editor-drawer-left">
             <div>
               <div class="p-3 border-b border-slate-800 flex items-center justify-between">
                 <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -297,7 +297,7 @@ class AuraEditorView {
           </aside>
 
           <!-- CENTER: CANVAS COM FOLHAS ACADÊMICAS REAIS A4 (ESTILO WORD / GOOGLE DOCS) -->
-          <div class="flex-1 academic-page-container overflow-y-auto p-4 sm:p-6 lg:p-10 flex flex-col items-center pb-28" id="editor-sheet-container">
+          <div class="flex-1 academic-page-container overflow-y-auto p-4 sm:p-6 lg:p-10 flex flex-col items-center pb-28 md:h-full" id="editor-sheet-container">
             
             <div id="academic-sheets-wrapper" class="w-full max-w-[210mm] flex flex-col items-center transition-all">
               
@@ -521,7 +521,7 @@ class AuraEditorView {
           </div>
 
           <!-- RIGHT CONTEXT PANEL (ASSISTENTE IA, ANÁLISE, LOCALIZAR/SUBSTITUIR - FIXO NO DESKTOP, DRAWER NO MOBILE) -->
-          <aside class="w-full md:w-80 lg:w-96 bg-slate-900 border-l border-slate-800 flex flex-col flex-shrink-0 editor-sticky-sidebar editor-drawer-mobile editor-drawer-right" id="editor-right-panel">
+          <aside class="w-full md:w-80 lg:w-96 bg-slate-900 border-l border-slate-800 flex flex-col flex-shrink-0 md:h-full md:overflow-y-auto editor-sticky-sidebar editor-drawer-mobile editor-drawer-right" id="editor-right-panel">
             
             <!-- Mobile Close Header -->
             <div class="md:hidden p-2.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">

@@ -322,12 +322,13 @@ class AuraModals {
     const isEn = window.AURA && window.AURA.currentLang === 'en';
 
     let typeTitle = isEn ? 'Short Direct Citation' : 'Citação Direta Curta';
+    if (type === 'long') typeTitle = isEn ? 'Long Direct Citation (Block Quote)' : 'Citação Direta Longa (+ de 3 linhas)';
     if (type === 'indirect') typeTitle = isEn ? 'Indirect Citation / Paraphrase' : 'Citação Indireta (Paráfrase)';
     if (type === 'apud') typeTitle = isEn ? 'Citation of Citation (Apud)' : 'Citação de Citação (Apud)';
 
     container.innerHTML = `
       <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-        <div class="glass-panel w-full max-w-md rounded-2xl p-5 sm:p-6 border border-slate-700 shadow-2xl flex flex-col gap-4">
+        <div class="glass-panel w-full max-w-lg rounded-2xl p-5 sm:p-6 border border-slate-700 shadow-2xl flex flex-col gap-4">
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 class="text-base font-bold text-white flex items-center gap-2">
               <i data-lucide="bookmark" class="w-5 h-5 text-indigo-400"></i> ${typeTitle}
@@ -363,7 +364,17 @@ class AuraModals {
             ${type === 'direct' ? `
               <div>
                 <label class="block text-slate-300 font-medium mb-1">${isEn ? 'Quoted Text (up to 3 lines):' : 'Texto Citado (até 3 linhas):'}</label>
-                <textarea id="modal-cit-text" rows="3" placeholder="Insira o trecho textual exato..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"></textarea>
+                <textarea id="modal-cit-text" rows="3" placeholder="Insira o trecho textual exato entre aspas..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"></textarea>
+              </div>
+            ` : ''}
+
+            ${type === 'long' ? `
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block text-slate-300 font-medium">${isEn ? 'Long Quoted Text (+3 lines):' : 'Texto da Citação Longa (+ de 3 linhas):'}</label>
+                  <span class="text-[10px] text-aura-400 font-mono">Recuo 4cm • Fonte 10pt • Espaço Simples</span>
+                </div>
+                <textarea id="modal-cit-text" rows="5" placeholder="Digite ou cole aqui o texto integral da citação longa..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500 text-xs"></textarea>
               </div>
             ` : ''}
           </div>
