@@ -95,9 +95,18 @@ class AuraDashboardView {
                 <div class="flex flex-col gap-3">
                   <div class="flex items-center justify-between">
                     <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-mono font-bold">${p.standard}</span>
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${p.score >= 85 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}">
-                      ${p.score}% ${t('dash_ready')}
-                    </span>
+                    <div class="flex items-center gap-2">
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${p.score >= 85 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}">
+                        ${p.score}% ${t('dash_ready')}
+                      </span>
+                      <button 
+                        onclick="event.stopPropagation(); AURA.deleteSavedDocument('${p.id}')"
+                        class="p-1 rounded-lg bg-slate-800/80 hover:bg-rose-900/60 text-slate-400 hover:text-rose-300 border border-slate-700/50 transition-all"
+                        title="Excluir este trabalho"
+                      >
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
                   </div>
 
                   <h3 class="text-sm sm:text-base font-bold text-white leading-snug hover:text-aura-300 transition-colors line-clamp-2">

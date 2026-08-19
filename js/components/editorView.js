@@ -133,6 +133,10 @@ class AuraEditorView {
               <button onclick="AURA.openHeaderFooterModal()" title="Configurar Numeração, Cabeçalho e Rodapé" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
                 <i data-lucide="layout-template" class="w-3.5 h-3.5 text-purple-400"></i> <span class="hidden sm:inline">Cabeçalho/Rodapé</span>
               </button>
+              <!-- Botão de Histórico de Edições -->
+              <button onclick="AURA.openHistoryModal()" title="Histórico de Edições e Versões Salvas" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white flex items-center gap-1 border border-indigo-500/30 shadow-sm">
+                <i data-lucide="history" class="w-3.5 h-3.5 text-indigo-400"></i> <span class="hidden sm:inline">Histórico</span>
+              </button>
             </div>
 
             <!-- Standard Selector & Export Action -->
@@ -344,21 +348,33 @@ class AuraEditorView {
                   </section>
                 ` : ''}
 
-                <!-- Rodapé da Folha 1 -->
-                <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between text-[8.5pt] text-slate-400 select-none">
-                  <div>${(currentDoc.pageConfig && currentDoc.pageConfig.footerText) || ''}</div>
-                  <div class="text-[8pt] text-slate-300 uppercase">${stdId.toUpperCase()} • PÁG. 1</div>
+                <!-- Rodapé da Folha 1 (Editável diretamente na folha) -->
+                <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between text-[8.5pt] text-slate-400">
+                  <div 
+                    contenteditable="true" 
+                    id="doc-footer-input-1"
+                    oninput="AURA.updateDocFooterDirect(this.innerText)"
+                    title="Clique para editar o rodapé do trabalho"
+                    class="focus:outline-none focus:bg-slate-50 focus:ring-1 focus:ring-aura-400 rounded px-1.5 py-0.5 text-slate-500 hover:bg-slate-50/80 cursor-text min-w-[120px]"
+                  >${(currentDoc.pageConfig && currentDoc.pageConfig.footerText) || 'Insira uma nota de rodapé ou afiliação...'}</div>
+                  <div class="text-[8pt] text-slate-300 uppercase select-none">${stdId.toUpperCase()} • PÁG. 1</div>
                 </div>
               </div>
 
               <!-- FOLHA A4 - PÁGINA 2 (CORPO PRINCIPAL / METODOLOGIA / RESULTADOS) -->
               <div class="academic-page-sheet sheet-standard-${stdId}" id="academic-sheet-2" data-page="2">
-                <!-- Cabeçalho de Página e Numeração -->
-                <div class="flex items-center justify-between text-[10pt] font-mono text-slate-500 mb-6 pb-2 border-b border-slate-200 select-none">
-                  <div class="text-left font-sans text-xs text-slate-400 uppercase tracking-wider">
-                    ${(currentDoc.pageConfig && currentDoc.pageConfig.headerText) || ''}
+                <!-- Cabeçalho de Página e Numeração (Editável diretamente na folha) -->
+                <div class="flex items-center justify-between text-[10pt] font-mono text-slate-500 mb-6 pb-2 border-b border-slate-200">
+                  <div 
+                    contenteditable="true" 
+                    id="doc-header-input-2"
+                    oninput="AURA.updateDocHeaderDirect(this.innerText)"
+                    title="Clique para editar o cabeçalho superior"
+                    class="text-left font-sans text-xs text-slate-500 uppercase tracking-wider focus:outline-none focus:bg-slate-50 focus:ring-1 focus:ring-aura-400 rounded px-1.5 py-0.5 hover:bg-slate-50/80 cursor-text min-w-[180px]"
+                  >
+                    ${(currentDoc.pageConfig && currentDoc.pageConfig.headerText) || currentDoc.title || 'Título Curto do Trabalho / Cabeçalho Superior'}
                   </div>
-                  <div class="text-right font-mono font-bold text-slate-500">
+                  <div class="text-right font-mono font-bold text-slate-500 select-none">
                     ${this.formatPageNumber(currentDoc.pageConfig, 2)}
                   </div>
                 </div>
@@ -382,21 +398,33 @@ class AuraEditorView {
                   `).join('')}
                 </div>
 
-                <!-- Rodapé da Folha 2 -->
-                <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between text-[8.5pt] text-slate-400 select-none">
-                  <div>${(currentDoc.pageConfig && currentDoc.pageConfig.footerText) || ''}</div>
-                  <div class="text-[8pt] text-slate-300 uppercase">${stdId.toUpperCase()} • PÁG. 2</div>
+                <!-- Rodapé da Folha 2 (Editável diretamente na folha) -->
+                <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between text-[8.5pt] text-slate-400">
+                  <div 
+                    contenteditable="true" 
+                    id="doc-footer-input-2"
+                    oninput="AURA.updateDocFooterDirect(this.innerText)"
+                    title="Clique para editar o rodapé do trabalho"
+                    class="focus:outline-none focus:bg-slate-50 focus:ring-1 focus:ring-aura-400 rounded px-1.5 py-0.5 text-slate-500 hover:bg-slate-50/80 cursor-text min-w-[120px]"
+                  >${(currentDoc.pageConfig && currentDoc.pageConfig.footerText) || ''}</div>
+                  <div class="text-[8pt] text-slate-300 uppercase select-none">${stdId.toUpperCase()} • PÁG. 2</div>
                 </div>
               </div>
 
               <!-- FOLHA A4 - PÁGINA 3 (ELEMENTOS PÓS-TEXTUAIS & REFERÊNCIAS BIBLIOGRÁFICAS) -->
               <div class="academic-page-sheet sheet-standard-${stdId}" id="academic-sheet-3" data-page="3">
-                <!-- Cabeçalho de Página e Numeração -->
-                <div class="flex items-center justify-between text-[10pt] font-mono text-slate-500 mb-6 pb-2 border-b border-slate-200 select-none">
-                  <div class="text-left font-sans text-xs text-slate-400 uppercase tracking-wider">
-                    ${(currentDoc.pageConfig && currentDoc.pageConfig.headerText) || ''}
+                <!-- Cabeçalho de Página e Numeração (Editável diretamente na folha) -->
+                <div class="flex items-center justify-between text-[10pt] font-mono text-slate-500 mb-6 pb-2 border-b border-slate-200">
+                  <div 
+                    contenteditable="true" 
+                    id="doc-header-input-3"
+                    oninput="AURA.updateDocHeaderDirect(this.innerText)"
+                    title="Clique para editar o cabeçalho superior"
+                    class="text-left font-sans text-xs text-slate-500 uppercase tracking-wider focus:outline-none focus:bg-slate-50 focus:ring-1 focus:ring-aura-400 rounded px-1.5 py-0.5 hover:bg-slate-50/80 cursor-text min-w-[180px]"
+                  >
+                    ${(currentDoc.pageConfig && currentDoc.pageConfig.headerText) || currentDoc.title || 'Título Curto do Trabalho / Cabeçalho Superior'}
                   </div>
-                  <div class="text-right font-mono font-bold text-slate-500">
+                  <div class="text-right font-mono font-bold text-slate-500 select-none">
                     ${this.formatPageNumber(currentDoc.pageConfig, 3)}
                   </div>
                 </div>

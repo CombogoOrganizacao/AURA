@@ -880,21 +880,28 @@ class AuraApp {
     container.innerHTML = repeats.slice(0, 6).map((r, rIdx) => `
       <div class="p-2.5 rounded-lg bg-slate-900/80 border border-purple-900/40 hover:border-purple-500/50 transition-all flex flex-col gap-2">
         <div class="flex items-center justify-between">
-          <span class="font-bold text-purple-300 flex items-center gap-1 cursor-pointer hover:underline" onclick="AURA.highlightAndScrollToText('${r.word}')" title="Clique para localizar no texto">
+          <span class="font-bold text-purple-300 flex items-center gap-1 cursor-pointer hover:underline" onclick="AURA.focusRepeatedWord('${r.word}', 0)" title="Clique para navegar e localizar esta palavra no texto">
             <i data-lucide="repeat" class="w-3 h-3 text-purple-400"></i> "${r.word}"
           </span>
-          <span class="px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 text-[10px] font-mono font-bold">${r.count}x</span>
+          <div class="flex items-center gap-1">
+            <button onclick="AURA.navigateRepeatedWord('${r.word}', -1)" title="Ocorrência Anterior" class="p-1 rounded bg-slate-800 hover:bg-purple-700 text-purple-300 hover:text-white transition-all">
+              <i data-lucide="chevron-left" class="w-3 h-3"></i>
+            </button>
+            <span id="rep-counter-${r.word.replace(/\s+/g, '_')}" class="px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 text-[10px] font-mono font-bold">1/${r.count}</span>
+            <button onclick="AURA.navigateRepeatedWord('${r.word}', 1)" title="Próxima Ocorrência" class="p-1 rounded bg-slate-800 hover:bg-purple-700 text-purple-300 hover:text-white transition-all">
+              <i data-lucide="chevron-right" class="w-3 h-3"></i>
+            </button>
+          </div>
         </div>
         
-        <!-- Lista de Sinônimos Sugeridos com 1-Click Replacement (Substitui apenas 1 ocorrência para variar vocabulário) -->
+        <!-- Lista de Sinônimos Sugeridos com Substituição Direta na Ocorrência Focada -->
         <div class="flex flex-col gap-1 text-[10px] bg-slate-950/60 p-2 rounded border border-slate-800">
           <div class="text-slate-400 font-semibold mb-0.5 flex items-center justify-between">
-            <span>Trocar próxima ocorrência:</span>
-            <span class="text-[9px] text-purple-400 font-normal">1 ocorrência</span>
+            <span>Trocar esta ocorrência focada por:</span>
           </div>
           <div class="flex flex-wrap gap-1">
             ${r.synonyms.map(syn => `
-              <button onclick="AURA.replaceRepeatedWord('${r.word}', '${syn}')" title="Substituir 1 ocorrência de '${r.word}' por '${syn}'" class="px-2 py-0.5 rounded bg-purple-900/40 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-700/50 transition-all flex items-center gap-1">
+              <button onclick="AURA.replaceCurrentRepeatedOccurrence('${r.word}', '${syn}')" title="Substituir a ocorrência selecionada de '${r.word}' por '${syn}'" class="px-2 py-0.5 rounded bg-purple-900/40 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-700/50 transition-all flex items-center gap-1">
                 <span>${syn}</span>
                 <i data-lucide="arrow-right" class="w-2.5 h-2.5"></i>
               </button>
@@ -906,13 +913,135 @@ class AuraApp {
     lucide.createIcons();
   }
 
-  replaceRepeatedWord(oldWord, newWord) {
+  focusRepeatedWord(word, targetIndex = 0) {
+    this.repeatedWordIndices = this.repeatedWordIndices || {};
+    this.repeatedWordIndices[word] = targetIndex;
+    this.highlightAndScrollToText(word);
+    const counter = document.getElementById(`rep-counter-${word.replace(/\s+/g, '_')}`);
+    if (counter && this.searchMatches) {
+      counter.innerText = `${targetIndex + 1}/${this.searchMatches.length || 1}`;
+    }
+  }
+
+  navigateRepeatedWord(word, direction = 1) {
+    this.repeatedWordIndices = this.repeatedWordIndices || {};
+    const curr = this.repeatedWordIndices[word] || 0;
+    
+    // Assegura que o termo está pesquisado
+    const findInput = document.getElementById('find-input');
+    if (!findInput || findInput.value !== word) {
+      this.highlightAndScrollToText(word);
+    }
+    
+    if (direction > 0) {
+      this.findNextMatch();
+    } else {
+      this.findPrevMatch();
+    }
+
+    const nextIndex = this.currentSearchIndex >= 0 ? this.currentSearchIndex : 0;
+    this.repeatedWordIndices[word] = nextIndex;
+    const counter = document.getElementById(`rep-counter-${word.replace(/\s+/g, '_')}`);
+    if (counter && this.searchMatches) {
+      counter.innerText = `${nextIndex + 1}/${this.searchMatches.length}`;
+    }
+  }
+
+  replaceCurrentRepeatedOccurrence(oldWord, newWord) {
     this.saveStateToHistory();
-    // Substitui apenas 1 ocorrência para não substituir todo o texto de uma só vez
-    this.executeGlobalReplace(oldWord, newWord, false);
-    this.showToast(`1 ocorrência de "${oldWord}" foi substituída por "${newWord}".`, 'success');
+    // Localiza e substitui a ocorrência atual
+    const currentHighlight = document.querySelector('.search-highlight-current') || document.querySelector('.search-highlight');
+    if (currentHighlight) {
+      currentHighlight.innerText = newWord;
+      currentHighlight.classList.remove('search-highlight-current', 'search-highlight');
+      // Atualiza o documento a partir do DOM editável
+      this.syncActiveDocumentFromDOM();
+      this.showToast(`Ocorrência de "${oldWord}" substituída por "${newWord}".`, 'success');
+    } else {
+      this.executeGlobalReplace(oldWord, newWord, false);
+      this.showToast(`Ocorrência de "${oldWord}" substituída por "${newWord}".`, 'success');
+    }
     this.refreshRepeatedWords(false);
     this.refreshLiveState();
+  }
+
+  syncActiveDocumentFromDOM() {
+    if (!this.activeDocument) return;
+    const abstractEl = document.getElementById('doc-abstract-input');
+    if (abstractEl) this.activeDocument.abstract = abstractEl.innerText;
+    
+    (this.activeDocument.sections || []).forEach(sec => {
+      const secEl = document.getElementById(`content-${sec.id}`);
+      if (secEl) {
+        sec.content = secEl.innerText;
+      }
+    });
+    this.triggerAutoSave();
+  }
+
+  // --- CABEÇALHO & RODAPÉ EDITÁVEIS DIRETAMENTE NA FOLHA ---
+  updateDocHeaderDirect(text) {
+    if (!this.activeDocument) return;
+    if (!this.activeDocument.pageConfig) this.activeDocument.pageConfig = {};
+    this.activeDocument.pageConfig.headerText = text.trim();
+    // Sincronizar todos os campos de cabeçalho na folha
+    ['doc-header-input-2', 'doc-header-input-3'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && document.activeElement !== el) el.innerText = text.trim();
+    });
+    this.triggerAutoSave();
+  }
+
+  updateDocFooterDirect(text) {
+    if (!this.activeDocument) return;
+    if (!this.activeDocument.pageConfig) this.activeDocument.pageConfig = {};
+    this.activeDocument.pageConfig.footerText = text.trim();
+    // Sincronizar todos os campos de rodapé na folha
+    ['doc-footer-input-1', 'doc-footer-input-2'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && document.activeElement !== el) el.innerText = text.trim();
+    });
+    this.triggerAutoSave();
+  }
+
+  // --- GESTÃO E EXCLUSÃO DE TRABALHOS EM MEUS TRABALHOS ---
+  deleteSavedDocument(docId) {
+    const targetDoc = this.openDocuments.find(d => d.id === docId) || (window.AURA_SAMPLE_DOCUMENTS || []).find(d => d.id === docId);
+    const title = targetDoc ? targetDoc.title : 'Trabalho Acadêmico';
+    window.auraModals.showDeleteConfirmModal(docId, title);
+  }
+
+  confirmDeleteDocument(docId) {
+    this.openDocuments = this.openDocuments.filter(d => d.id !== docId);
+    if (window.AURA_SAMPLE_DOCUMENTS) {
+      window.AURA_SAMPLE_DOCUMENTS = window.AURA_SAMPLE_DOCUMENTS.filter(d => d.id !== docId);
+    }
+    
+    // Se o documento excluído for o ativo, seleciona o próximo restante
+    if (this.activeDocument && this.activeDocument.id === docId) {
+      this.activeDocument = this.openDocuments[0] || null;
+    }
+
+    this.persistDocuments();
+    this.closeModal();
+    this.navigate('dashboard');
+    this.showToast('Trabalho acadêmico excluído com sucesso!', 'info');
+  }
+
+  // --- MODAL DE HISTÓRICO DE VERSÕES ---
+  openHistoryModal() {
+    window.auraModals.showHistoryModal(this.historyStack, this.historyIndex);
+  }
+
+  restoreHistorySnapshot(snapshotIndex) {
+    if (this.historyStack[snapshotIndex]) {
+      this.historyIndex = snapshotIndex;
+      this.activeDocument = JSON.parse(this.historyStack[snapshotIndex]);
+      this.persistDocuments();
+      this.closeModal();
+      this.navigate('editor');
+      this.showToast(`Versão #${snapshotIndex + 1} restaurada com sucesso!`, 'success');
+    }
   }
 
   refreshSpellCheck() {
