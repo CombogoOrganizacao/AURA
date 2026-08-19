@@ -24,19 +24,38 @@ class AuraExportEngine {
    * Exporta o trabalho acadêmico como arquivo DOCX formatado (HTML-compatible Word)
    */
   exportToDocx(documentData, standardConfig) {
-    const std = standardConfig || window.AURA_STANDARDS.abnt;
+    const std = standardConfig || (documentData.standardId && window.AURA_STANDARDS[documentData.standardId]) || window.AURA_STANDARDS.abnt;
+    const stdId = documentData.standardId || 'abnt';
     
+    // Process sections into clean continuous paragraphs without unwanted <br>
+    const processSectionContent = (content) => {
+      if (!content) return '';
+      // Remove HTML tags se houver
+      const textOnly = content.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim();
+      const paragraphs = textOnly.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+      if (paragraphs.length === 0) {
+        return `<p class="MsoNormal academic-p">${textOnly.replace(/\n+/g, ' ')}</p>`;
+      }
+      return paragraphs.map(p => `<p class="MsoNormal academic-p">${p.replace(/\n+/g, ' ')}</p>`).join('\n');
+    };
+
     let htmlContent = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
         <meta charset="utf-8">
-        <title>${documentData.title}</title>
+        <title>${documentData.title || 'Trabalho Acadêmico'}</title>
         <!--[if gte mso 9]>
         <xml>
         <w:WordDocument>
           <w:View>Print</w:View>
           <w:Zoom>100</w:Zoom>
           <w:DoNotOptimizeForBrowser/>
+          <w:Compatibility>
+            <w:BreakWrappedTables/>
+            <w:SnapToGridInCell/>
+            <w:WrapTextWithPunct/>
+            <w:UseAsianBreakRules/>
+          </w:Compatibility>
         </w:WordDocument>
         </xml>
         <![endif]-->
@@ -50,75 +69,101 @@ class AuraExportEngine {
           }
           div.Section1 { page: Section1; }
           body {
-            font-family: '${std.font.family.split('/')[0].trim()}', serif;
+            font-family: '${std.font.family.split('/')[0].trim()}', 'Times New Roman', serif;
             font-size: ${std.font.size}pt;
             line-height: ${std.lineSpacing};
             text-align: ${std.alignment};
             color: #000000;
           }
-          h1 {
+          p.MsoNormal, p.academic-p {
+            font-family: '${std.font.family.split('/')[0].trim()}', 'Times New Roman', serif;
+            font-size: ${std.font.size}pt;
+            line-height: ${std.lineSpacing};
+            text-align: ${std.alignment};
+            text-indent: ${std.paragraphIndent}cm;
+            margin-top: 0pt;
+            margin-bottom: 6pt;
+            mso-line-height-rule: exactly;
+          }
+          h1.academic-h1 {
+            font-family: '${std.font.family.split('/')[0].trim()}', 'Times New Roman', serif;
             font-size: 12pt;
             font-weight: bold;
             text-transform: ${std.headings.h1.uppercase ? 'uppercase' : 'none'};
             margin-top: 18pt;
             margin-bottom: 6pt;
-          }
-          h2 {
-            font-size: 12pt;
-            font-weight: bold;
-            margin-top: 12pt;
-            margin-bottom: 4pt;
-          }
-          p {
-            text-indent: ${std.paragraphIndent}cm;
-            margin-top: 0pt;
-            margin-bottom: 6pt;
+            text-align: left;
+            text-indent: 0cm;
+            page-break-after: avoid;
           }
           .title-block {
             text-align: center;
             font-weight: bold;
-            font-size: 14pt;
-            margin-bottom: 24pt;
+            font-size: 13pt;
+            margin-top: 0pt;
+            margin-bottom: 16pt;
+            text-transform: uppercase;
+            line-height: 1.5;
+            text-indent: 0cm;
           }
           .author-block {
             text-align: center;
             font-size: 11pt;
-            margin-bottom: 30pt;
+            margin-bottom: 24pt;
+            text-indent: 0cm;
           }
-          .abstract-block {
-            font-size: 10pt;
-            line-height: 1.0;
-            margin-bottom: 20pt;
+          .abstract-container {
+            margin-top: 12pt;
+            margin-bottom: 18pt;
+            font-size: 10.5pt;
+            line-height: 1.2;
             text-align: justify;
+            text-indent: 0cm;
+          }
+          .abstract-container strong {
+            text-transform: uppercase;
+          }
+          .abstract-text {
+            text-indent: 0cm;
+            margin-top: 4pt;
+            margin-bottom: 6pt;
+          }
+          .keywords-line {
+            text-indent: 0cm;
+            font-size: 10.5pt;
+            margin-top: 6pt;
           }
           .reference-item {
             text-indent: 0cm;
-            margin-bottom: 12pt;
+            margin-top: 0pt;
+            margin-bottom: 10pt;
             font-size: ${std.font.size}pt;
             line-height: 1.0;
+            text-align: left;
           }
         </style>
       </head>
       <body>
         <div class="Section1">
-          <div class="title-block">${documentData.title.toUpperCase()}</div>
-          <div class="author-block">${documentData.authors || 'Autor(a)'}</div>
+          <div class="title-block">${(documentData.title || 'TÍTULO DO TRABALHO').toUpperCase()}</div>
+          <div class="author-block">${documentData.authors || 'Nome do(a) Autor(a)'}</div>
           
-          <div class="abstract-block">
-            <strong>RESUMO:</strong> ${documentData.abstract || ''}<br><br>
-            <strong>Palavras-chave:</strong> ${(documentData.keywords || []).join('. ')}.
+          <div class="abstract-container">
+            <strong>${stdId === 'apa' || stdId === 'ieee' || stdId === 'mla' ? 'ABSTRACT' : 'RESUMO'}</strong>
+            <div class="abstract-text">${documentData.abstract || ''}</div>
+            <div class="keywords-line"><strong>${stdId === 'apa' || stdId === 'ieee' || stdId === 'mla' ? 'Keywords:' : 'Palavras-chave:'}</strong> ${(documentData.keywords || []).join('; ')}.</div>
           </div>
 
-          <hr style="border: 0; border-top: 1px solid #ccc; margin: 20pt 0;">
+          <div style="height: 12pt;"></div>
 
           ${(documentData.sections || []).map(sec => `
-            <h1>${sec.title}</h1>
-            ${sec.content.split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('')}
+            <h1 class="academic-h1">${sec.title}</h1>
+            ${processSectionContent(sec.content)}
           `).join('')}
 
-          <h1>REFERÊNCIAS</h1>
+          <h1 class="academic-h1">${stdId === 'mla' ? 'WORKS CITED' : (stdId === 'chicago' ? 'BIBLIOGRAPHY' : (stdId === 'apa' || stdId === 'ieee' ? 'REFERENCES' : 'REFERÊNCIAS'))}</h1>
           ${(documentData.references || []).map(ref => `
-            <div class="reference-item">${ref}</div>
+            <p class="reference-item">${ref}</p>
           `).join('')}
         </div>
       </body>

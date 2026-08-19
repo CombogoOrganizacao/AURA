@@ -7,7 +7,7 @@ window.AURA_TRANSLATIONS = {
     // Header & Brand
     app_subtitle: 'Ambiente Unificado de Revisão Acadêmica',
     nav_home: 'Início',
-    nav_editor: 'Editor & Normas',
+    nav_editor: 'Editor & Revisão',
     nav_notices: 'Central de Editais',
     nav_dashboard: 'Meus Trabalhos',
     btn_new_doc: 'Novo Trabalho',
@@ -132,7 +132,7 @@ window.AURA_TRANSLATIONS = {
     // Header & Brand
     app_subtitle: 'Unified Academic Review & Writing Environment',
     nav_home: 'Home',
-    nav_editor: 'Editor & Standards',
+    nav_editor: 'Editor & Review',
     nav_notices: 'Calls & Grants Hub',
     nav_dashboard: 'My Projects',
     btn_new_doc: 'New Project',

@@ -1198,10 +1198,14 @@ class AuraApp {
       this.showToast('Edital analisado com sucesso!', 'success');
     } else {
       const parsedDoc = window.auraDocumentParser.parseTextToDocument(text, 'Documento Importado');
+      if (!this.openDocuments) this.openDocuments = [];
+      this.openDocuments.push(parsedDoc);
       this.activeDocument = parsedDoc;
       this.closeModal();
+      this.saveStateToHistory();
+      this.persistDocuments();
       this.navigate('editor');
-      this.showToast('Documento estruturado automaticamente pela IA!', 'success');
+      this.showToast('Documento estruturado em uma nova aba!', 'success');
     }
   }
 
@@ -1218,10 +1222,15 @@ class AuraApp {
         this.navigate('notices');
         this.showToast('Edital lido e processado com sucesso!', 'success');
       } else {
-        this.activeDocument = window.auraDocumentParser.parseTextToDocument(text, file.name);
+        const parsedDoc = window.auraDocumentParser.parseTextToDocument(text, file.name);
+        if (!this.openDocuments) this.openDocuments = [];
+        this.openDocuments.push(parsedDoc);
+        this.activeDocument = parsedDoc;
         this.closeModal();
+        this.saveStateToHistory();
+        this.persistDocuments();
         this.navigate('editor');
-        this.showToast('Documento importado e formatado!', 'success');
+        this.showToast('Documento importado em uma nova aba!', 'success');
       }
     };
     reader.readAsText(file, 'UTF-8');
