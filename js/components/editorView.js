@@ -33,30 +33,61 @@ class AuraEditorView {
     container.innerHTML = `
       <div class="flex-1 flex flex-col h-[calc(100vh-61px)] overflow-hidden bg-slate-950">
         
-        <!-- EDITOR TOP TOOLBAR (Mobile-First Responsive with horizontal scroll) -->
+        <!-- EDITOR TOP TOOLBAR (Fixed non-scrollable bar with comprehensive editing controls) -->
         <div class="bg-slate-900 border-b border-slate-800 px-3 sm:px-4 py-2 flex items-center justify-between gap-2 overflow-x-auto text-xs z-20 whitespace-nowrap scrollbar-none">
           
-          <!-- Formatting Buttons -->
+          <!-- History & Basic Formatting -->
           <div class="flex items-center gap-1 flex-shrink-0">
-            <button onclick="AURA.execCommand('bold')" title="Negrito" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="bold" class="w-4 h-4"></i></button>
-            <button onclick="AURA.execCommand('italic')" title="Itálico" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="italic" class="w-4 h-4"></i></button>
-            <button onclick="AURA.execCommand('underline')" title="Sublinhado" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="underline" class="w-4 h-4"></i></button>
+            <!-- Undo / Redo -->
+            <button onclick="AURA.undo()" title="Desfazer (Ctrl+Z)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center gap-1 font-medium">
+              <i data-lucide="undo-2" class="w-4 h-4 text-aura-400"></i>
+              <span class="hidden sm:inline">Desfazer</span>
+            </button>
+            <button onclick="AURA.redo()" title="Refazer (Ctrl+Y)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center gap-1 font-medium">
+              <i data-lucide="redo-2" class="w-4 h-4 text-aura-400"></i>
+              <span class="hidden sm:inline">Refazer</span>
+            </button>
             <div class="h-4 w-px bg-slate-700 mx-1"></div>
 
-            <button onclick="AURA.insertLongQuote()" title="Citação Longa ABNT (Recuo 4cm)" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
-              <i data-lucide="quote" class="w-3.5 h-3.5 text-aura-400"></i> <span class="hidden sm:inline">${t('long_quote')}</span>
+            <button onclick="AURA.execCommand('bold')" title="Negrito (Ctrl+B)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="bold" class="w-4 h-4"></i></button>
+            <button onclick="AURA.execCommand('italic')" title="Itálico (Ctrl+I)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="italic" class="w-4 h-4"></i></button>
+            <button onclick="AURA.execCommand('underline')" title="Sublinhado (Ctrl+U)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="underline" class="w-4 h-4"></i></button>
+            <div class="h-4 w-px bg-slate-700 mx-1"></div>
+
+            <!-- Intuitive Citation Selector Dropdown -->
+            <div class="relative inline-block text-left">
+              <button onclick="AURA.toggleCitationMenu()" id="btn-citation-dropdown" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1.5 font-medium border border-slate-700">
+                <i data-lucide="bookmark" class="w-3.5 h-3.5 text-indigo-400"></i>
+                <span>Citação</span>
+                <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
+              </button>
+              <div id="citation-dropdown-menu" class="hidden absolute left-0 mt-1 w-56 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl z-50 py-1.5 flex flex-col gap-1 text-xs animate-fade-in">
+                <button onclick="AURA.insertDirectCitation()" class="px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-white flex flex-col">
+                  <span class="font-bold text-indigo-300">Citação Direta Curta</span>
+                  <span class="text-[10px] text-slate-400">Até 3 linhas entre aspas ("...")</span>
+                </button>
+                <button onclick="AURA.insertLongQuote()" class="px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-white flex flex-col">
+                  <span class="font-bold text-aura-300">Citação Direta Longa</span>
+                  <span class="text-[10px] text-slate-400">+3 linhas, recuo 4cm e corpo 10pt</span>
+                </button>
+                <button onclick="AURA.insertIndirectCitation()" class="px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-white flex flex-col">
+                  <span class="font-bold text-emerald-300">Citação Indireta / Paráfrase</span>
+                  <span class="text-[10px] text-slate-400">Ideia com autor (Autor, Ano)</span>
+                </button>
+                <button onclick="AURA.insertApudCitation()" class="px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-white flex flex-col">
+                  <span class="font-bold text-amber-300">Citação de Outro Autor (Apud)</span>
+                  <span class="text-[10px] text-slate-400">Citação de citação (Silva apud Souza)</span>
+                </button>
+              </div>
+            </div>
+
+            <button onclick="AURA.insertImageModal()" title="Inserir Imagem / Figura com Legenda ABNT" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
+              <i data-lucide="image" class="w-3.5 h-3.5 text-emerald-400"></i> <span class="hidden sm:inline">Figura/Imagem</span>
             </button>
-            <button onclick="AURA.openCitationDialog()" title="Inserir Citação (Autor-Data ou Numérica)" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
-              <i data-lucide="bookmark" class="w-3.5 h-3.5 text-indigo-400"></i> <span class="hidden sm:inline">${t('citation_nbr')}</span>
+            <button onclick="AURA.insertTable()" title="Inserir Tabela Acadêmica com Fonte" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
+              <i data-lucide="table" class="w-3.5 h-3.5 text-blue-400"></i> <span class="hidden sm:inline">Tabela</span>
             </button>
-            <button onclick="AURA.insertTable()" title="Inserir Tabela Acadêmica" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="table" class="w-4 h-4"></i></button>
             <button onclick="AURA.insertEquation()" title="Inserir Equação Matemática" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="sigma" class="w-4 h-4"></i></button>
-            <div class="h-4 w-px bg-slate-700 mx-1"></div>
-
-            <!-- Find & Replace Button -->
-            <button onclick="AURA.openFindReplace()" title="Localizar e Substituir (Ctrl+F)" class="px-2.5 py-1 rounded bg-slate-800/80 hover:bg-slate-700 text-amber-300 flex items-center gap-1.5 font-medium">
-              <i data-lucide="search" class="w-3.5 h-3.5"></i> <span class="hidden md:inline">${t('find_replace')}</span>
-            </button>
           </div>
 
           <!-- Document Limits & Live Stats Indicators -->
@@ -84,7 +115,7 @@ class AuraEditorView {
             </div>
 
             <!-- Export Button -->
-            <button onclick="AURA.openExportModal()" class="px-2.5 sm:px-3 py-1 rounded bg-aura-600 hover:bg-aura-500 text-white font-semibold flex items-center gap-1 transition-all">
+            <button onclick="AURA.openExportModal()" class="px-2.5 sm:px-3 py-1 rounded bg-aura-600 hover:bg-aura-500 text-white font-semibold flex items-center gap-1 transition-all shadow-md shadow-aura-600/30">
               <i data-lucide="download" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">${t('export')}</span>
             </button>
           </div>
@@ -95,18 +126,27 @@ class AuraEditorView {
         <div class="flex-1 flex overflow-hidden">
           
           <!-- LEFT SIDEBAR: STRUCTURE TREE (ESTRUTURA DO TRABALHO) -->
-          <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between hidden md:flex">
-            <div class="p-3 border-b border-slate-800 flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <i data-lucide="list-tree" class="w-4 h-4 text-aura-400"></i> ${t('structure_title')}
-              </span>
-              <button onclick="AURA.addSection()" title="Adicionar Seção" class="p-1 rounded bg-slate-800 hover:bg-slate-700 text-aura-400">
-                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-              </button>
+          <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between hidden md:flex flex-shrink-0">
+            <div>
+              <div class="p-3 border-b border-slate-800 flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <i data-lucide="list-tree" class="w-4 h-4 text-aura-400"></i> ${t('structure_title')}
+                </span>
+                <button onclick="AURA.addSection()" title="Adicionar Seção" class="p-1 rounded bg-slate-800 hover:bg-slate-700 text-aura-400">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+
+              <!-- Quick Action: Auto-Format 1-Click (Proximo da estrutura do trabalho) -->
+              <div class="p-2.5 border-b border-slate-800 bg-slate-900/90">
+                <button onclick="AURA.applyAutomaticFormat()" class="w-full py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md shadow-emerald-700/20 flex items-center justify-center gap-1.5 transition-all">
+                  <i data-lucide="wand-2" class="w-3.5 h-3.5"></i> ${t('auto_format_btn')}
+                </button>
+              </div>
             </div>
 
             <!-- Sections List -->
-            <div class="flex-1 overflow-y-auto p-2 flex flex-col gap-1 text-xs" id="editor-section-tree">
+            <div class="flex-1 overflow-y-auto p-2 flex flex-col gap-1 text-xs scrollbar-thin" id="editor-section-tree">
               <!-- Elementos Pré-Textuais -->
               <div class="px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">${t('pre_textual')}</div>
               <div onclick="AURA.scrollToElement('doc-pretextual')" class="tree-item px-2.5 py-1.5 rounded bg-slate-800/40 text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer flex items-center gap-2">
@@ -132,13 +172,6 @@ class AuraEditorView {
               <div onclick="AURA.scrollToElement('doc-references')" class="tree-item px-2.5 py-1.5 rounded bg-slate-800/40 text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer flex items-center gap-2">
                 <i data-lucide="book-marked" class="w-3.5 h-3.5 text-amber-400"></i> ${t('references')} (${(currentDoc.references || []).length})
               </div>
-            </div>
-
-            <!-- Quick Action: Auto-Format 1-Click -->
-            <div class="p-3 border-t border-slate-800 bg-slate-900/80">
-              <button onclick="AURA.applyAutomaticFormat()" class="w-full py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md shadow-emerald-700/20 flex items-center justify-center gap-1.5 transition-all">
-                <i data-lucide="wand-2" class="w-3.5 h-3.5"></i> ${t('auto_format_btn')}
-              </button>
             </div>
           </aside>
 
@@ -308,19 +341,26 @@ class AuraEditorView {
                 </div>
               </div>
 
-              <!-- Live AI Suggestion Diff Box (Antes -> Depois) -->
+              <!-- Live AI Suggestion Diff Box -->
               <div id="ai-diff-container" class="hidden bg-slate-950 rounded-xl p-3 border border-aura-500/40 flex flex-col gap-2">
                 <div class="font-bold text-aura-400 flex items-center justify-between">
-                  <span>Sugestão da IA (Antes → Depois)</span>
-                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-aura-500/20 text-aura-300">Prévia</span>
+                  <span>Sugestão da IA</span>
+                  <div class="flex items-center gap-1">
+                    <button onclick="AURA.undo()" title="Desfazer" class="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white">
+                      <i data-lucide="undo-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button onclick="AURA.redo()" title="Refazer" class="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white">
+                      <i data-lucide="redo-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
                 </div>
                 <div class="p-2 rounded bg-rose-950/40 border border-rose-800/40 text-rose-200">
                   <div class="text-[10px] font-bold uppercase text-rose-400">Original:</div>
-                  <div id="ai-diff-original" class="mt-0.5">...</div>
+                  <div id="ai-diff-original" class="mt-0.5 max-h-24 overflow-y-auto">...</div>
                 </div>
                 <div class="p-2 rounded bg-emerald-950/40 border border-emerald-800/40 text-emerald-200">
                   <div class="text-[10px] font-bold uppercase text-emerald-400">Sugerido:</div>
-                  <div id="ai-diff-suggested" class="mt-0.5">...</div>
+                  <div id="ai-diff-suggested" class="mt-0.5 max-h-24 overflow-y-auto">...</div>
                 </div>
                 <div class="flex items-center gap-2 mt-1">
                   <button onclick="AURA.acceptDiff()" class="flex-1 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-center">
@@ -336,35 +376,48 @@ class AuraEditorView {
 
             <!-- Tab 2: Localizar e Substituir (Find & Replace) -->
             <div id="panel-tab-find_replace" class="hidden flex-1 overflow-y-auto p-4 flex flex-col gap-4 text-xs">
-              <div class="font-bold text-slate-200 flex items-center gap-1.5">
-                <i data-lucide="search" class="w-4 h-4 text-amber-400"></i> Localizar e Substituir em Lote
+              <div class="font-bold text-slate-200 flex items-center justify-between">
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="search" class="w-4 h-4 text-amber-400"></i> Localizar e Substituir
+                </span>
+                <span id="find-counter-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 font-mono hidden">0/0</span>
               </div>
 
               <div class="flex flex-col gap-3 bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
                 <div>
-                  <label class="block text-slate-400 text-[11px] mb-1">Localizar termo:</label>
-                  <input type="text" id="find-input" placeholder="Ex: através de, metodologias..." class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-none focus:border-amber-400">
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="text-slate-400 text-[11px]">Localizar termo:</label>
+                    <div class="flex items-center gap-1">
+                      <button onclick="AURA.findPrevMatch()" title="Ocorrência Anterior (Shift+F3)" class="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">
+                        <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <button onclick="AURA.findNextMatch()" title="Próxima Ocorrência (F3)" class="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <input type="text" id="find-input" oninput="AURA.onFindInputChange(this.value)" placeholder="Digite o termo para destacar na folha..." class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-none focus:border-amber-400">
                 </div>
 
                 <div>
                   <label class="block text-slate-400 text-[11px] mb-1">Substituir por:</label>
-                  <input type="text" id="replace-input" placeholder="Ex: por meio de, métodos..." class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-none focus:border-emerald-400">
+                  <input type="text" id="replace-input" placeholder="Novo texto substituto..." class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-none focus:border-emerald-400">
                 </div>
 
                 <div class="flex flex-col gap-1.5 text-slate-300 text-[11px]">
                   <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="find-opt-case" class="rounded bg-slate-900 border-slate-700 text-amber-500">
+                    <input type="checkbox" id="find-opt-case" onchange="AURA.onFindInputChange(document.getElementById('find-input').value)" class="rounded bg-slate-900 border-slate-700 text-amber-500">
                     Diferenciar maiúsculas/minúsculas
                   </label>
                   <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="find-opt-word" class="rounded bg-slate-900 border-slate-700 text-amber-500">
+                    <input type="checkbox" id="find-opt-word" onchange="AURA.onFindInputChange(document.getElementById('find-input').value)" class="rounded bg-slate-900 border-slate-700 text-amber-500">
                     Apenas palavras inteiras
                   </label>
                 </div>
 
                 <div class="flex items-center gap-2 pt-2 border-t border-slate-700">
                   <button onclick="AURA.execFindAndReplace(false)" class="flex-1 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-white font-medium text-center">
-                    Substituir Próxima
+                    Substituir Esta
                   </button>
                   <button onclick="AURA.execFindAndReplace(true)" class="flex-1 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-white font-bold text-center">
                     Substituir Tudo

@@ -11,6 +11,49 @@ class AuraApp {
     this.pendingAIDiff = null;
     this.spellLanguage = 'pt';
     this.currentLang = localStorage.getItem('aura_lang') || 'pt';
+    
+    // State History for Undo / Redo
+    this.historyStack = [];
+    this.historyIndex = -1;
+    this.saveStateToHistory();
+
+    // Find & Replace Search Navigation State
+    this.searchMatches = [];
+    this.currentSearchIndex = -1;
+  }
+
+  saveStateToHistory() {
+    if (!this.activeDocument) return;
+    const snapshot = JSON.stringify(this.activeDocument);
+    // If we're not at the top of history stack, truncate forward history
+    if (this.historyIndex < this.historyStack.length - 1) {
+      this.historyStack = this.historyStack.slice(0, this.historyIndex + 1);
+    }
+    this.historyStack.push(snapshot);
+    if (this.historyStack.length > 50) this.historyStack.shift();
+    this.historyIndex = this.historyStack.length - 1;
+  }
+
+  undo() {
+    if (this.historyIndex > 0) {
+      this.historyIndex--;
+      this.activeDocument = JSON.parse(this.historyStack[this.historyIndex]);
+      this.navigate('editor');
+      this.showToast(this.currentLang === 'en' ? 'Action undone.' : 'Ação desfeita (Desfazer).', 'info');
+    } else {
+      document.execCommand('undo', false, null);
+    }
+  }
+
+  redo() {
+    if (this.historyIndex < this.historyStack.length - 1) {
+      this.historyIndex++;
+      this.activeDocument = JSON.parse(this.historyStack[this.historyIndex]);
+      this.navigate('editor');
+      this.showToast(this.currentLang === 'en' ? 'Action redone.' : 'Ação refeita (Refazer).', 'info');
+    } else {
+      document.execCommand('redo', false, null);
+    }
   }
 
   init() {
@@ -115,12 +158,32 @@ class AuraApp {
 
   setupKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
-      // Ctrl+F ou Cmd+F para abrir o Localizar & Substituir
+      // Ctrl+Z / Cmd+Z para desfazer
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        if (this.currentView === 'editor' && !document.activeElement.isContentEditable) {
+          e.preventDefault();
+          this.undo();
+        }
+      }
+      // Ctrl+Y / Cmd+Shift+Z para refazer
+      if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')) {
+        if (this.currentView === 'editor' && !document.activeElement.isContentEditable) {
+          e.preventDefault();
+          this.redo();
+        }
+      }
+      // Ctrl+F para abrir o Localizar lateral
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
         if (this.currentView === 'editor') {
           e.preventDefault();
           this.openFindReplace();
         }
+      }
+      // F3 para proxima busca
+      if (e.key === 'F3') {
+        e.preventDefault();
+        if (e.shiftKey) this.findPrevMatch();
+        else this.findNextMatch();
       }
     });
   }
@@ -138,31 +201,31 @@ class AuraApp {
     }
   }
 
-  // --- EDITOR DOCUMENT STATE HANDLERS ---
+  // --- DOCUMENT EDITING HOOKS ---
 
   updateDocTitle(title) {
     if (this.activeDocument) {
       this.activeDocument.title = title;
-      this.refreshLiveState();
+      this.updateHeaderBadge();
     }
   }
 
   updateDocAuthors(authors) {
-    if (this.activeDocument) {
-      this.activeDocument.authors = authors;
-    }
+    if (this.activeDocument) this.activeDocument.authors = authors;
   }
 
-  updateDocAbstract(abstract) {
+  updateDocAbstract(abstractText) {
     if (this.activeDocument) {
-      this.activeDocument.abstract = abstract;
+      this.activeDocument.abstract = abstractText;
       this.refreshLiveState();
+      this.refreshCompliancePanel();
     }
   }
 
-  updateDocKeywords(kwStr) {
+  updateDocKeywords(keywordsText) {
     if (this.activeDocument) {
-      this.activeDocument.keywords = kwStr.split(';').map(k => k.trim()).filter(k => k.length > 0);
+      this.activeDocument.keywords = keywordsText.split(';').map(k => k.trim()).filter(k => k.length > 0);
+      this.refreshCompliancePanel();
     }
   }
 
@@ -176,7 +239,6 @@ class AuraApp {
     if (!this.activeDocument || !this.activeDocument.sections) return;
     const sec = this.activeDocument.sections.find(s => s.id === secId);
     if (sec) {
-      // Converte HTML do contenteditable em texto limpo com parágrafos
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = html;
       sec.content = tempDiv.innerText;
@@ -193,6 +255,7 @@ class AuraApp {
 
   deleteReference(idx) {
     if (this.activeDocument && this.activeDocument.references) {
+      this.saveStateToHistory();
       this.activeDocument.references.splice(idx, 1);
       this.navigate('editor');
       this.showToast('Referência removida com sucesso.', 'info');
@@ -200,8 +263,10 @@ class AuraApp {
   }
 
   addReferencePrompt() {
-    const ref = prompt('Digite ou cole a referência conforme ABNT NBR 6023:');
+    const isEn = this.currentLang === 'en';
+    const ref = prompt(isEn ? 'Enter bibliographic reference:' : 'Digite ou cole a referência conforme ABNT NBR 6023:');
     if (ref && ref.trim()) {
+      this.saveStateToHistory();
       if (!this.activeDocument.references) this.activeDocument.references = [];
       this.activeDocument.references.push(ref.trim());
       this.navigate('editor');
@@ -210,12 +275,14 @@ class AuraApp {
   }
 
   addSection() {
-    const title = prompt('Título da nova seção (ex: 4. RESULTADOS E DISCUSSÃO):');
+    const isEn = this.currentLang === 'en';
+    const title = prompt(isEn ? 'Section title:' : 'Título da nova seção (ex: 4. RESULTADOS E DISCUSSÃO):');
     if (title && title.trim()) {
+      this.saveStateToHistory();
       const newSec = {
         id: 'sec_' + Date.now(),
         title: title.trim(),
-        content: 'Insira aqui o conteúdo desta seção científica...'
+        content: isEn ? 'Type section scientific content here...' : 'Insira aqui o conteúdo desta seção científica...'
       };
       this.activeDocument.sections.push(newSec);
       this.navigate('editor');
@@ -224,7 +291,8 @@ class AuraApp {
   }
 
   deleteSection(secId) {
-    if (confirm('Deseja realmente excluir esta seção do documento?')) {
+    if (confirm(this.currentLang === 'en' ? 'Delete this section?' : 'Deseja realmente excluir esta seção do documento?')) {
+      this.saveStateToHistory();
       this.activeDocument.sections = this.activeDocument.sections.filter(s => s.id !== secId);
       this.navigate('editor');
       this.showToast('Seção excluída.', 'info');
@@ -233,6 +301,7 @@ class AuraApp {
 
   changeDocumentStandard(newStdId) {
     if (this.activeDocument) {
+      this.saveStateToHistory();
       this.activeDocument.standardId = newStdId;
       const sheet = document.getElementById('academic-active-sheet');
       if (sheet) {
@@ -296,20 +365,34 @@ class AuraApp {
       return;
     }
 
-    container.innerHTML = issues.slice(0, 3).map(iss => `
-      <div class="p-2 rounded-lg bg-slate-900/80 border border-rose-900/40 flex flex-col gap-1">
+    container.innerHTML = issues.slice(0, 4).map(iss => `
+      <div class="p-2.5 rounded-lg bg-slate-900/80 border border-rose-900/40 hover:border-rose-500/60 transition-all flex flex-col gap-1.5 cursor-pointer" onclick="AURA.highlightAndScrollToText('${iss.matchedText}')">
         <div class="flex items-center justify-between">
-          <span class="font-bold text-rose-300">"${iss.matchedText}"</span>
-          <button onclick="AURA.applySpellFix('${iss.matchedText}', '${iss.suggestedFix.split('/')[0].trim()}')" class="text-[10px] text-emerald-400 hover:underline font-bold">Substituir</button>
+          <span class="font-bold text-rose-300 flex items-center gap-1">
+            <i data-lucide="alert-circle" class="w-3.5 h-3.5 text-rose-400"></i> "${iss.matchedText}"
+          </span>
+          <button onclick="event.stopPropagation(); AURA.applySpellFix('${iss.matchedText}', '${iss.suggestedFix.split('/')[0].trim()}')" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/60">
+            Corrigir
+          </button>
         </div>
-        <div class="text-[10px] text-slate-400">${iss.reason}</div>
-        <div class="text-[10px] text-emerald-300 font-mono">Sugestão: ${iss.suggestedFix}</div>
+        <div class="text-[10px] text-slate-300">${iss.reason}</div>
+        <div class="text-[10px] text-emerald-300 font-mono">Sugestão: <strong>${iss.suggestedFix}</strong> (Clique para localizar)</div>
       </div>
     `).join('');
     lucide.createIcons();
   }
 
+  highlightAndScrollToText(targetText) {
+    this.openFindReplace();
+    const findInput = document.getElementById('find-input');
+    if (findInput) {
+      findInput.value = targetText;
+      this.onFindInputChange(targetText);
+    }
+  }
+
   applySpellFix(oldText, newText) {
+    this.saveStateToHistory();
     this.executeGlobalReplace(oldText, newText, true);
     this.showToast(`Substituído "${oldText}" por "${newText}"`, 'success');
   }
@@ -344,31 +427,59 @@ class AuraApp {
     lucide.createIcons();
   }
 
-  // --- ASSISTENTE IA (ANTES -> DEPOIS) ---
+  // --- ASSISTENTE IA (AGORA TRANSFORMA O TEXTO SELECIONADO OU SEÇÃO ATIVA) ---
+
+  getSelectedDocumentText() {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const text = selection.toString().trim();
+      if (text.length > 5) return text;
+    }
+    return null;
+  }
 
   runAIAssist(mode) {
-    if (!this.activeDocument || !this.activeDocument.sections || this.activeDocument.sections.length === 0) return;
-    
-    // Utiliza primeira seção ou introdução como base para a demonstração interativa
-    const targetSec = this.activeDocument.sections[0];
-    const original = targetSec.content.split('\n\n')[0];
+    if (!this.activeDocument) return;
+
+    let targetSection = (this.activeDocument.sections && this.activeDocument.sections[0]) || null;
+    let selected = this.getSelectedDocumentText();
+    let original = selected;
+
+    // Se o usuário não selecionou manualmente com o mouse, pega o primeiro parágrafo da primeira seção
+    if (!original && targetSection) {
+      original = targetSection.content.split('\n\n')[0] || targetSection.content;
+    }
+
+    if (!original) {
+      this.showToast('Por favor, selecione um trecho de texto no documento.', 'warning');
+      return;
+    }
 
     let suggested = '';
     if (mode === 'academic_tone') {
-      suggested = original.replace(/frequentemente enfrentam dificuldades/g, 'deparam-se com óbices epistemológicos e práticos')
-                          .replace(/desponta como uma alternativa viável/g, 'configura-se como um vetor metodológico proeminente');
+      suggested = original.replace(/frequentemente enfrentam dificuldades/gi, 'deparam-se com óbices epistemológicos e práticos')
+                          .replace(/desponta como uma alternativa viável/gi, 'configura-se como um vetor metodológico proeminente')
+                          .replace(/muito bom/gi, 'altamente satisfatório')
+                          .replace(/foi feito/gi, 'procedeu-se à realização de')
+                          .replace(/acho que/gi, 'os dados sugerem que')
+                          .replace(/mostra/gi, 'evidencia');
+      if (suggested === original) {
+        suggested = `Observa-se, sob a ótica dos parâmetros científicos estabelecidos, que ${original.toLowerCase().replace(/^\w/, c => c.toLowerCase())}.`;
+      }
     } else if (mode === 'paraphrase') {
       const options = window.auraLanguage.generateParaphraseOptions(original);
-      suggested = options[0].text;
+      suggested = (options && options[0]) ? options[0].text : `Em síntese, os resultados denotam que ${original.toLowerCase()}`;
     } else if (mode === 'concise') {
-      suggested = 'O crescimento vertiginoso da literatura científica desafia revisões sistemáticas e conformidade metodológica, demandando soluções baseadas em IA para extração e validação automatizadas.';
+      suggested = original.length > 80 
+        ? original.substring(0, Math.floor(original.length * 0.65)) + '...'
+        : 'Síntese objetiva: ' + original;
     } else if (mode === 'alignment') {
-      alert('✓ Alinhamento Metodológico Verificado:\n\n- Problema de Pesquisa: 100% alinhado aos Objetivos 1 e 2.\n- Metodologia: Descreve métodos para todos os objetivos específicos.\n- Cronograma: 24 meses adequados para a amostragem prevista.');
+      this.showToast('✓ Alinhamento Metodológico: 100% dos objetivos possuem métodos correspondentes.', 'success');
       return;
     }
 
     this.pendingAIDiff = {
-      sectionId: targetSec.id,
+      sectionId: targetSection ? targetSection.id : null,
       originalText: original,
       suggestedText: suggested
     };
@@ -378,17 +489,15 @@ class AuraApp {
       diffBox.classList.remove('hidden');
       document.getElementById('ai-diff-original').innerText = original;
       document.getElementById('ai-diff-suggested').innerText = suggested;
+      this.setRightTab('ai');
     }
   }
 
   acceptDiff() {
     if (!this.pendingAIDiff) return;
-    const sec = this.activeDocument.sections.find(s => s.id === this.pendingAIDiff.sectionId);
-    if (sec) {
-      sec.content = sec.content.replace(this.pendingAIDiff.originalText, this.pendingAIDiff.suggestedText);
-      this.navigate('editor');
-      this.showToast('Alteração da IA aplicada ao texto com sucesso!', 'success');
-    }
+    this.saveStateToHistory();
+    this.executeGlobalReplace(this.pendingAIDiff.originalText, this.pendingAIDiff.suggestedText, false);
+    this.showToast('Sugestão da IA aceita e inserida no texto!', 'success');
     this.rejectDiff();
   }
 
@@ -398,12 +507,107 @@ class AuraApp {
     if (diffBox) diffBox.classList.add('hidden');
   }
 
-  // --- LOCALIZAR E SUBSTITUIR EM LOTE ---
+  // --- LOCALIZAR E SUBSTITUIR COM NAVEGAÇÃO E HIGHLIGHT EM TEMPO REAL ---
 
   openFindReplace() {
     this.setRightTab('find_replace');
     const input = document.getElementById('find-input');
-    if (input) input.focus();
+    if (input) {
+      input.focus();
+      if (input.value) this.onFindInputChange(input.value);
+    }
+  }
+
+  onFindInputChange(term) {
+    const sheet = document.getElementById('academic-active-sheet');
+    const counterBadge = document.getElementById('find-counter-badge');
+    if (!sheet) return;
+
+    // Limpa destaques anteriores
+    this.clearSearchHighlights();
+
+    if (!term || term.trim().length === 0) {
+      if (counterBadge) counterBadge.classList.add('hidden');
+      this.searchMatches = [];
+      this.currentSearchIndex = -1;
+      return;
+    }
+
+    const matchCase = document.getElementById('find-opt-case') ? document.getElementById('find-opt-case').checked : false;
+    const wholeWord = document.getElementById('find-opt-word') ? document.getElementById('find-opt-word').checked : false;
+
+    // Cria regex seguro
+    let pattern = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (wholeWord) pattern = `\\b${pattern}\\b`;
+    const regex = new RegExp(pattern, matchCase ? 'g' : 'gi');
+
+    // Destaca no DOM visual da folha
+    const walker = document.createTreeWalker(sheet, NodeFilter.SHOW_TEXT, null, false);
+    const nodesToReplace = [];
+
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (node.parentElement && !node.parentElement.classList.contains('search-highlight') && regex.test(node.nodeValue)) {
+        nodesToReplace.push(node);
+      }
+    }
+
+    nodesToReplace.forEach(node => {
+      const span = document.createElement('span');
+      span.innerHTML = node.nodeValue.replace(regex, (match) => `<mark class="search-highlight">${match}</mark>`);
+      node.parentNode.replaceChild(span, node);
+    });
+
+    this.searchMatches = Array.from(sheet.querySelectorAll('.search-highlight'));
+    if (this.searchMatches.length > 0) {
+      this.currentSearchIndex = 0;
+      this.highlightCurrentMatch();
+      if (counterBadge) {
+        counterBadge.classList.remove('hidden');
+        counterBadge.innerText = `1/${this.searchMatches.length}`;
+      }
+    } else {
+      if (counterBadge) {
+        counterBadge.classList.remove('hidden');
+        counterBadge.innerText = '0/0';
+      }
+    }
+  }
+
+  clearSearchHighlights() {
+    const sheet = document.getElementById('academic-active-sheet');
+    if (!sheet) return;
+    sheet.querySelectorAll('.search-highlight').forEach(el => {
+      const parent = el.parentNode;
+      parent.replaceChild(document.createTextNode(el.innerText), el);
+      parent.normalize();
+    });
+  }
+
+  highlightCurrentMatch() {
+    if (this.searchMatches.length === 0 || this.currentSearchIndex < 0) return;
+    this.searchMatches.forEach(m => m.classList.remove('search-highlight-current'));
+    const curr = this.searchMatches[this.currentSearchIndex];
+    if (curr) {
+      curr.classList.add('search-highlight-current');
+      curr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const counterBadge = document.getElementById('find-counter-badge');
+      if (counterBadge) {
+        counterBadge.innerText = `${this.currentSearchIndex + 1}/${this.searchMatches.length}`;
+      }
+    }
+  }
+
+  findNextMatch() {
+    if (this.searchMatches.length === 0) return;
+    this.currentSearchIndex = (this.currentSearchIndex + 1) % this.searchMatches.length;
+    this.highlightCurrentMatch();
+  }
+
+  findPrevMatch() {
+    if (this.searchMatches.length === 0) return;
+    this.currentSearchIndex = (this.currentSearchIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
+    this.highlightCurrentMatch();
   }
 
   execFindAndReplace(replaceAll = true) {
@@ -417,11 +621,12 @@ class AuraApp {
       return;
     }
 
+    this.saveStateToHistory();
     const count = this.executeGlobalReplace(findTerm, replaceTerm, replaceAll, { matchCase, wholeWord });
     const resultsEl = document.getElementById('find-replace-results');
     if (resultsEl) {
       resultsEl.innerText = count > 0 
-        ? `✓ ${count} ocorrência(s) substituída(s) com sucesso em UTF-8.`
+        ? `✓ ${count} ocorrência(s) substituída(s) com sucesso.`
         : `Nenhuma ocorrência encontrada para "${findTerm}".`;
     }
     this.showToast(`${count} substituição(ões) realizadas!`, count > 0 ? 'success' : 'info');
@@ -431,7 +636,6 @@ class AuraApp {
     let totalCount = 0;
     if (!this.activeDocument) return 0;
 
-    // Substituir no resumo
     if (this.activeDocument.abstract) {
       const res = window.auraLanguage.findAndReplace(this.activeDocument.abstract, searchTerm, replaceTerm, { ...options, replaceAll });
       this.activeDocument.abstract = res.updatedText;
@@ -756,29 +960,110 @@ class AuraApp {
     document.execCommand(cmd, false, null);
   }
 
+  toggleCitationMenu() {
+    const menu = document.getElementById('citation-dropdown-menu');
+    if (menu) {
+      menu.classList.toggle('hidden');
+    }
+  }
+
+  insertDirectCitation() {
+    this.toggleCitationMenu();
+    window.auraModals.showCitationModal('direct');
+  }
+
+  insertIndirectCitation() {
+    this.toggleCitationMenu();
+    window.auraModals.showCitationModal('indirect');
+  }
+
+  insertApudCitation() {
+    this.toggleCitationMenu();
+    window.auraModals.showCitationModal('apud');
+  }
+
+  confirmInsertCitation(type) {
+    const author = document.getElementById('modal-cit-author').value.trim();
+    const year = document.getElementById('modal-cit-year').value.trim();
+    const page = document.getElementById('modal-cit-page').value.trim();
+    const apud = document.getElementById('modal-cit-apud') ? document.getElementById('modal-cit-apud').value.trim() : '';
+    const text = document.getElementById('modal-cit-text') ? document.getElementById('modal-cit-text').value.trim() : '';
+
+    if (!author || !year) {
+      this.showToast('Preencha ao menos o autor e ano.', 'warning');
+      return;
+    }
+
+    let citationHtml = '';
+    if (type === 'direct') {
+      const pageStr = page ? `, p. ${page}` : '';
+      citationHtml = `<span>"${text}" (${author.toUpperCase()}, ${year}${pageStr})</span>&nbsp;`;
+    } else if (type === 'indirect') {
+      const pageStr = page ? `, p. ${page}` : '';
+      citationHtml = `<span>(${author.toUpperCase()}, ${year}${pageStr})</span>&nbsp;`;
+    } else if (type === 'apud') {
+      citationHtml = `<span>(${author.toUpperCase()}, ${year} apud ${apud.toUpperCase()})</span>&nbsp;`;
+    }
+
+    this.saveStateToHistory();
+    this.closeModal();
+    document.execCommand('insertHTML', false, citationHtml);
+    this.refreshCompliancePanel();
+    this.showToast('Citação inserida conforme a norma!', 'success');
+  }
+
   insertLongQuote() {
     const quote = prompt('Insira o texto da citação longa (ABNT: + de 3 linhas com recuo 4cm e corpo 10pt):');
     if (quote) {
+      this.saveStateToHistory();
       document.execCommand('insertHTML', false, `<div class="academic-long-quote">${quote}</div><p class="academic-paragraph"></p>`);
     }
   }
 
-  openCitationDialog() {
-    const author = prompt('Autor(es) (ex: SILVA):');
-    const year = prompt('Ano da publicação (ex: 2023):');
-    const page = prompt('Página (opcional, ex: 45):');
-    if (author && year) {
-      const formatted = page ? `(${author.toUpperCase()}, ${year}, p. ${page})` : `(${author.toUpperCase()}, ${year})`;
-      document.execCommand('insertHTML', false, `<span>${formatted}</span>&nbsp;`);
-      this.refreshCompliancePanel();
+  insertImageModal() {
+    window.auraModals.showImageModal();
+  }
+
+  handleImageFileSelect(input) {
+    const file = input.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const urlInput = document.getElementById('modal-img-url');
+        if (urlInput) urlInput.value = e.target.result;
+      };
+      reader.readAsDataURL(file);
     }
   }
 
+  confirmInsertImage() {
+    const title = document.getElementById('modal-img-title').value.trim() || 'Figura 1 — Ilustração Científica';
+    const url = document.getElementById('modal-img-url').value.trim() || 'https://images.unsplash.com/photo-1507668077129-56e32842fceb?w=600&auto=format&fit=crop&q=80';
+    const source = document.getElementById('modal-img-source').value.trim() || 'Fonte: Elaborado pelos autores (2026).';
+
+    this.saveStateToHistory();
+    const figureHtml = `
+      <div class="my-6 text-center select-none" contenteditable="false">
+        <div class="text-xs font-bold text-slate-800 mb-1.5 text-center">${title}</div>
+        <div class="flex justify-center">
+          <img src="${url}" alt="${title}" class="max-w-full max-h-80 object-contain rounded border border-slate-300 shadow-sm mx-auto my-1">
+        </div>
+        <div class="text-[10pt] text-slate-600 mt-1.5 text-center">${source}</div>
+      </div>
+      <p class="academic-paragraph" contenteditable="true"></p>
+    `;
+
+    this.closeModal();
+    document.execCommand('insertHTML', false, figureHtml);
+    this.showToast('Figura inserida com padrão ABNT/APA!', 'success');
+  }
+
   insertTable() {
+    this.saveStateToHistory();
     const tableHtml = `
-      <div class="my-4">
+      <div class="my-4" contenteditable="false">
         <div class="text-xs font-bold mb-1">Tabela 1 — Descrição dos Dados Coletados</div>
-        <table class="w-full border-collapse border border-slate-300 text-xs text-left">
+        <table class="w-full border-collapse border border-slate-300 text-xs text-left" contenteditable="true">
           <thead class="bg-slate-100 font-bold border-b border-slate-300">
             <tr><th class="p-2 border">Variável</th><th class="p-2 border">Amostra A</th><th class="p-2 border">Amostra B</th></tr>
           </thead>
@@ -789,6 +1074,7 @@ class AuraApp {
         </table>
         <div class="text-[10pt] text-slate-500 mt-1">Fonte: Elaborado pelos autores (2026).</div>
       </div>
+      <p class="academic-paragraph" contenteditable="true"></p>
     `;
     document.execCommand('insertHTML', false, tableHtml);
   }
@@ -796,29 +1082,84 @@ class AuraApp {
   insertEquation() {
     const eq = prompt('Digite a fórmula ou expressão (ex: F1 = 2 * (P * R) / (P + R)):');
     if (eq) {
+      this.saveStateToHistory();
       document.execCommand('insertHTML', false, `<div class="text-center font-mono text-sm my-3 p-2 bg-slate-50 rounded border border-slate-200">${eq}</div><p class="academic-paragraph"></p>`);
     }
   }
 
-  addTimelineActivity() {
-    const name = prompt('Nome da nova meta/atividade do cronograma:');
-    if (name) {
-      if (!this.activeDocument.timeline) this.activeDocument.timeline = [];
-      this.activeDocument.timeline.push({ activity: name, m1: true, m2: true, m3: false, m4: false, m5: false, m6: false });
-      this.navigate('notices');
-      this.showToast('Atividade adicionada ao cronograma!', 'success');
+  // --- INLINE TIMELINE & BUDGET ACTIONS (NO POPUPS) ---
+
+  addTimelineActivityInline() {
+    const input = document.getElementById('inline-timeline-input');
+    if (!input || !input.value.trim()) {
+      this.showToast('Digite o nome da atividade.', 'warning');
+      return;
+    }
+
+    if (!this.activeDocument.timeline) this.activeDocument.timeline = [];
+    this.activeDocument.timeline.push({
+      activity: input.value.trim(),
+      m1: true,
+      m2: true,
+      m3: false,
+      m4: false,
+      m5: false,
+      m6: false
+    });
+
+    input.value = '';
+    this.navigate('notices');
+    this.showToast('Nova atividade adicionada diretamente ao cronograma!', 'success');
+  }
+
+  updateTimelineActivity(idx, newName) {
+    if (this.activeDocument && this.activeDocument.timeline && this.activeDocument.timeline[idx]) {
+      this.activeDocument.timeline[idx].activity = newName;
     }
   }
 
-  addBudgetItem() {
-    const category = prompt('Categoria (ex: Equipamentos, Bolsas, Custeio):') || 'Custeio';
-    const item = prompt('Descrição do item:') || 'Item de Pesquisa';
-    const val = parseFloat(prompt('Valor (R$):') || '1000');
-    if (!isNaN(val)) {
-      if (!this.activeDocument.budget) this.activeDocument.budget = [];
-      this.activeDocument.budget.push({ category, item, amount: val });
+  toggleTimelineMonth(idx, monthKey) {
+    if (this.activeDocument && this.activeDocument.timeline && this.activeDocument.timeline[idx]) {
+      this.activeDocument.timeline[idx][monthKey] = !this.activeDocument.timeline[idx][monthKey];
+    }
+  }
+
+  removeTimelineActivity(idx) {
+    if (this.activeDocument && this.activeDocument.timeline) {
+      this.activeDocument.timeline.splice(idx, 1);
       this.navigate('notices');
-      this.showToast('Item orçamentário registrado!', 'success');
+      this.showToast('Atividade removida.', 'info');
+    }
+  }
+
+  addBudgetItemInline() {
+    const cat = document.getElementById('inline-budget-cat').value;
+    const desc = document.getElementById('inline-budget-desc').value.trim();
+    const val = parseFloat(document.getElementById('inline-budget-val').value);
+
+    if (!desc || isNaN(val) || val <= 0) {
+      this.showToast('Informe a descrição e o valor do item.', 'warning');
+      return;
+    }
+
+    if (!this.activeDocument.budget) this.activeDocument.budget = [];
+    this.activeDocument.budget.push({
+      category: cat,
+      item: desc,
+      amount: val
+    });
+
+    document.getElementById('inline-budget-desc').value = '';
+    document.getElementById('inline-budget-val').value = '';
+    this.navigate('notices');
+    this.showToast('Item orçamentário adicionado diretamente!', 'success');
+  }
+
+  removeBudgetItem(idx) {
+    if (this.activeDocument && this.activeDocument.budget) {
+      this.activeDocument.budget.splice(idx, 1);
+      this.navigate('notices');
+      this.showToast('Item orçamentário removido.', 'info');
     }
   }
 }

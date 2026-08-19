@@ -269,6 +269,114 @@ class AuraModals {
     lucide.createIcons();
   }
 
+  showImageModal() {
+    const container = document.getElementById('modal-container');
+    const isEn = window.AURA && window.AURA.currentLang === 'en';
+
+    container.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div class="glass-panel w-full max-w-md rounded-2xl p-5 sm:p-6 border border-slate-700 shadow-2xl flex flex-col gap-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="image" class="w-5 h-5 text-emerald-400"></i> ${isEn ? 'Insert Figure / Image (Standard Format)' : 'Inserir Figura / Imagem Acadêmica'}
+            </h3>
+            <button onclick="AURA.closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+
+          <div class="flex flex-col gap-3 text-xs">
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">${isEn ? 'Figure Caption / Title (e.g., Figura 1 — ...):' : 'Título da Figura (ex: Figura 1 — Arquitetura da Rede):'}</label>
+              <input type="text" id="modal-img-title" placeholder="Figura 1 — Diagrama esquemático do fluxo experimental" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
+            </div>
+
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">${isEn ? 'Image URL or Local Upload:' : 'URL da Imagem ou Selecionar do Computador:'}</label>
+              <div class="flex gap-2">
+                <input type="text" id="modal-img-url" placeholder="https://images.unsplash.com/... ou selecione o arquivo" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500 text-xs">
+                <button onclick="document.getElementById('modal-img-file').click()" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold flex items-center gap-1 border border-slate-700 whitespace-nowrap">
+                  <i data-lucide="upload" class="w-3.5 h-3.5"></i> ${isEn ? 'Browse' : 'Arquivo'}
+                </button>
+                <input type="file" id="modal-img-file" accept="image/*" class="hidden" onchange="AURA.handleImageFileSelect(this)">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">${isEn ? 'Source / Attribution (Mandatory in ABNT/APA):' : 'Fonte (Obrigatório segundo ABNT / APA):'}</label>
+              <input type="text" id="modal-img-source" placeholder="Fonte: Elaborado pelos autores (2026)." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+            <button onclick="AURA.closeModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">${isEn ? 'Cancel' : 'Cancelar'}</button>
+            <button onclick="AURA.confirmInsertImage()" class="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30">${isEn ? 'Insert Figure' : 'Inserir Figura'}</button>
+          </div>
+        </div>
+      </div>
+    `;
+    lucide.createIcons();
+  }
+
+  showCitationModal(type = 'direct') {
+    const container = document.getElementById('modal-container');
+    const isEn = window.AURA && window.AURA.currentLang === 'en';
+
+    let typeTitle = isEn ? 'Short Direct Citation' : 'Citação Direta Curta';
+    if (type === 'indirect') typeTitle = isEn ? 'Indirect Citation / Paraphrase' : 'Citação Indireta (Paráfrase)';
+    if (type === 'apud') typeTitle = isEn ? 'Citation of Citation (Apud)' : 'Citação de Citação (Apud)';
+
+    container.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div class="glass-panel w-full max-w-md rounded-2xl p-5 sm:p-6 border border-slate-700 shadow-2xl flex flex-col gap-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="bookmark" class="w-5 h-5 text-indigo-400"></i> ${typeTitle}
+            </h3>
+            <button onclick="AURA.closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+
+          <div class="flex flex-col gap-3 text-xs">
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">${isEn ? 'Author(s) Surname (e.g. SILVA or SILVA; SOUZA):' : 'Sobrenome do(s) Autor(es) (ex: SILVA ou SILVA; SANTOS):'}</label>
+              <input type="text" id="modal-cit-author" placeholder="SILVA" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-300 font-medium mb-1">${isEn ? 'Year of Publication:' : 'Ano de Publicação:'}</label>
+                <input type="number" id="modal-cit-year" placeholder="2024" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+              </div>
+
+              <div>
+                <label class="block text-slate-300 font-medium mb-1">${isEn ? 'Page (optional):' : 'Página (ex: 45):'}</label>
+                <input type="text" id="modal-cit-page" placeholder="45" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+              </div>
+            </div>
+
+            ${type === 'apud' ? `
+              <div>
+                <label class="block text-slate-300 font-medium mb-1">${isEn ? 'Original Author cited (Apud ...):' : 'Autor Original Citado (Apud ...):'}</label>
+                <input type="text" id="modal-cit-apud" placeholder="SOUZA, 1998, p. 12" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+              </div>
+            ` : ''}
+
+            ${type === 'direct' ? `
+              <div>
+                <label class="block text-slate-300 font-medium mb-1">${isEn ? 'Quoted Text (up to 3 lines):' : 'Texto Citado (até 3 linhas):'}</label>
+                <textarea id="modal-cit-text" rows="3" placeholder="Insira o trecho textual exato..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"></textarea>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+            <button onclick="AURA.closeModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">${isEn ? 'Cancel' : 'Cancelar'}</button>
+            <button onclick="AURA.confirmInsertCitation('${type}')" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30">${isEn ? 'Insert Citation' : 'Inserir Citação'}</button>
+          </div>
+        </div>
+      </div>
+    `;
+    lucide.createIcons();
+  }
+
   close() {
     document.getElementById('modal-container').innerHTML = '';
   }

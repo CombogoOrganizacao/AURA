@@ -169,49 +169,91 @@ class AuraNoticesView {
                       <th class="p-3 text-center">M13-M16</th>
                       <th class="p-3 text-center">M17-M20</th>
                       <th class="p-3 text-center">M21-M24</th>
+                      <th class="p-3 text-center">Ações</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-slate-800">
-                    ${(doc.timeline || []).map((t, idx) => `
-                      <tr class="hover:bg-slate-800/40">
-                        <td class="p-3 font-medium text-white">${t.activity}</td>
-                        <td class="p-3 text-center"><input type="checkbox" ${t.m1 ? 'checked' : ''} class="rounded bg-slate-900 text-aura-500"></td>
-                        <td class="p-3 text-center"><input type="checkbox" ${t.m2 ? 'checked' : ''} class="rounded bg-slate-900 text-aura-500"></td>
-                        <td class="p-3 text-center"><input type="checkbox" ${t.m3 ? 'checked' : ''} class="rounded bg-slate-900 text-aura-500"></td>
-                        <td class="p-3 text-center"><input type="checkbox" ${t.m4 ? 'checked' : ''} class="rounded bg-slate-900 text-aura-500"></td>
-                        <td class="p-3 text-center"><input type="checkbox" ${t.m5 ? 'checked' : ''} class="rounded bg-slate-900 text-aura-500"></td>
-                        <td class="p-3 text-center"><input type="checkbox" ${t.m6 ? 'checked' : ''} class="rounded bg-slate-900 text-aura-500"></td>
+                  <tbody class="divide-y divide-slate-800" id="timeline-tbody">
+                    ${(doc.timeline || []).map((tItem, idx) => `
+                      <tr class="hover:bg-slate-800/40 group">
+                        <td class="p-3 font-medium text-white">
+                          <input type="text" value="${tItem.activity}" onchange="AURA.updateTimelineActivity(${idx}, this.value)" class="bg-transparent border-b border-transparent hover:border-slate-600 focus:border-aura-500 focus:bg-slate-900 px-1 py-0.5 rounded text-xs text-white w-full focus:outline-none">
+                        </td>
+                        <td class="p-3 text-center"><input type="checkbox" ${tItem.m1 ? 'checked' : ''} onchange="AURA.toggleTimelineMonth(${idx}, 'm1')" class="rounded bg-slate-900 text-aura-500 cursor-pointer"></td>
+                        <td class="p-3 text-center"><input type="checkbox" ${tItem.m2 ? 'checked' : ''} onchange="AURA.toggleTimelineMonth(${idx}, 'm2')" class="rounded bg-slate-900 text-aura-500 cursor-pointer"></td>
+                        <td class="p-3 text-center"><input type="checkbox" ${tItem.m3 ? 'checked' : ''} onchange="AURA.toggleTimelineMonth(${idx}, 'm3')" class="rounded bg-slate-900 text-aura-500 cursor-pointer"></td>
+                        <td class="p-3 text-center"><input type="checkbox" ${tItem.m4 ? 'checked' : ''} onchange="AURA.toggleTimelineMonth(${idx}, 'm4')" class="rounded bg-slate-900 text-aura-500 cursor-pointer"></td>
+                        <td class="p-3 text-center"><input type="checkbox" ${tItem.m5 ? 'checked' : ''} onchange="AURA.toggleTimelineMonth(${idx}, 'm5')" class="rounded bg-slate-900 text-aura-500 cursor-pointer"></td>
+                        <td class="p-3 text-center"><input type="checkbox" ${tItem.m6 ? 'checked' : ''} onchange="AURA.toggleTimelineMonth(${idx}, 'm6')" class="rounded bg-slate-900 text-aura-500 cursor-pointer"></td>
+                        <td class="p-3 text-center">
+                          <button onclick="AURA.removeTimelineActivity(${idx})" title="Remover atividade" class="text-rose-400 hover:text-rose-300 opacity-60 group-hover:opacity-100 transition-opacity">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5 inline"></i>
+                          </button>
+                        </td>
                       </tr>
                     `).join('')}
                   </tbody>
                 </table>
               </div>
+
+              <!-- Inline Quick Add Timeline Activity Form -->
+              <div class="mt-3 pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-center gap-2">
+                <input type="text" id="inline-timeline-input" placeholder="${window.AURA && window.AURA.currentLang === 'en' ? 'Type new project milestone or activity name...' : 'Digite o nome da nova meta ou atividade do cronograma...'}" class="flex-1 bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+                <button onclick="AURA.addTimelineActivityInline()" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shadow-md shadow-emerald-600/20 whitespace-nowrap">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i> ${window.AURA && window.AURA.currentLang === 'en' ? 'Add Activity' : 'Adicionar Atividade'}
+                </button>
+              </div>
             </div>
 
             <!-- Módulo de Orçamento -->
-            <div class="glass-panel rounded-2xl p-6 border border-slate-800">
-              <div class="flex items-center justify-between mb-4">
+            <div class="glass-panel rounded-2xl p-5 sm:p-6 border border-slate-800">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                 <div>
                   <h3 class="text-base font-bold text-white flex items-center gap-2">
-                    <i data-lucide="calculator" class="w-4 h-4 text-indigo-400"></i> Orçamento Detalhado & Teto Permitido
+                    <i data-lucide="calculator" class="w-4 h-4 text-indigo-400"></i> ${window.AURA && window.AURA.currentLang === 'en' ? 'Detailed Budget & Call Ceiling' : 'Orçamento Detalhado & Teto Permitido'}
                   </h3>
-                  <p class="text-xs text-slate-400">Limite do Edital: R$ ${notice.limits.maxBudget.toLocaleString('pt-BR')},00</p>
+                  <p class="text-xs text-slate-400">${window.AURA && window.AURA.currentLang === 'en' ? 'Call Limit:' : 'Limite do Edital:'} R$ ${notice.limits.maxBudget.toLocaleString('pt-BR')},00</p>
                 </div>
-                <button onclick="AURA.addBudgetItem()" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1">
-                  <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar Item
-                </button>
               </div>
 
-              <div class="flex flex-col gap-2 text-xs">
-                ${(doc.budget || []).map(b => `
-                  <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-800/50 border border-slate-700/50">
-                    <div>
-                      <span class="font-bold text-white">${b.category}:</span>
-                      <span class="text-slate-300 ml-1">${b.item}</span>
+              <div class="flex flex-col gap-2 text-xs" id="budget-items-list">
+                ${(doc.budget || []).map((b, bIdx) => `
+                  <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-indigo-500/40 transition-all group">
+                    <div class="flex items-center gap-2 flex-1">
+                      <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold text-[10px]">${b.category}</span>
+                      <span class="text-white font-medium">${b.item}</span>
                     </div>
-                    <span class="font-mono font-bold text-emerald-400">R$ ${b.amount.toLocaleString('pt-BR')},00</span>
+                    <div class="flex items-center gap-3">
+                      <span class="font-mono font-bold text-emerald-400">R$ ${b.amount.toLocaleString('pt-BR')},00</span>
+                      <button onclick="AURA.removeBudgetItem(${bIdx})" class="text-rose-400 hover:text-rose-300 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
                   </div>
                 `).join('')}
+              </div>
+
+              <!-- Inline Quick Add Budget Item Form -->
+              <div class="mt-3 pt-3 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-12 gap-2 text-xs">
+                <div class="sm:col-span-3">
+                  <select id="inline-budget-cat" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:border-indigo-500">
+                    <option value="Custeio / Diárias">Custeio / Diárias</option>
+                    <option value="Capital / Equipamentos">Capital / Equipamentos</option>
+                    <option value="Bolsas de Pesquisa">Bolsas de Pesquisa</option>
+                    <option value="Serviços de Terceiros">Serviços de Terceiros</option>
+                    <option value="Material de Consumo">Material de Consumo</option>
+                  </select>
+                </div>
+                <div class="sm:col-span-5">
+                  <input type="text" id="inline-budget-desc" placeholder="${window.AURA && window.AURA.currentLang === 'en' ? 'Description of research item...' : 'Descrição do item ou insumo de pesquisa...'}" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="sm:col-span-2">
+                  <input type="number" id="inline-budget-val" placeholder="R$ 1500" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-indigo-500 font-mono">
+                </div>
+                <div class="sm:col-span-2">
+                  <button onclick="AURA.addBudgetItemInline()" class="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center justify-center gap-1 shadow-md shadow-indigo-600/20">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> ${window.AURA && window.AURA.currentLang === 'en' ? 'Add' : 'Adicionar'}
+                  </button>
+                </div>
               </div>
             </div>
 
