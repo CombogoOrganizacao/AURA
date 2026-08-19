@@ -41,14 +41,12 @@ class AuraEditorView {
           <div class="px-3 sm:px-4 py-2 flex items-center justify-between gap-2 text-xs z-40 whitespace-nowrap overflow-x-auto relative border-b border-slate-800/80">
             <!-- History & Basic Formatting -->
             <div class="flex items-center gap-1 flex-shrink-0">
-              <!-- Undo / Redo -->
-              <button onclick="AURA.undo()" title="Desfazer (Ctrl+Z)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center gap-1 font-medium">
+              <!-- Undo / Redo (Apenas Ícones) -->
+              <button onclick="AURA.undo()" title="Desfazer (Ctrl+Z)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
                 <i data-lucide="undo-2" class="w-4 h-4 text-aura-400"></i>
-                <span class="hidden sm:inline">Desfazer</span>
               </button>
-              <button onclick="AURA.redo()" title="Refazer (Ctrl+Y)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center gap-1 font-medium">
+              <button onclick="AURA.redo()" title="Refazer (Ctrl+Y)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
                 <i data-lucide="redo-2" class="w-4 h-4 text-aura-400"></i>
-                <span class="hidden sm:inline">Refazer</span>
               </button>
               <div class="h-4 w-px bg-slate-700 mx-1"></div>
 
@@ -133,19 +131,40 @@ class AuraEditorView {
                 </div>
               </div>
 
-              <button onclick="AURA.insertImageModal()" title="Inserir Imagem / Figura com Legenda ABNT" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
-                <i data-lucide="image" class="w-3.5 h-3.5 text-emerald-400"></i> <span class="hidden sm:inline">Figura</span>
+              <!-- Inserir Figura, Tabela, Cabeçalho/Rodapé (Apenas Ícones) -->
+              <button onclick="AURA.insertImageModal()" title="Inserir Imagem / Figura com Legenda ABNT" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
+                <i data-lucide="image" class="w-4 h-4 text-emerald-400"></i>
               </button>
-              <button onclick="AURA.insertTable()" title="Inserir Tabela Acadêmica com Fonte" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
-                <i data-lucide="table" class="w-3.5 h-3.5 text-blue-400"></i> <span class="hidden sm:inline">Tabela</span>
+              <button onclick="AURA.insertTable()" title="Inserir Tabela Acadêmica Editável com Linhas/Colunas" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
+                <i data-lucide="table" class="w-4 h-4 text-blue-400"></i>
               </button>
-              <button onclick="AURA.openHeaderFooterModal()" title="Configurar Numeração, Cabeçalho e Rodapé" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
-                <i data-lucide="layout-template" class="w-3.5 h-3.5 text-purple-400"></i> <span class="hidden sm:inline">Cabeçalho/Rodapé</span>
+              <button onclick="AURA.openHeaderFooterModal()" title="Configurar Numeração, Cabeçalho e Rodapé" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
+                <i data-lucide="layout-template" class="w-4 h-4 text-purple-400"></i>
               </button>
-              <!-- Botão de Histórico de Edições -->
-              <button onclick="AURA.openHistoryModal()" title="Histórico de Edições e Versões Salvas" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white flex items-center gap-1 border border-indigo-500/30 shadow-sm">
-                <i data-lucide="history" class="w-3.5 h-3.5 text-indigo-400"></i> <span class="hidden sm:inline">Histórico</span>
-              </button>
+              <div class="h-4 w-px bg-slate-700 mx-1"></div>
+
+              <!-- BARRA DE LOCALIZAR NA TOOLBAR + BOTÃO MODO AVANÇADO -->
+              <div class="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800 shadow-inner">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400"></i>
+                <input 
+                  type="text" 
+                  id="toolbar-find-input" 
+                  placeholder="Localizar no texto..." 
+                  oninput="AURA.onFindInputChange(this.value)"
+                  onkeydown="if(event.key==='Enter'){ if(event.shiftKey) AURA.findPrevMatch(); else AURA.findNextMatch(); }"
+                  class="bg-transparent border-none text-xs text-white placeholder-slate-500 focus:outline-none w-28 sm:w-36 font-sans"
+                />
+                <span id="find-counter-badge" class="text-[9px] px-1.5 py-0.2 rounded-full bg-slate-800 text-amber-300 font-mono hidden">0/0</span>
+                <button onclick="AURA.findPrevMatch()" title="Anterior (Shift+F3)" class="p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white">
+                  <i data-lucide="chevron-up" class="w-3 h-3"></i>
+                </button>
+                <button onclick="AURA.findNextMatch()" title="Próximo (F3)" class="p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white">
+                  <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                </button>
+                <button onclick="AURA.openAdvancedFindReplaceModal()" title="Localizar e Substituir Avançado (Ctrl+H)" class="p-1 rounded bg-slate-800 hover:bg-aura-600 text-amber-300 hover:text-white transition-all ml-0.5" id="btn-open-advanced-find">
+                  <i data-lucide="replace" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
             </div>
 
             <!-- Standard Selector & Export Action -->
@@ -526,13 +545,13 @@ class AuraEditorView {
               </button>
             </div>
 
-            <!-- Panel Tabs -->
+            <!-- Panel Tabs (IA, Histórico & Versões, Conformidade) -->
             <div class="flex items-center border-b border-slate-800 text-xs font-semibold bg-slate-950/60 p-1 gap-1">
               <button onclick="AURA.setRightTab('ai')" id="tab-btn-ai" class="flex-1 py-1.5 px-2 rounded text-center transition-all bg-aura-600 text-white flex items-center justify-center gap-1">
                 <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> ${t('tab_ai')}
               </button>
-              <button onclick="AURA.setRightTab('find_replace')" id="tab-btn-find_replace" class="flex-1 py-1.5 px-2 rounded text-center transition-all text-slate-400 hover:text-white flex items-center justify-center gap-1">
-                <i data-lucide="replace" class="w-3.5 h-3.5"></i> ${t('tab_find')}
+              <button onclick="AURA.setRightTab('history')" id="tab-btn-history" class="flex-1 py-1.5 px-2 rounded text-center transition-all text-slate-400 hover:text-white flex items-center justify-center gap-1">
+                <i data-lucide="history" class="w-3.5 h-3.5"></i> Histórico
               </button>
               <button onclick="AURA.setRightTab('compliance')" id="tab-btn-compliance" class="flex-1 py-1.5 px-2 rounded text-center transition-all text-slate-400 hover:text-white flex items-center justify-center gap-1">
                 <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> ${t('tab_compliance')}
@@ -636,8 +655,19 @@ class AuraEditorView {
 
             </div>
 
-            <!-- Tab 2: Localizar e Substituir (Find & Replace) -->
-            <div id="panel-tab-find_replace" class="hidden flex-1 overflow-y-auto p-4 flex flex-col gap-4 text-xs">
+            <!-- Tab 2: Histórico de Edições & Versões Salvas (1-Click Switch on Card Click) -->
+            <div id="panel-tab-history" class="hidden flex-1 overflow-y-auto p-4 flex flex-col gap-3 text-xs">
+              <div class="font-bold text-slate-200 flex items-center justify-between pb-1 border-b border-slate-800">
+                <span class="flex items-center gap-1.5 text-indigo-400">
+                  <i data-lucide="history" class="w-4 h-4"></i> Histórico & Versões Salvas
+                </span>
+                <span class="text-[10px] text-slate-400 font-mono">Clique no card para alternar</span>
+              </div>
+
+              <div id="sidebar-history-container" class="flex flex-col gap-2">
+                <!-- Injetado dinamicamente por AURA.renderSidebarHistory() -->
+              </div>
+            </div>
               <div class="font-bold text-slate-200 flex items-center justify-between">
                 <span class="flex items-center gap-1.5">
                   <i data-lucide="search" class="w-4 h-4 text-amber-400"></i> Localizar e Substituir

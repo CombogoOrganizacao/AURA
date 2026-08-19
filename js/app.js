@@ -1056,20 +1056,124 @@ class AuraApp {
     this.showToast('Trabalho acadêmico excluído com sucesso!', 'info');
   }
 
-  // --- MODAL DE HISTÓRICO DE VERSÕES ---
+  setRightTab(tabName) {
+    ['ai', 'history', 'compliance'].forEach(t => {
+      const btn = document.getElementById(`tab-btn-${t}`);
+      const panel = document.getElementById(`panel-tab-${t}`);
+      if (btn) {
+        if (t === tabName) {
+          btn.className = 'flex-1 py-1.5 px-2 rounded text-center transition-all bg-aura-600 text-white font-bold shadow flex items-center justify-center gap-1';
+        } else {
+          btn.className = 'flex-1 py-1.5 px-2 rounded text-center transition-all text-slate-400 hover:text-white flex items-center justify-center gap-1';
+        }
+      }
+      if (panel) {
+        panel.classList.toggle('hidden', t !== tabName);
+      }
+    });
+
+    if (tabName === 'history') {
+      this.renderSidebarHistory();
+    }
+  }
+
+  renderSidebarHistory() {
+    const container = document.getElementById('sidebar-history-container');
+    if (!container) return;
+
+    if (!this.historyStack || this.historyStack.length === 0) {
+      container.innerHTML = `<div class="text-slate-500 text-center p-4">Nenhuma versão gravada ainda.</div>`;
+      return;
+    }
+
+    container.innerHTML = this.historyStack.map((item, idx) => {
+      let docPreview = {};
+      let timeStr = 'Agora';
+      let descStr = 'Edição no documento';
+      if (item && item.doc) {
+        docPreview = item.doc;
+        timeStr = `${item.date || ''} às ${item.timestamp || ''}`;
+        descStr = item.desc || 'Edição';
+      } else {
+        try { docPreview = JSON.parse(item); } catch (e) { docPreview = {}; }
+      }
+
+      const isCurrent = idx === this.historyIndex;
+      return `
+        <div 
+          onclick="AURA.restoreHistorySnapshot(${idx})"
+          class="p-2.5 rounded-xl border transition-all cursor-pointer group flex flex-col gap-1.5 ${isCurrent ? 'bg-indigo-950/70 border-indigo-500 shadow-md ring-1 ring-indigo-500/50 text-white' : 'bg-slate-900/70 border-slate-800 hover:border-slate-700 text-slate-300 hover:bg-slate-800/80'}"
+          title="Clique para alternar imediatamente para a Versão #${idx + 1}"
+        >
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-xs flex items-center gap-1.5">
+              <span class="w-5 h-5 rounded ${isCurrent ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 group-hover:text-white'} flex items-center justify-center font-mono text-[10px]">v${idx + 1}</span>
+              <span class="truncate max-w-[140px]">${docPreview.title || 'Documento'}</span>
+            </span>
+            ${isCurrent ? `
+              <span class="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 text-[9px] font-bold border border-emerald-800/50">Ativa ✓</span>
+            ` : `
+              <span class="text-[9px] text-slate-500 group-hover:text-indigo-300 flex items-center gap-0.5">
+                <i data-lucide="rotate-ccw" class="w-2.5 h-2.5"></i> Restaurar
+              </span>
+            `}
+          </div>
+
+          <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <span class="text-indigo-400 font-medium">${timeStr}</span>
+            <span>${descStr}</span>
+          </div>
+        </div>
+      `;
+    }).reverse().join('');
+    lucide.createIcons();
+  }
+
   openHistoryModal() {
-    window.auraModals.showHistoryModal(this.historyStack, this.historyIndex);
+    this.setRightTab('history');
   }
 
   restoreHistorySnapshot(snapshotIndex) {
     if (this.historyStack[snapshotIndex]) {
       this.historyIndex = snapshotIndex;
-      this.activeDocument = JSON.parse(this.historyStack[snapshotIndex]);
+      const target = this.historyStack[snapshotIndex];
+      this.activeDocument = target.doc ? JSON.parse(JSON.stringify(target.doc)) : JSON.parse(target);
       this.persistDocuments();
       this.closeModal();
       this.navigate('editor');
-      this.showToast(`Versão #${snapshotIndex + 1} restaurada com sucesso!`, 'success');
+      this.setRightTab('history');
+      this.showToast(`Documento alternado para a Versão #v${snapshotIndex + 1}!`, 'success');
     }
+  }
+
+  // --- LOCALIZAR E SUBSTITUIR AVANÇADO (TOOLBAR + MODAL) ---
+  openAdvancedFindReplaceModal() {
+    const toolbarInput = document.getElementById('toolbar-find-input');
+    const currentTerm = toolbarInput ? toolbarInput.value : '';
+    window.auraModals.showAdvancedFindReplaceModal(currentTerm);
+  }
+
+  execModalFindAndReplace(replaceAll = true) {
+    const findTerm = document.getElementById('modal-find-input').value;
+    const replaceTerm = document.getElementById('modal-replace-input').value;
+    const matchCase = document.getElementById('modal-find-opt-case').checked;
+    const wholeWord = document.getElementById('modal-find-opt-word').checked;
+
+    if (!findTerm) {
+      this.showToast('Digite o termo a ser localizado.', 'warning');
+      return;
+    }
+
+    this.saveStateToHistory(replaceAll ? `Substituir tudo "${findTerm}"` : `Substituir 1 "${findTerm}"`);
+    const count = this.executeGlobalReplace(findTerm, replaceTerm, replaceAll, { matchCase, wholeWord });
+    const resultsEl = document.getElementById('modal-find-replace-results');
+    if (resultsEl) {
+      resultsEl.innerText = count > 0 
+        ? `✓ ${count} ocorrência(s) substituída(s) com sucesso.`
+        : `Nenhuma ocorrência encontrada para "${findTerm}".`;
+    }
+    this.refreshLiveState();
+    this.showToast(`${count} substituição(ões) realizadas!`, count > 0 ? 'success' : 'info');
   }
 
   refreshSpellCheck() {
@@ -1264,6 +1368,16 @@ class AuraApp {
   onFindInputChange(term) {
     const sheet = document.getElementById('academic-active-sheet');
     const counterBadge = document.getElementById('find-counter-badge');
+    const toolbarInput = document.getElementById('toolbar-find-input');
+    const modalInput = document.getElementById('modal-find-input');
+
+    if (toolbarInput && toolbarInput.value !== term && document.activeElement !== toolbarInput) {
+      toolbarInput.value = term;
+    }
+    if (modalInput && modalInput.value !== term && document.activeElement !== modalInput) {
+      modalInput.value = term;
+    }
+
     if (!sheet) return;
 
     // Limpa destaques anteriores
@@ -1821,24 +1935,135 @@ class AuraApp {
   }
 
   insertTable() {
-    this.saveStateToHistory();
+    this.saveStateToHistory('Inserção de Tabela');
+    const tableId = 'table_' + Date.now();
     const tableHtml = `
-      <div class="my-4" contenteditable="false">
-        <div class="text-xs font-bold mb-1">Tabela 1 — Descrição dos Dados Coletados</div>
-        <table class="w-full border-collapse border border-slate-300 text-xs text-left" contenteditable="true">
-          <thead class="bg-slate-100 font-bold border-b border-slate-300">
-            <tr><th class="p-2 border">Variável</th><th class="p-2 border">Amostra A</th><th class="p-2 border">Amostra B</th></tr>
+      <div class="my-5 academic-table-wrapper select-text" id="${tableId}" contenteditable="false">
+        <div class="flex items-center justify-between gap-2 mb-1 no-print">
+          <span contenteditable="true" class="text-xs font-bold text-slate-800 focus:outline-none focus:bg-slate-100 p-1 rounded">Tabela 1 — Descrição dos Dados Coletados</span>
+          <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-[10px]">
+            <button onclick="AURA.addTableRow('${tableId}')" title="Adicionar Linha" class="px-2 py-0.5 rounded bg-white hover:bg-slate-200 text-slate-700 font-bold border border-slate-300 shadow-2xs flex items-center gap-0.5">
+              + Linha
+            </button>
+            <button onclick="AURA.removeTableRow('${tableId}')" title="Remover Linha" class="px-2 py-0.5 rounded bg-white hover:bg-slate-200 text-rose-600 font-bold border border-slate-300 shadow-2xs flex items-center gap-0.5">
+              - Linha
+            </button>
+            <button onclick="AURA.getTableColumn('${tableId}')" title="Adicionar Coluna" class="px-2 py-0.5 rounded bg-white hover:bg-slate-200 text-indigo-700 font-bold border border-slate-300 shadow-2xs flex items-center gap-0.5">
+              + Coluna
+            </button>
+            <button onclick="AURA.removeTableColumn('${tableId}')" title="Remover Coluna" class="px-2 py-0.5 rounded bg-white hover:bg-slate-200 text-rose-600 font-bold border border-slate-300 shadow-2xs flex items-center gap-0.5">
+              - Coluna
+            </button>
+          </div>
+        </div>
+        <table class="w-full border-collapse border border-slate-400 text-xs text-left">
+          <thead class="bg-slate-100 font-bold border-b-2 border-slate-400">
+            <tr>
+              <th contenteditable="true" class="p-2 border border-slate-300 focus:outline-none focus:bg-white">Variável / Métrica</th>
+              <th contenteditable="true" class="p-2 border border-slate-300 focus:outline-none focus:bg-white">Amostra A</th>
+              <th contenteditable="true" class="p-2 border border-slate-300 focus:outline-none focus:bg-white">Amostra B</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td class="p-2 border">Acurácia (%)</td><td class="p-2 border">94.2</td><td class="p-2 border">88.7</td></tr>
-            <tr><td class="p-2 border">F1-Score</td><td class="p-2 border">0.93</td><td class="p-2 border">0.86</td></tr>
+            <tr>
+              <td contenteditable="true" class="p-2 border border-slate-300 focus:outline-none focus:bg-slate-50">Acurácia Global (%)</td>
+              <td contenteditable="true" class="p-2 border border-slate-300 focus:outline-none focus:bg-slate-50">94.2</td>
+              <td contenteditable="true" class="p-2 border border-slate-300 focus:outline-none focus:bg-slate-50">88.7</td>
+            </tr>
+            <tr>
+              <td contenteditable="true" class="p-2 border border-slate-300 focus:outline-none focus:bg-slate-50">F1-Score Ponderado</td>
+              <td contenteditable="true" class="p-2 border border-slate-300 focus:outline-none focus:bg-slate-50">0.93</td>
+              <td contenteditable="true" class="p-2 border border-slate-300 focus:outline-none focus:bg-slate-50">0.86</td>
+            </tr>
           </tbody>
         </table>
-        <div class="text-[10pt] text-slate-500 mt-1">Fonte: Elaborado pelos autores (2026).</div>
+        <div contenteditable="true" class="text-[9pt] text-slate-500 mt-1 focus:outline-none focus:bg-slate-50 p-0.5 rounded">Fonte: Elaborado pelos autores (2026).</div>
       </div>
       <p class="academic-paragraph" contenteditable="true"></p>
     `;
     document.execCommand('insertHTML', false, tableHtml);
+    this.showToast('Tabela acadêmica interativa inserida! Todas as células, linhas e colunas são editáveis.', 'success');
+  }
+
+  addTableRow(tableWrapperId) {
+    this.saveStateToHistory('Adicionar Linha na Tabela');
+    const wrapper = document.getElementById(tableWrapperId);
+    if (!wrapper) return;
+    const tbody = wrapper.querySelector('tbody');
+    const theadRow = wrapper.querySelector('thead tr');
+    const colCount = theadRow ? theadRow.children.length : 3;
+    
+    if (tbody) {
+      const tr = document.createElement('tr');
+      for (let i = 0; i < colCount; i++) {
+        const td = document.createElement('td');
+        td.className = 'p-2 border border-slate-300 focus:outline-none focus:bg-slate-50';
+        td.contentEditable = 'true';
+        td.innerText = i === 0 ? 'Nova Linha' : '-';
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+      this.syncActiveDocumentFromDOM();
+      this.showToast('Linha adicionada à tabela!', 'info');
+    }
+  }
+
+  removeTableRow(tableWrapperId) {
+    this.saveStateToHistory('Remover Linha da Tabela');
+    const wrapper = document.getElementById(tableWrapperId);
+    if (!wrapper) return;
+    const tbody = wrapper.querySelector('tbody');
+    if (tbody && tbody.children.length > 1) {
+      tbody.removeChild(tbody.lastElementChild);
+      this.syncActiveDocumentFromDOM();
+      this.showToast('Última linha removida!', 'info');
+    } else {
+      this.showToast('A tabela deve conter ao menos 1 linha.', 'warning');
+    }
+  }
+
+  getTableColumn(tableWrapperId) {
+    this.saveStateToHistory('Adicionar Coluna na Tabela');
+    const wrapper = document.getElementById(tableWrapperId);
+    if (!wrapper) return;
+    const theadRow = wrapper.querySelector('thead tr');
+    if (theadRow) {
+      const th = document.createElement('th');
+      th.className = 'p-2 border border-slate-300 focus:outline-none focus:bg-white';
+      th.contentEditable = 'true';
+      th.innerText = `Coluna ${theadRow.children.length + 1}`;
+      theadRow.appendChild(th);
+    }
+    const tbodyRows = wrapper.querySelectorAll('tbody tr');
+    tbodyRows.forEach(row => {
+      const td = document.createElement('td');
+      td.className = 'p-2 border border-slate-300 focus:outline-none focus:bg-slate-50';
+      td.contentEditable = 'true';
+      td.innerText = '-';
+      row.appendChild(td);
+    });
+    this.syncActiveDocumentFromDOM();
+    this.showToast('Coluna adicionada à tabela!', 'info');
+  }
+
+  removeTableColumn(tableWrapperId) {
+    this.saveStateToHistory('Remover Coluna da Tabela');
+    const wrapper = document.getElementById(tableWrapperId);
+    if (!wrapper) return;
+    const theadRow = wrapper.querySelector('thead tr');
+    if (theadRow && theadRow.children.length > 1) {
+      theadRow.removeChild(theadRow.lastElementChild);
+      const tbodyRows = wrapper.querySelectorAll('tbody tr');
+      tbodyRows.forEach(row => {
+        if (row.children.length > 1) {
+          row.removeChild(row.lastElementChild);
+        }
+      });
+      this.syncActiveDocumentFromDOM();
+      this.showToast('Última coluna removida!', 'info');
+    } else {
+      this.showToast('A tabela deve conter ao menos 1 coluna.', 'warning');
+    }
   }
 
   insertEquation() {
