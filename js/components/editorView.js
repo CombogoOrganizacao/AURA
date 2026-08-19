@@ -61,20 +61,15 @@ class AuraEditorView {
                 </select>
 
                 <!-- Botão Circular de Cores & Color Picker com Preservação de Seleção -->
-                <div class="relative flex items-center justify-center ml-0.5" title="Cor do Texto Selecionado">
-                  <button 
-                    type="button" 
-                    onclick="AURA.triggerColorPicker()" 
-                    onmousedown="AURA.saveCurrentSelection()"
-                    class="w-6 h-6 rounded-full border-2 border-slate-600 hover:border-aura-400 cursor-pointer flex items-center justify-center overflow-hidden bg-gradient-to-tr from-rose-500 via-amber-400 to-sky-400 shadow-sm transition-all hover:scale-105"
-                  >
-                  </button>
+                <div class="relative flex items-center justify-center ml-0.5 w-6 h-6 rounded-full border-2 border-slate-600 hover:border-aura-400 cursor-pointer overflow-hidden bg-gradient-to-tr from-rose-500 via-amber-400 to-sky-400 shadow-sm transition-all hover:scale-105" title="Cor do Texto Selecionado">
                   <input 
                     type="color" 
                     id="editor-text-color" 
                     value="#000000" 
-                    onchange="AURA.applyTextColor(this.value)" 
-                    class="opacity-0 w-0 h-0 absolute pointer-events-none"
+                    onmousedown="AURA.saveCurrentSelection()"
+                    oninput="AURA.applyTextColor(this.value)"
+                    onchange="AURA.applyTextColor(this.value)"
+                    class="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10 p-0 m-0"
                   />
                 </div>
 
@@ -105,13 +100,13 @@ class AuraEditorView {
               <div class="h-4 w-px bg-slate-700 mx-1"></div>
 
               <!-- Intuitive Citation Selector Dropdown (Fixed z-index) -->
-              <div class="relative inline-block text-left z-50">
-                <button onclick="AURA.toggleCitationMenu()" id="btn-citation-dropdown" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1.5 font-medium border border-slate-700 shadow-sm">
+              <div class="relative inline-block text-left">
+                <button onclick="AURA.toggleCitationMenu(event)" id="btn-citation-dropdown" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1.5 font-medium border border-slate-700 shadow-sm">
                   <i data-lucide="bookmark" class="w-3.5 h-3.5 text-indigo-400"></i>
                   <span>Citação</span>
                   <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
                 </button>
-                <div id="citation-dropdown-menu" class="hidden absolute left-0 top-full mt-1.5 w-60 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl z-[100] py-1.5 flex flex-col gap-1 text-xs backdrop-blur-xl">
+                <div id="citation-dropdown-menu" class="hidden fixed w-64 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl z-[99999] py-1.5 flex flex-col gap-1 text-xs backdrop-blur-xl">
                   <button onclick="AURA.insertDirectCitation()" class="px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-white flex flex-col">
                     <span class="font-bold text-indigo-300">Citação Direta Curta</span>
                     <span class="text-[10px] text-slate-400">Até 3 linhas entre aspas ("...")</span>
@@ -521,13 +516,6 @@ class AuraEditorView {
                   +
                 </button>
               </div>
-
-              <div class="h-4 w-px bg-slate-700"></div>
-
-              <!-- Botão de Acessibilidade: Leitura em Voz Didática Feminina (Apenas Ícone Profissional) -->
-              <button onclick="AURA.toggleSpeechPresentation()" id="btn-speech-read" title="Apresentação Oral com Voz Didática" class="p-2 rounded-xl bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-500/50 flex items-center justify-center font-bold transition-all shadow-md">
-                <i data-lucide="volume-2" class="w-4 h-4 text-purple-300" id="speech-icon"></i>
-              </button>
             </div>
 
           </div>
@@ -590,23 +578,7 @@ class AuraEditorView {
                 </div>
               </div>
 
-              <!-- Detector de Repetições e Sinônimos (Retrátil com Toggle) -->
-              <div class="bg-slate-800/60 rounded-xl border border-slate-700/60 flex flex-col overflow-hidden">
-                <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-slate-800/80 transition-colors" onclick="AURA.toggleRepeatedWordsBox()">
-                  <span class="font-bold text-purple-300 flex items-center gap-1.5 select-none">
-                    <i data-lucide="repeat" class="w-3.5 h-3.5"></i> Palavras Repetidas Detectadas
-                  </span>
-                  <div class="flex items-center gap-2">
-                    <button onclick="event.stopPropagation(); AURA.refreshRepeatedWords(true)" class="text-[10px] text-aura-400 hover:underline">Atualizar</button>
-                    <i data-lucide="chevron-down" class="w-4 h-4 text-purple-400 transition-transform duration-200" id="repeated-words-chevron"></i>
-                  </div>
-                </div>
-                <div id="repeated-words-container" class="p-3 pt-0 flex flex-col gap-1.5">
-                  <!-- Gerado dinamicamente -->
-                </div>
-              </div>
-
-              <!-- Verificador Ortográfico e Gramatical PT/EN -->
+              <!-- 1. Verificador Ortográfico e Gramatical PT/EN (Agora em primeiro lugar) -->
               <div class="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60 flex flex-col gap-2">
                 <div class="flex items-center justify-between">
                   <span class="font-bold text-rose-300 flex items-center gap-1.5">
@@ -618,6 +590,22 @@ class AuraEditorView {
                   </select>
                 </div>
                 <div id="spell-issues-container" class="flex flex-col gap-1.5">
+                  <!-- Gerado dinamicamente -->
+                </div>
+              </div>
+
+              <!-- 2. Detector de Repetições e Sinônimos (Retrátil com Toggle - Agora abaixo de Gramática) -->
+              <div class="bg-slate-800/60 rounded-xl border border-slate-700/60 flex flex-col overflow-hidden">
+                <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-slate-800/80 transition-colors" onclick="AURA.toggleRepeatedWordsBox()">
+                  <span class="font-bold text-purple-300 flex items-center gap-1.5 select-none">
+                    <i data-lucide="repeat" class="w-3.5 h-3.5"></i> Palavras Repetidas Detectadas
+                  </span>
+                  <div class="flex items-center gap-2">
+                    <button onclick="event.stopPropagation(); AURA.refreshRepeatedWords(true)" class="text-[10px] text-aura-400 hover:underline">Atualizar</button>
+                    <i data-lucide="chevron-down" class="w-4 h-4 text-purple-400 transition-transform duration-200" id="repeated-words-chevron"></i>
+                  </div>
+                </div>
+                <div id="repeated-words-container" class="p-3 pt-0 flex flex-col gap-1.5">
                   <!-- Gerado dinamicamente -->
                 </div>
               </div>

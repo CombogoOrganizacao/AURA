@@ -126,7 +126,8 @@ class AuraApp {
     }
     if (doc) {
       this.activeDocument = doc;
-      this.saveStateToHistory();
+      this.historyStack = [];
+      this.saveStateToHistory('Versão Inicial');
       this.persistDocuments();
       this.navigate('editor');
     }
@@ -170,6 +171,7 @@ class AuraApp {
 
   saveStateToHistory(description = 'Edição no documento') {
     if (!this.activeDocument) return;
+    if (!this.historyStack) this.historyStack = [];
     const snapshot = {
       timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       date: new Date().toLocaleDateString('pt-BR'),
@@ -192,6 +194,7 @@ class AuraApp {
     if (this.historyStack.length > 50) this.historyStack.shift();
     this.historyIndex = this.historyStack.length - 1;
     this.triggerAutoSave();
+    this.renderSidebarHistory();
   }
 
   undo() {
@@ -224,6 +227,9 @@ class AuraApp {
     this.clearCorruptStorage();
     this.applyI18n();
     this.registerServiceWorker();
+    if (this.activeDocument) {
+      this.saveStateToHistory('Versão Inicial');
+    }
     this.navigate('home');
     this.refreshLiveState();
     this.setupKeyboardShortcuts();
@@ -326,10 +332,14 @@ class AuraApp {
     if (viewName === 'home') {
       window.auraHomeView.render(targetSection);
     } else if (viewName === 'editor') {
+      if ((!this.historyStack || this.historyStack.length === 0) && this.activeDocument) {
+        this.saveStateToHistory('Versão Inicial');
+      }
       window.auraEditorView.render(targetSection, this.activeDocument);
       this.refreshCompliancePanel();
       this.refreshRepeatedWords();
       this.refreshSpellCheck();
+      this.renderSidebarHistory();
     } else if (viewName === 'notices') {
       window.auraNoticesView.render(targetSection, this.activeNotice, this.activeDocument);
     } else if (viewName === 'dashboard') {
@@ -388,6 +398,17 @@ class AuraApp {
         e.preventDefault();
         if (e.shiftKey) this.findPrevMatch();
         else this.findNextMatch();
+      }
+    });
+
+    // Fechar dropdown de citação ao clicar fora
+    document.addEventListener('click', (e) => {
+      const citationMenu = document.getElementById('citation-dropdown-menu');
+      const citationBtn = document.getElementById('btn-citation-dropdown');
+      if (citationMenu && !citationMenu.classList.contains('hidden')) {
+        if (!citationMenu.contains(e.target) && (!citationBtn || !citationBtn.contains(e.target))) {
+          citationMenu.classList.add('hidden');
+        }
       }
     });
   }
@@ -810,76 +831,6 @@ class AuraApp {
     }
   }
 
-  // Acessibilidade: Leitura em Voz Didática Feminina (Apresentação Oral)
-  toggleSpeechPresentation() {
-    if (!('speechSynthesis' in window)) {
-      this.showToast('Síntese de voz não suportada pelo seu navegador.', 'warning');
-      return;
-    }
-
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-      this.updateSpeechUI(false);
-      this.showToast('Apresentação de áudio pausada/encerrada.', 'info');
-      return;
-    }
-
-    const doc = this.activeDocument;
-    if (!doc) return;
-
-    // Constrói o roteiro didático de apresentação oral do trabalho
-    const isEn = this.currentLang === 'en';
-    const presentationText = isEn
-      ? `Welcome to the scientific presentation of the paper: ${doc.title || 'Untitled'}. Authored by: ${doc.authors || 'Candidate'}. Abstract: ${doc.abstract || 'Not provided.'}. Objectives and methodology: ${(doc.sections || []).map(s => s.title + '. ' + s.content).join('. ')}`
-      : `Seja bem-vindo(a) à apresentação acadêmica do trabalho: ${doc.title || 'Trabalho Científico'}. De autoria de: ${doc.authors || 'Pesquisador'}. Resumo da pesquisa: ${doc.abstract || ''}. Estrutura do trabalho: ${(doc.sections || []).map(s => s.title + '. ' + s.content).join('. ')}`;
-
-    const utterance = new SpeechSynthesisUtterance(presentationText);
-    utterance.lang = isEn ? 'en-US' : 'pt-BR';
-    utterance.rate = 0.95; // Cadência didática clara e pausada
-    utterance.pitch = 1.15; // Tom suave e feminino
-
-    // Tentar selecionar voz feminina em português ou inglês
-    const voices = window.speechSynthesis.getVoices();
-    const femaleVoice = voices.find(v => 
-      (isEn ? v.lang.startsWith('en') : v.lang.startsWith('pt')) && 
-      (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('luciana') || v.name.toLowerCase().includes('francisca') || v.name.toLowerCase().includes('maria') || v.name.toLowerCase().includes('victoria') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('google português'))
-    ) || voices.find(v => isEn ? v.lang.startsWith('en') : v.lang.startsWith('pt'));
-
-    if (femaleVoice) {
-      utterance.voice = femaleVoice;
-    }
-
-    utterance.onstart = () => {
-      this.updateSpeechUI(true);
-      this.showToast(isEn ? 'Scientific audio presentation started.' : 'Apresentação com voz didática iniciada!', 'success');
-    };
-
-    utterance.onend = () => {
-      this.updateSpeechUI(false);
-      this.showToast(isEn ? 'Presentation completed.' : 'Apresentação concluída com sucesso.', 'info');
-    };
-
-    utterance.onerror = () => {
-      this.updateSpeechUI(false);
-    };
-
-    window.speechSynthesis.speak(utterance);
-  }
-
-  updateSpeechUI(isPlaying) {
-    const btn = document.getElementById('btn-speech-read');
-    const icon = document.getElementById('speech-icon');
-    if (btn) {
-      if (isPlaying) {
-        btn.className = 'p-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 flex items-center justify-center font-bold transition-all shadow-lg animate-pulse';
-        btn.setAttribute('title', 'Parar Leitura');
-      } else {
-        btn.className = 'p-2 rounded-xl bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-500/50 flex items-center justify-center font-bold transition-all shadow-md';
-        btn.setAttribute('title', 'Apresentação Oral com Voz Didática');
-      }
-    }
-  }
-
   // Toggle do container retrátil de palavras repetidas
   toggleRepeatedWordsBox() {
     const container = document.getElementById('repeated-words-container');
@@ -951,21 +902,24 @@ class AuraApp {
   focusRepeatedWord(word, targetIndex = 0) {
     this.repeatedWordIndices = this.repeatedWordIndices || {};
     this.repeatedWordIndices[word] = targetIndex;
-    this.highlightAndScrollToText(word);
+    this.highlightAndScrollToText(word, false);
+    if (this.searchMatches && this.searchMatches.length > 0) {
+      this.currentSearchIndex = Math.min(targetIndex, this.searchMatches.length - 1);
+      this.highlightCurrentMatch();
+    }
     const counter = document.getElementById(`rep-counter-${word.replace(/\s+/g, '_')}`);
-    if (counter && this.searchMatches) {
-      counter.innerText = `${targetIndex + 1}/${this.searchMatches.length || 1}`;
+    if (counter && this.searchMatches && this.searchMatches.length > 0) {
+      counter.innerText = `${(this.currentSearchIndex >= 0 ? this.currentSearchIndex : 0) + 1}/${this.searchMatches.length}`;
     }
   }
 
   navigateRepeatedWord(word, direction = 1) {
     this.repeatedWordIndices = this.repeatedWordIndices || {};
-    const curr = this.repeatedWordIndices[word] || 0;
     
-    // Assegura que o termo está pesquisado
-    const findInput = document.getElementById('find-input');
-    if (!findInput || findInput.value !== word) {
-      this.highlightAndScrollToText(word);
+    // Assegura que o termo está pesquisado e destacado
+    const toolbarInput = document.getElementById('toolbar-find-input');
+    if (!toolbarInput || toolbarInput.value !== word || !this.searchMatches || this.searchMatches.length === 0) {
+      this.highlightAndScrollToText(word, false);
     }
     
     if (direction > 0) {
@@ -977,7 +931,7 @@ class AuraApp {
     const nextIndex = this.currentSearchIndex >= 0 ? this.currentSearchIndex : 0;
     this.repeatedWordIndices[word] = nextIndex;
     const counter = document.getElementById(`rep-counter-${word.replace(/\s+/g, '_')}`);
-    if (counter && this.searchMatches) {
+    if (counter && this.searchMatches && this.searchMatches.length > 0) {
       counter.innerText = `${nextIndex + 1}/${this.searchMatches.length}`;
     }
   }
@@ -1217,7 +1171,7 @@ class AuraApp {
     if (switchTab) {
       this.openFindReplace();
     }
-    const findInput = document.getElementById('find-input');
+    const findInput = document.getElementById('toolbar-find-input');
     if (findInput) {
       findInput.value = targetText;
     }
@@ -1373,7 +1327,7 @@ class AuraApp {
   }
 
   onFindInputChange(term) {
-    const sheet = document.getElementById('academic-active-sheet');
+    const sheetsContainer = document.getElementById('academic-sheets-wrapper') || document.getElementById('editor-sheet-container') || document.body;
     const counterBadge = document.getElementById('find-counter-badge');
     const toolbarInput = document.getElementById('toolbar-find-input');
     const modalInput = document.getElementById('modal-find-input');
@@ -1385,8 +1339,6 @@ class AuraApp {
       modalInput.value = term;
     }
 
-    if (!sheet) return;
-
     // Limpa destaques anteriores
     this.clearSearchHighlights();
 
@@ -1397,32 +1349,43 @@ class AuraApp {
       return;
     }
 
-    const matchCase = document.getElementById('find-opt-case') ? document.getElementById('find-opt-case').checked : false;
-    const wholeWord = document.getElementById('find-opt-word') ? document.getElementById('find-opt-word').checked : false;
+    const matchCase = document.getElementById('modal-find-opt-case') ? document.getElementById('modal-find-opt-case').checked : false;
+    const wholeWord = document.getElementById('modal-find-opt-word') ? document.getElementById('modal-find-opt-word').checked : false;
 
-    // Cria regex seguro
     let pattern = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     if (wholeWord) pattern = `\\b${pattern}\\b`;
     const regex = new RegExp(pattern, matchCase ? 'g' : 'gi');
 
-    // Destaca no DOM visual da folha
-    const walker = document.createTreeWalker(sheet, NodeFilter.SHOW_TEXT, null, false);
-    const nodesToReplace = [];
+    const sheets = sheetsContainer.querySelectorAll('.academic-page-sheet');
+    const searchRoots = sheets.length > 0 ? Array.from(sheets) : [sheetsContainer];
 
-    while (walker.nextNode()) {
-      const node = walker.currentNode;
-      if (node.parentElement && !node.parentElement.classList.contains('search-highlight') && regex.test(node.nodeValue)) {
-        nodesToReplace.push(node);
+    searchRoots.forEach(sheet => {
+      const walker = document.createTreeWalker(sheet, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) => {
+          if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          const parent = node.parentElement;
+          if (parent && (parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE' || parent.classList.contains('search-highlight') || parent.classList.contains('no-print') || parent.closest('.no-print'))) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+
+      const nodesToReplace = [];
+      while (walker.nextNode()) {
+        if (regex.test(walker.currentNode.nodeValue)) {
+          nodesToReplace.push(walker.currentNode);
+        }
       }
-    }
 
-    nodesToReplace.forEach(node => {
-      const span = document.createElement('span');
-      span.innerHTML = node.nodeValue.replace(regex, (match) => `<mark class="search-highlight">${match}</mark>`);
-      node.parentNode.replaceChild(span, node);
+      nodesToReplace.forEach(node => {
+        const span = document.createElement('span');
+        span.innerHTML = node.nodeValue.replace(regex, (match) => `<mark class="search-highlight">${match}</mark>`);
+        node.parentNode.replaceChild(span, node);
+      });
     });
 
-    this.searchMatches = Array.from(sheet.querySelectorAll('.search-highlight'));
+    this.searchMatches = Array.from(sheetsContainer.querySelectorAll('.search-highlight'));
     if (this.searchMatches.length > 0) {
       this.currentSearchIndex = 0;
       this.highlightCurrentMatch();
@@ -1439,17 +1402,19 @@ class AuraApp {
   }
 
   clearSearchHighlights() {
-    const sheet = document.getElementById('academic-active-sheet');
-    if (!sheet) return;
-    sheet.querySelectorAll('.search-highlight').forEach(el => {
+    const sheetsContainer = document.getElementById('academic-sheets-wrapper') || document.getElementById('editor-sheet-container') || document.body;
+    if (!sheetsContainer) return;
+    sheetsContainer.querySelectorAll('.search-highlight').forEach(el => {
       const parent = el.parentNode;
-      parent.replaceChild(document.createTextNode(el.innerText), el);
-      parent.normalize();
+      if (parent) {
+        parent.replaceChild(document.createTextNode(el.innerText), el);
+        parent.normalize();
+      }
     });
   }
 
   highlightCurrentMatch() {
-    if (this.searchMatches.length === 0 || this.currentSearchIndex < 0) return;
+    if (!this.searchMatches || this.searchMatches.length === 0 || this.currentSearchIndex < 0) return;
     this.searchMatches.forEach(m => m.classList.remove('search-highlight-current'));
     const curr = this.searchMatches[this.currentSearchIndex];
     if (curr) {
@@ -1463,13 +1428,13 @@ class AuraApp {
   }
 
   findNextMatch() {
-    if (this.searchMatches.length === 0) return;
+    if (!this.searchMatches || this.searchMatches.length === 0) return;
     this.currentSearchIndex = (this.currentSearchIndex + 1) % this.searchMatches.length;
     this.highlightCurrentMatch();
   }
 
   findPrevMatch() {
-    if (this.searchMatches.length === 0) return;
+    if (!this.searchMatches || this.searchMatches.length === 0) return;
     this.currentSearchIndex = (this.currentSearchIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
     this.highlightCurrentMatch();
   }
@@ -1843,10 +1808,21 @@ class AuraApp {
     document.execCommand(cmd, false, null);
   }
 
-  toggleCitationMenu() {
+  toggleCitationMenu(e) {
+    if (e) e.stopPropagation();
     const menu = document.getElementById('citation-dropdown-menu');
-    if (menu) {
-      menu.classList.toggle('hidden');
+    const btn = document.getElementById('btn-citation-dropdown');
+    if (!menu || !btn) return;
+    const isHidden = menu.classList.contains('hidden');
+    if (isHidden) {
+      const rect = btn.getBoundingClientRect();
+      menu.style.position = 'fixed';
+      menu.style.top = `${rect.bottom + 6}px`;
+      menu.style.left = `${Math.max(10, Math.min(rect.left, window.innerWidth - 270))}px`;
+      menu.style.zIndex = '99999';
+      menu.classList.remove('hidden');
+    } else {
+      menu.classList.add('hidden');
     }
   }
 
