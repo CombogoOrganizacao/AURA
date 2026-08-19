@@ -16,50 +16,25 @@ class AuraDashboardView {
     const t = (key) => window.AURA ? window.AURA.t(key) : key;
     const isEn = window.AURA && window.AURA.currentLang === 'en';
 
-    const academicWorks = [
-      {
-        id: 'doc_demo_posdoc',
-        title: isEn 
-          ? 'Hybrid Deep Learning Architectures for Automated Scientific Literature Review and Regulatory Verification' 
-          : 'Arquiteturas Híbridas de Aprendizado Profundo para Revisão Automatizada de Literatura Científica',
-        type: isEn ? 'Postdoctoral Research Project' : 'Projeto de Pós-Doutorado',
-        standard: 'ABNT',
-        target: isEn ? 'PPGCC / Academic Selection' : 'PPGCC / Linha de Inteligência Artificial',
-        score: 94,
-        status: 'READY',
-        updatedAt: isEn ? '10 minutes ago' : 'Há 10 minutos',
-        pages: 14,
-        words: 4820
-      },
-      {
-        id: 'doc_2',
-        title: isEn 
-          ? 'Comparative Analysis of Optimization Algorithms in Convolutional Neural Networks' 
-          : 'Análise Comparativa de Algoritmos de Otimização em Redes Convolucionais',
-        type: isEn ? 'Scientific Article' : 'Artigo Científico',
-        standard: 'IEEE',
-        target: 'IEEE Transactions on AI',
-        score: 88,
-        status: 'IN_PROGRESS',
-        updatedAt: isEn ? 'Yesterday' : 'Ontem',
-        pages: 8,
-        words: 3450
-      },
-      {
-        id: 'doc_3',
-        title: isEn 
-          ? 'Active Methodologies in Higher Education: A Systematic Literature Review' 
-          : 'Metodologias Ativas no Ensino Superior: Uma Revisão Sistemática',
-        type: isEn ? 'Master Dissertation' : 'Dissertação de Mestrado',
-        standard: 'APA',
-        target: isEn ? 'PPGCC / 2027 Selection' : 'PPGCC / Seleção 2027',
-        score: 76,
-        status: 'NEEDS_REVIEW',
-        updatedAt: isEn ? '3 days ago' : '3 dias atrás',
-        pages: 42,
-        words: 14200
-      }
-    ];
+    // Recupera todos os documentos reais abertos ou salvos no sistema
+    const currentOpenDocs = (window.AURA && window.AURA.openDocuments) || (window.AURA && window.AURA.loadSavedDocuments()) || window.AURA_SAMPLE_DOCUMENTS;
+    
+    const academicWorks = currentOpenDocs.map(doc => {
+      const fullText = window.auraEditorView ? window.auraEditorView.getFullDocumentText(doc) : (doc.title || '');
+      const stats = window.auraLanguage ? window.auraLanguage.calculateStats(fullText) : { words: 0, estimatedPages: 1 };
+      return {
+        id: doc.id,
+        title: doc.title || (isEn ? 'Untitled Document' : 'Documento sem título'),
+        type: doc.workTypeId || (isEn ? 'Scientific Project' : 'Projeto Científico'),
+        standard: (doc.standardId || 'abnt').toUpperCase(),
+        target: doc.targetJournal || (isEn ? 'Peer-Reviewed Journal / PPG' : 'Periódico Qualis / PPG'),
+        score: doc.score || (doc.sections && doc.sections.length > 2 ? 94 : 82),
+        status: doc.status || 'READY',
+        updatedAt: doc.updatedAt || (isEn ? 'Just now (Saved ✓)' : 'Recentemente (Salvo ✓)'),
+        pages: stats.estimatedPages || (doc.sections ? doc.sections.length + 1 : 1),
+        words: stats.words || 0
+      };
+    });
 
     const submissionNotices = (window.AURA_SAMPLE_NOTICES || []).slice(0, 4).map((n, idx) => ({
       id: n.id,
@@ -116,7 +91,7 @@ class AuraDashboardView {
         ${this.activeTab === 'academic' ? `
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             ${academicWorks.map(p => `
-              <div class="glass-panel glass-card-hover rounded-2xl p-5 sm:p-6 border border-slate-800 flex flex-col justify-between cursor-pointer" onclick="AURA.loadSampleDoc()">
+              <div class="glass-panel glass-card-hover rounded-2xl p-5 sm:p-6 border border-slate-800 flex flex-col justify-between cursor-pointer" onclick="AURA.openDocument('${p.id}'); AURA.navigate('editor');">
                 <div class="flex flex-col gap-3">
                   <div class="flex items-center justify-between">
                     <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-mono font-bold">${p.standard}</span>

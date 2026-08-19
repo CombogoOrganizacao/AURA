@@ -107,6 +107,8 @@ class AuraLanguageAndStats {
       'pesquisas': ['investigações', 'estudos científicos', 'inquéritos', 'levantamentos'],
       'metodologia': ['método', 'procedimento', 'delineamento', 'sistemática', 'abordagem metodológica'],
       'metodologias': ['métodos', 'procedimentos', 'delineamentos', 'sistemáticas', 'abordagens'],
+      'metodo': ['procedimento', 'delineamento', 'técnica', 'protocolo', 'estratégia'],
+      'método': ['procedimento', 'delineamento', 'técnica', 'protocolo', 'estratégia'],
       'estudo': ['investigação', 'exame', 'análise', 'ensaio científico', 'trabalho'],
       'estudos': ['investigações', 'exames', 'análises', 'ensaios científicos'],
       'analise': ['exame crítico', 'apreciação', 'investigação', 'decomposição analítica', 'avaliação'],
@@ -118,8 +120,19 @@ class AuraLanguageAndStats {
       'amostra': ['amostragem', 'grupo amostral', 'coorte investigada', 'conjunto de dados'],
       'amostras': ['amostragens', 'grupos amostrais', 'coortes investigadas', 'conjuntos de dados'],
       'dados': ['informações empíricas', 'evidências', 'amostras', 'registros', 'indicadores'],
+      'dado': ['informação', 'evidência', 'registro', 'indicador'],
+      'informacao': ['dado', 'evidência', 'conhecimento', 'registro'],
+      'informação': ['dado', 'evidência', 'conhecimento', 'registro'],
+      'informacoes': ['dados', 'evidências', 'conhecimentos', 'registros'],
+      'informações': ['dados', 'evidências', 'conhecimentos', 'registros'],
+      'avaliacao': ['apreciação', 'diagnóstico', 'mensuração', 'exame valorativo'],
+      'avaliação': ['apreciação', 'diagnóstico', 'mensuração', 'exame valorativo'],
+      'hipotese': ['conjectura', 'pressuposto', 'suposição teórica', 'proposição'],
+      'hipótese': ['conjectura', 'pressuposto', 'suposição teórica', 'proposição'],
+      'hipoteses': ['conjecturas', 'pressupostos', 'suposições teóricas', 'proposições'],
+      'hipóteses': ['conjecturas', 'pressupostos', 'suposições teóricas', 'proposições'],
 
-      // Resultados e Conclusões
+      // Resultados, Discussão e Conclusões
       'resultado': ['desfecho', 'achado', 'constatação', 'conclusão empírica', 'dado obtido'],
       'resultados': ['achados', 'desfechos', 'dados empíricos', 'evidências obtidas', 'constatações'],
       'conclusao': ['desfecho', 'inferência', 'dedução', 'arremate teórico', 'síntese final'],
@@ -128,6 +141,12 @@ class AuraLanguageAndStats {
       'conclusões': ['desfechos', 'inferências', 'deduções', 'sínteses finais'],
       'impacto': ['repercussão', 'desdobramento', 'influência', 'relevância prática', 'efeito'],
       'impactos': ['repercussões', 'desdobramentos', 'influências', 'efeitos'],
+      'evidencia': ['comprovação', 'prova', 'indício', 'sustentação empírica'],
+      'evidência': ['comprovação', 'prova', 'indício', 'sustentação empírica'],
+      'evidencias': ['comprovações', 'provas', 'indícios', 'sustentações empíricas'],
+      'evidências': ['comprovações', 'provas', 'indícios', 'sustentações empíricas'],
+      'discrepancia': ['divergência', 'incongruência', 'assimetria', 'diferença'],
+      'discrepância': ['divergência', 'incongruência', 'assimetria', 'diferença'],
 
       // Verbos Acadêmicos Comuns
       'demonstra': ['evidencia', 'comprova', 'revela', 'indica', 'atesta', 'elucida'],
@@ -142,16 +161,38 @@ class AuraLanguageAndStats {
       'observam': ['constatam', 'verificam', 'vislumbram', 'percebem'],
       'utiliza': ['emprega', 'adota', 'faz uso de', 'recorre a', 'mobiliza'],
       'utilizam': ['empregam', 'adotam', 'fazem uso de', 'recorrem a', 'mobilizam'],
+      'utilizado': ['empregado', 'adotado', 'mobilizado', 'aplicado'],
+      'utilizados': ['empregados', 'adotados', 'mobilizados', 'aplicados'],
       'realiza': ['conduz', 'executa', 'efetua', 'concretiza', 'desenvolve'],
       'realizam': ['conduzem', 'executam', 'efetuam', 'concretizam', 'desenvolvem'],
+      'realizado': ['conduzido', 'executado', 'efetuado', 'desenvolvido'],
+      'realizados': ['conduzidos', 'executados', 'efetuados', 'desenvolvidos'],
       'desenvolve': ['elabora', 'constrói', 'projeta', 'estrutura', 'concebe'],
       'desenvolvem': ['elaboram', 'constroem', 'projetam', 'estruturam', 'concebem'],
+      'investiga': ['examina', 'perscruta', 'sonda', 'analisa', 'averigua'],
+      'investigam': ['examinam', 'perscrutam', 'sondam', 'analisam', 'averiguam'],
+      'verifica': ['averece', 'constata', 'atesta', 'confirma', 'valida'],
+      'verificam': ['averecem', 'constatam', 'atestam', 'confirmam', 'validam'],
+      'propoe': ['sugere', 'apresenta', 'postula', 'formula', 'aventa'],
+      'propõe': ['sugere', 'apresenta', 'postula', 'formula', 'aventa'],
+      'propoem': ['sugerem', 'apresentam', 'postulam', 'formulam'],
+      'propõem': ['sugerem', 'apresentam', 'postulam', 'formulam'],
+      'avalia': ['aferese', 'mensura', 'pondera', 'aprecia', 'julga'],
+      'avaliam': ['aferem', 'mensuram', 'ponderam', 'apreciam'],
+      'discute': ['debate', 'problematiza', 'contrapõe', 'reflete sobre'],
+      'discutem': ['debatem', 'problematizam', 'contrapõem', 'refletem sobre'],
+      'encontra': ['identifica', 'detecta', 'depara com', 'constata'],
+      'encontram': ['identificam', 'detectam', 'deparam com', 'constatam'],
 
-      // Conceitos e Qualificadores
+      // Conceitos, Qualificadores e Substantivos Acadêmicos
       'importante': ['relevante', 'preponderante', 'significativo', 'fundamental', 'essencial', 'basilar'],
       'importantes': ['relevantes', 'preponderantes', 'significativos', 'fundamentais', 'essenciais'],
       'relevante': ['preponderante', 'significativo', 'fulcral', 'essencial', 'pertinente'],
       'relevantes': ['preponderantes', 'significativos', 'fulcrais', 'essenciais', 'pertinentes'],
+      'fundamental': ['essencial', 'primordial', 'basilar', 'preponderante', 'capital'],
+      'fundamentais': ['essenciais', 'primordiais', 'basilares', 'preponderantes'],
+      'significativo': ['expressivo', 'notável', 'relevante', 'consistente', 'marcado'],
+      'significativos': ['expressivos', 'notáveis', 'relevantes', 'consistentes'],
       'problema': ['questão de pesquisa', 'objeto de estudo', 'desafio', 'problemática', 'óbice'],
       'problemas': ['questões de pesquisa', 'objetos de estudo', 'desafios', 'problemáticas', 'óbices'],
       'objetivo': ['finalidade', 'escopo', 'propósito', 'meta', 'intento'],
@@ -161,7 +202,7 @@ class AuraLanguageAndStats {
       'sistema': ['plataforma', 'mecanismo', 'estrutura', 'aparato', 'framework'],
       'sistemas': ['plataformas', 'mecanismos', 'estruturas', 'aparatos', 'frameworks'],
       'modelo': ['paradigma', 'arquitetura', 'formulação teórica', 'esquema', 'framework'],
-      'modelos': ['paradigmas', 'arquiteturas formulações teóricas', 'esquemas'],
+      'modelos': ['paradigmas', 'arquiteturas', 'formulações teóricas', 'esquemas'],
       'documento': ['manuscrito', 'texto acadêmico', 'trabalho', 'produção textual'],
       'documentos': ['manuscritos', 'textos acadêmicos', 'trabalhos', 'produções textuais'],
       'artigo': ['manuscrito', 'paper científico', 'estudo', 'ensaio'],
@@ -179,20 +220,44 @@ class AuraLanguageAndStats {
       'revisão': ['síntese crítica', 'levantamento bibliográfico', 'exame panorâmico'],
       'teoria': ['fundamentação conceitual', 'arcabouço teórico', 'paradigma epistemológico'],
       'teorias': ['fundamentações conceituais', 'arcabouços teóricos', 'paradigmas'],
+      'abordagem': ['perspectiva', 'óptica', 'enfoque', 'vertente teórica'],
+      'abordagens': ['perspectivas', 'ópticas', 'enfoques', 'vertentes teóricas'],
+      'contexto': ['cenário', 'panorama', 'conjuntura', 'âmbito', 'quadro'],
+      'contextos': ['cenários', 'panoramas', 'conjunturas', 'âmbitos'],
+      'desafio': ['obstáculo', 'dificuldade', 'problemática', 'gargalo'],
+      'desafios': ['obstáculos', 'dificuldades', 'problemáticas', 'gargalos'],
+      'aspecto': ['dimensão', 'fator', 'vertente', 'elemento', 'característica'],
+      'aspectos': ['dimensões', 'fatores', 'vertentes', 'elementos'],
+      'estrutura': ['arquitetura', 'configuração', 'conformação', 'organização'],
+      'estruturas': ['arquiteturas', 'configurações', 'organizações'],
+      'nivel': ['patamar', 'grau', 'estágio', 'índice'],
+      'nível': ['patamar', 'grau', 'estágio', 'índice'],
+      'niveis': ['patamares', 'graus', 'estágios', 'índices'],
+      'níveis': ['patamares', 'graus', 'estágios', 'índices'],
 
       // Inglês Acadêmico
       'research': ['investigation', 'scientific inquiry', 'study', 'exploration'],
+      'researches': ['investigations', 'scientific studies', 'inquiries'],
       'method': ['approach', 'procedure', 'framework', 'technique'],
       'methods': ['approaches', 'procedures', 'frameworks', 'techniques'],
       'results': ['findings', 'outcomes', 'empirical evidence', 'observations'],
       'result': ['finding', 'outcome', 'empirical observation'],
       'analysis': ['critical examination', 'assessment', 'evaluation', 'investigation'],
+      'analyses': ['critical examinations', 'assessments', 'evaluations'],
       'significant': ['notable', 'substantial', 'considerable', 'paramount', 'marked'],
       'demonstrate': ['evince', 'substantiate', 'illustrate', 'corroborate', 'reveal'],
       'demonstrates': ['evinces', 'substantiates', 'illustrates', 'corroborates', 'reveals'],
+      'demonstrated': ['evinced', 'substantiated', 'illustrated', 'corroborated'],
       'development': ['advancement', 'evolution', 'progression', 'enhancement', 'formulation'],
       'paper': ['manuscript', 'scientific article', 'study', 'work'],
-      'data': ['empirical evidence', 'records', 'observations', 'dataset']
+      'papers': ['manuscripts', 'scientific articles', 'studies', 'works'],
+      'data': ['empirical evidence', 'records', 'observations', 'dataset'],
+      'approach': ['methodology', 'framework', 'perspective', 'strategy'],
+      'approaches': ['methodologies', 'frameworks', 'perspectives', 'strategies'],
+      'evaluate': ['assess', 'appraise', 'examine', 'gauge'],
+      'evaluates': ['assesses', 'appraises', 'examines', 'gauges'],
+      'evaluated': ['assessed', 'appraised', 'examined', 'gauged'],
+      'importance': ['relevance', 'significance', 'prominence', 'weight']
     };
 
     if (synonymMap[w]) return synonymMap[w];
@@ -213,7 +278,7 @@ class AuraLanguageAndStats {
       return ['conduzir', 'proceder a', 'executar', 'viabilizar', 'efetuar'];
     }
 
-    return ['termo correlato', 'expressão análoga', 'conceito equivalente'];
+    return ['expressão análoga', 'termo correspondente', 'variante conceitual'];
   }
 
   /**
