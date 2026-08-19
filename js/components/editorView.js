@@ -137,10 +137,10 @@ class AuraEditorView {
         </div>
 
         <!-- WORKSPACE (SIDEBAR + MAIN CANVAS + CONTEXT PANEL) -->
-        <div class="flex-1 flex flex-col md:flex-row">
+        <div class="flex-1 flex flex-col md:flex-row relative">
           
-          <!-- LEFT SIDEBAR: STRUCTURE TREE (ESTRUTURA DO TRABALHO) -->
-          <aside class="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col flex-shrink-0">
+          <!-- LEFT SIDEBAR: STRUCTURE TREE (ESTRUTURA DO TRABALHO - FIXO E ACOMPANHA A PÁGINA) -->
+          <aside class="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col flex-shrink-0 editor-sticky-sidebar">
             <div>
               <div class="p-3 border-b border-slate-800 flex items-center justify-between">
                 <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -151,7 +151,7 @@ class AuraEditorView {
                 </button>
               </div>
 
-              <!-- Quick Action: Auto-Format 1-Click (Proximo da estrutura do trabalho) -->
+              <!-- Quick Action: Auto-Format 1-Click (Próximo da estrutura do trabalho) -->
               <div class="p-2.5 border-b border-slate-800 bg-slate-900/90">
                 <button onclick="AURA.applyAutomaticFormat()" class="w-full py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md shadow-emerald-700/20 flex items-center justify-center gap-1.5 transition-all">
                   <i data-lucide="wand-2" class="w-3.5 h-3.5"></i> ${t('auto_format_btn')}
@@ -159,22 +159,24 @@ class AuraEditorView {
               </div>
             </div>
 
-            <!-- Sections List -->
-            <div class="p-2 flex flex-col gap-1 text-xs" id="editor-section-tree">
+            <!-- Sections List: Títulos Idênticos aos da Folha -->
+            <div class="p-2 flex flex-col gap-1 text-xs flex-1" id="editor-section-tree">
               <!-- Elementos Pré-Textuais -->
               <div class="px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">${t('pre_textual')}</div>
               <div onclick="AURA.scrollToElement('doc-pretextual')" class="tree-item px-2.5 py-1.5 rounded bg-slate-800/40 text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer flex items-center gap-2">
-                <i data-lucide="file" class="w-3.5 h-3.5 text-slate-400"></i> ${t('title_and_authors')}
+                <i data-lucide="file" class="w-3.5 h-3.5 text-slate-400"></i> 
+                <span class="truncate" id="sidebar-title-display">${currentDoc.title || (isEn ? 'Title & Authors' : 'Título & Autoria')}</span>
               </div>
               <div onclick="AURA.scrollToElement('doc-abstract')" class="tree-item px-2.5 py-1.5 rounded bg-slate-800/40 text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer flex items-center gap-2">
-                <i data-lucide="align-left" class="w-3.5 h-3.5 text-indigo-400"></i> ${t('abstract_section')}
+                <i data-lucide="align-left" class="w-3.5 h-3.5 text-indigo-400"></i> 
+                <span>${stdId === 'apa' || stdId === 'ieee' || stdId === 'mla' ? 'Abstract' : 'Resumo'}</span>
               </div>
 
-              <!-- Elementos Textuais (Seções Dinâmicas) -->
+              <!-- Elementos Textuais (Seções Dinâmicas Sincronizadas) -->
               <div class="px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-2">${t('textual')}</div>
               ${(currentDoc.sections || []).map((sec, idx) => `
                 <div onclick="AURA.scrollToSection('${sec.id}')" class="tree-item px-2.5 py-1.5 rounded bg-slate-800/60 text-slate-200 hover:bg-aura-900/30 hover:text-aura-300 cursor-pointer flex items-center justify-between group">
-                  <span class="truncate">${sec.title}</span>
+                  <span class="truncate" id="sidebar-sec-${sec.id}">${sec.title}</span>
                   <button onclick="event.stopPropagation(); AURA.deleteSection('${sec.id}')" class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300">
                     <i data-lucide="trash-2" class="w-3 h-3"></i>
                   </button>
@@ -184,7 +186,9 @@ class AuraEditorView {
               <!-- Elementos Pós-Textuais -->
               <div class="px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-2">${t('post_textual')}</div>
               <div onclick="AURA.scrollToElement('doc-references')" class="tree-item px-2.5 py-1.5 rounded bg-slate-800/40 text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer flex items-center gap-2">
-                <i data-lucide="book-marked" class="w-3.5 h-3.5 text-amber-400"></i> ${t('references')} (${(currentDoc.references || []).length})
+                <i data-lucide="book-marked" class="w-3.5 h-3.5 text-amber-400"></i> 
+                <span>${stdId === 'mla' ? 'Works Cited' : (stdId === 'chicago' ? 'Bibliography' : (stdId === 'apa' || stdId === 'ieee' ? 'References' : 'Referências'))}</span>
+                <span class="text-[10px] text-slate-400">(${(currentDoc.references || []).length})</span>
               </div>
             </div>
           </aside>
@@ -332,8 +336,8 @@ class AuraEditorView {
 
           </div>
 
-          <!-- RIGHT CONTEXT PANEL (ASSISTENTE IA, ANÁLISE, LOCALIZAR/SUBSTITUIR) -->
-          <aside class="w-full md:w-80 lg:w-96 bg-slate-900 border-l border-slate-800 flex flex-col flex-shrink-0" id="editor-right-panel">
+          <!-- RIGHT CONTEXT PANEL (ASSISTENTE IA, ANÁLISE, LOCALIZAR/SUBSTITUIR - FIXO E ACOMPANHA A PÁGINA) -->
+          <aside class="w-full md:w-80 lg:w-96 bg-slate-900 border-l border-slate-800 flex flex-col flex-shrink-0 editor-sticky-sidebar" id="editor-right-panel">
             
             <!-- Panel Tabs -->
             <div class="flex items-center border-b border-slate-800 text-xs font-semibold bg-slate-950/60 p-1 gap-1">

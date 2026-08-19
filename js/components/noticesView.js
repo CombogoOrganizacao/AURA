@@ -113,6 +113,16 @@ class AuraNoticesView {
                     </div>
                   </div>
 
+                  <!-- Ações Rápidas: Resumo Inteligente + Link de Leitura Oficial -->
+                  <div class="flex items-center gap-1.5 text-[11px] text-slate-400 pt-1">
+                    <button onclick="AURA.showNoticeSummaryModal('${n.id}')" class="px-2 py-1 rounded bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border border-amber-800/40 flex items-center gap-1 font-semibold transition-all">
+                      <i data-lucide="file-check" class="w-3 h-3 text-amber-400"></i> Resumo Rápido
+                    </button>
+                    <a href="https://www.gov.br/cnpq/pt-br/assuntos/chamadas-publicas" target="_blank" rel="noopener noreferrer" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center gap-1 transition-all">
+                      <i data-lucide="external-link" class="w-3 h-3 text-aura-400"></i> Ler Edital Oficial
+                    </a>
+                  </div>
+
                   <div class="flex items-center gap-2 pt-2 border-t border-slate-800/80">
                     <button onclick="AURA.selectNotice('${n.id}')" class="flex-1 py-1.5 rounded-lg ${isSelected ? 'bg-amber-500 text-slate-950 font-extrabold' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'} text-xs flex items-center justify-center gap-1 transition-all">
                       <i data-lucide="eye" class="w-3.5 h-3.5"></i> ${isSelected ? 'Edital em Análise' : 'Analisar Edital'}

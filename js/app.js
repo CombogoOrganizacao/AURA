@@ -212,6 +212,8 @@ class AuraApp {
     if (this.activeDocument) {
       this.activeDocument.title = title;
       this.updateHeaderBadge();
+      const sidebarTitle = document.getElementById('sidebar-title-display');
+      if (sidebarTitle) sidebarTitle.innerText = title.trim() || (this.currentLang === 'en' ? 'Title & Authors' : 'Título & Autoria');
     }
   }
 
@@ -237,7 +239,11 @@ class AuraApp {
   updateSectionTitle(secId, title) {
     if (!this.activeDocument || !this.activeDocument.sections) return;
     const sec = this.activeDocument.sections.find(s => s.id === secId);
-    if (sec) sec.title = title;
+    if (sec) {
+      sec.title = title;
+      const sidebarSec = document.getElementById(`sidebar-sec-${secId}`);
+      if (sidebarSec) sidebarSec.innerText = title.trim() || 'Nova Seção';
+    }
   }
 
   updateSectionContent(secId, html) {
@@ -1445,6 +1451,18 @@ class AuraApp {
         this.showToast(isEn ? 'Budget item removed.' : 'Item orçamentário removido.', 'info');
       }
     }
+  }
+
+  showNoticeSummaryModal(noticeId) {
+    window.auraModals.showNoticeSummaryModal(noticeId);
+  }
+
+  exportComplianceReportDirect() {
+    const notice = this.activeNotice || window.AURA_SAMPLE_NOTICES[0];
+    const doc = this.activeDocument || window.AURA_SAMPLE_DOCUMENTS[0];
+    const compliance = window.auraRulesEngine.evaluateCompliance(doc, notice);
+    window.auraExport.exportComplianceReport(doc, notice, compliance);
+    this.showToast('Relatório oficial de conformidade em DOC formatado gerado com sucesso!', 'success');
   }
 }
 

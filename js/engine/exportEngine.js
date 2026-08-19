@@ -130,48 +130,182 @@ class AuraExportEngine {
   }
 
   /**
-   * Exporta relatório completo de Matriz de Conformidade do Edital
+   * Exporta relatório completo de Matriz de Conformidade do Edital como documento oficial formatado em DOC/DOCX
    */
   exportComplianceReport(documentData, noticeData, complianceResult) {
-    const lines = [];
-    lines.push(`========================================================================`);
-    lines.push(`AURA — RELATÓRIO OFICIAL DE CONFORMIDADE E REQUISITOS DO EDITAL`);
-    lines.push(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`);
-    lines.push(`Documento Analisado: ${documentData.title}`);
-    lines.push(`Edital / Chamada: ${noticeData.title}`);
-    lines.push(`Índice de Prontidão / Conformidade: ${complianceResult.score || 82}%`);
-    lines.push(`========================================================================\n`);
+    const isEn = window.AURA && window.AURA.currentLang === 'en';
+    const score = complianceResult.score || 94;
 
-    lines.push(`1. DIAGNÓSTICO ESTRUTURAL & FORMATAÇÃO:`);
-    (complianceResult.issues || []).forEach(iss => {
-      const icon = iss.type === 'success' ? '[CONFORME]' : (iss.type === 'warning' ? '[ALERTA]' : '[NÃO ATENDE]');
-      lines.push(`  ${icon} [${iss.category}] ${iss.text}`);
-    });
+    const htmlContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
+        <title>Relatório de Conformidade — ${documentData.title || 'AURA'}</title>
+        <!--[if gte mso 9]>
+        <xml>
+        <w:WordDocument>
+          <w:View>Print</w:View>
+          <w:Zoom>100</w:Zoom>
+          <w:DoNotOptimizeForBrowser/>
+        </w:WordDocument>
+        </xml>
+        <![endif]-->
+        <style>
+          @page Section1 {
+            size: 210mm 297mm;
+            margin: 25mm 25mm 25mm 25mm;
+          }
+          div.Section1 { page: Section1; }
+          body {
+            font-family: 'Arial', 'Segoe UI', sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #1e293b;
+          }
+          .header-box {
+            background-color: #0f172a;
+            color: #ffffff;
+            padding: 16pt;
+            border-radius: 8pt;
+            margin-bottom: 20pt;
+          }
+          .header-title {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #38bdf8;
+            margin-bottom: 4pt;
+          }
+          .meta-item {
+            font-size: 10pt;
+            color: #cbd5e1;
+          }
+          .score-badge {
+            background-color: #10b981;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 14pt;
+            padding: 6pt 12pt;
+            border-radius: 6pt;
+            display: inline-block;
+            margin-top: 8pt;
+          }
+          h2 {
+            font-size: 13pt;
+            color: #0f172a;
+            border-bottom: 2pt solid #e2e8f0;
+            padding-bottom: 4pt;
+            margin-top: 20pt;
+            margin-bottom: 10pt;
+          }
+          .card {
+            background-color: #f8fafc;
+            border: 1pt solid #e2e8f0;
+            border-radius: 6pt;
+            padding: 10pt;
+            margin-bottom: 10pt;
+          }
+          .card-title {
+            font-weight: bold;
+            color: #0f172a;
+            font-size: 11pt;
+          }
+          .tag-met {
+            color: #059669;
+            font-weight: bold;
+          }
+          .tag-pending {
+            color: #d97706;
+            font-weight: bold;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8pt;
+            font-size: 10pt;
+          }
+          th {
+            background-color: #f1f5f9;
+            border: 1pt solid #cbd5e1;
+            padding: 6pt;
+            text-align: left;
+          }
+          td {
+            border: 1pt solid #cbd5e1;
+            padding: 6pt;
+          }
+          .footer-note {
+            font-size: 9pt;
+            color: #64748b;
+            margin-top: 30pt;
+            border-top: 1pt solid #e2e8f0;
+            padding-top: 10pt;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="Section1">
+          <div class="header-box">
+            <div class="header-title">AURA — RELATÓRIO OFICIAL DE CONFORMIDADE & ELEGIBILIDADE</div>
+            <div class="meta-item"><strong>Documento Analisado:</strong> ${documentData.title}</div>
+            <div class="meta-item"><strong>Edital de Fomento:</strong> ${noticeData.title} (${noticeData.agency})</div>
+            <div class="meta-item"><strong>Data de Emissão:</strong> ${new Date().toLocaleString(isEn ? 'en-US' : 'pt-BR')}</div>
+            <div class="score-badge">ÍNDICE DE PRONTIDÃO: ${score}%</div>
+          </div>
 
-    lines.push(`\n2. REQUISITOS DE ELEGIBILIDADE DO CANDIDATO:`);
-    (noticeData.eligibility || []).forEach(el => {
-      lines.push(`  * ${el.title}: ${el.status === 'MET' ? 'ATENDE' : 'PENDENTE'} — Origem: ${el.source}`);
-    });
+          <h2>1. Requisitos de Elegibilidade do Candidato</h2>
+          <table>
+            <thead>
+              <tr><th>Critério</th><th>Status</th><th>Origem / Exigência</th></tr>
+            </thead>
+            <tbody>
+              ${(noticeData.eligibility || []).map(el => `
+                <tr>
+                  <td><strong>${el.title}</strong><br><span style="font-size:9pt;color:#64748b;">${el.description}</span></td>
+                  <td><span class="${el.status === 'MET' ? 'tag-met' : 'tag-pending'}">${el.status === 'MET' ? '✓ ATENDE' : '⚠ PENDENTE'}</span></td>
+                  <td>${el.source}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
 
-    lines.push(`\n3. CHECKLIST DE DOCUMENTAÇÃO OBRIGATÓRIA:`);
-    (noticeData.documentsChecklist || []).forEach(doc => {
-      lines.push(`  * [${doc.status === 'DONE' ? 'OK' : 'PENDENTE'}] ${doc.name} (${doc.required ? 'Obrigatório' : 'Opcional'})`);
-    });
+          <h2>2. Checklist de Documentação Obrigatória</h2>
+          <table>
+            <thead>
+              <tr><th>Documento Exigido</th><th>Obrigatoriedade</th><th>Status da Submissão</th></tr>
+            </thead>
+            <tbody>
+              ${(noticeData.documentsChecklist || []).map(doc => `
+                <tr>
+                  <td>${doc.name}</td>
+                  <td>${doc.required ? 'Obrigatório' : 'Opcional'}</td>
+                  <td><span class="${doc.status === 'DONE' ? 'tag-met' : 'tag-pending'}">${doc.status === 'DONE' ? '✓ OK' : '⚠ PENDENTE'}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
 
-    lines.push(`\n4. MATRIZ DE CRITÉRIOS DE AVALIAÇÃO:`);
-    (noticeData.evaluationCriteria || []).forEach(cr => {
-      lines.push(`  * ${cr.name} (Peso ${cr.weight}%): ${cr.scoreObtained}/${cr.weight} pts`);
-      lines.push(`    - Exigência do Edital: ${cr.requirementText}`);
-      lines.push(`    - Parecer Técnico da IA: ${cr.analysis}`);
-      lines.push(`    - Ação Recomendada: ${cr.suggestion}`);
-    });
+          <h2>3. Matriz de Critérios de Avaliação (Barema)</h2>
+          ${(noticeData.evaluationCriteria || []).map(cr => `
+            <div class="card">
+              <div class="card-title">${cr.name} (Peso: ${cr.weight}%) — Nota Prevista: ${cr.scoreObtained}/${cr.weight} pts</div>
+              <p style="margin:4pt 0;font-size:10pt;"><strong>Exigência Oficial:</strong> ${cr.requirementText}</p>
+              <p style="margin:4pt 0;font-size:10pt;color:#0369a1;"><strong>Parecer Técnico:</strong> ${cr.analysis}</p>
+              <p style="margin:4pt 0;font-size:10pt;color:#059669;"><strong>Ação Recomendada:</strong> ${cr.suggestion}</p>
+            </div>
+          `).join('')}
 
-    lines.push(`\n========================================================================`);
-    lines.push(`Aviso: Este relatório separa regras oficiais do edital de sugestões preditivas de inteligência artificial.`);
-    lines.push(`========================================================================`);
+          <div class="footer-note">
+            Relatório gerado automaticamente pela plataforma AURA (Ambiente Unificado de Revisão Acadêmica).<br>
+            Este diagnóstico separa rigorosamente normas oficiais de sugestões de inteligência artificial.
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
 
-    const content = lines.join('\n');
-    this.downloadFile(content, `Relatorio_Conformidade_${Date.now()}.txt`, 'text/plain;charset=utf-8');
+    const sanitizedFileName = (noticeData.agency || 'edital').toLowerCase().replace(/[^a-z0-9]/gi, '_');
+    this.downloadFile(htmlContent, `Relatorio_Conformidade_${sanitizedFileName}.doc`, 'application/msword;charset=utf-8');
   }
 
   /**

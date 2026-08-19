@@ -264,11 +264,30 @@ body {
   text-underline-offset: 3px;
 }
 
-/* Repeated Word Highlight */
-.repeated-word-highlight {
-  background-color: rgba(168, 85, 247, 0.2);
-  border-bottom: 2px dashed #a855f7;
-  border-radius: 2px;
+/* Sticky / Fixed Sidebars in Editor View */
+@media (min-width: 768px) {
+  .editor-sticky-sidebar {
+    position: sticky;
+    top: 57px; /* Below toolbar */
+    height: calc(100vh - 114px);
+    overflow-y: auto;
+  }
+}
+
+/* Custom Scrollbar for Sleek Panels */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(51, 65, 85, 0.8);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.8);
 }
 
 /* Printable Styles */
@@ -277,7 +296,7 @@ body {
     background: white;
     color: black;
   }
-  #app-header, .no-print {
+  #app-header, .no-print, .fixed {
     display: none !important;
   }
   .academic-sheet {
@@ -287,3 +306,4 @@ body {
     min-height: auto;
   }
 }
+

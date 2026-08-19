@@ -444,9 +444,87 @@ class AuraModals {
     lucide.createIcons();
   }
 
+  showNoticeSummaryModal(noticeId) {
+    const container = document.getElementById('modal-container');
+    const isEn = window.AURA && window.AURA.currentLang === 'en';
+    const notice = (window.AURA_SAMPLE_NOTICES || []).find(n => n.id === noticeId) || window.AURA_SAMPLE_NOTICES[0];
+
+    container.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div class="glass-panel w-full max-w-2xl rounded-2xl p-5 sm:p-6 border border-slate-700 shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">${notice.agency}</span>
+              <h3 class="text-base font-bold text-white">${isEn ? 'Executive Call Summary' : 'Resumo Executivo do Edital'}</h3>
+            </div>
+            <button onclick="AURA.closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+
+          <div>
+            <h4 class="text-sm font-bold text-white mb-2 leading-snug">${notice.title}</h4>
+            <p class="text-xs text-slate-300">Modalidade: <strong>${notice.type}</strong> • Prazo final: <strong class="text-amber-400">${notice.deadline}</strong> • Teto orçamentário: <strong class="text-emerald-400">R$ ${notice.limits.maxBudget > 0 ? (notice.limits.maxBudget/1000).toFixed(0) + 'k' : 'Sob demanda'}</strong></p>
+          </div>
+
+          <!-- Informações Mais Importantes -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-1.5">
+              <span class="font-bold text-amber-300 flex items-center gap-1">
+                <i data-lucide="user-check" class="w-3.5 h-3.5"></i> Perfil e Elegibilidade
+              </span>
+              <ul class="list-disc list-inside text-slate-300 space-y-1">
+                ${(notice.eligibility || []).map(e => `<li><strong>${e.title}:</strong> ${e.description}</li>`).join('')}
+              </ul>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-1.5">
+              <span class="font-bold text-emerald-300 flex items-center gap-1">
+                <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Limites e Formatação
+              </span>
+              <ul class="list-disc list-inside text-slate-300 space-y-1">
+                <li>Extensão: <strong>${notice.limits.minPages || 1} a ${notice.limits.maxPages} páginas</strong></li>
+                <li>Duração do projeto: <strong>${notice.limits.durationMonths} meses</strong></li>
+                <li>Resumo: até <strong>${notice.limits.maxAbstractWords || 250} palavras</strong></li>
+                <li>Fonte: <strong>${notice.formattingRules.fontFamily || 'Times/Arial 12pt'}</strong></li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Barema Resumido -->
+          <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-1.5 text-xs">
+            <span class="font-bold text-aura-300 flex items-center gap-1">
+              <i data-lucide="award" class="w-3.5 h-3.5"></i> Critérios de Avaliação Mais Pesados
+            </span>
+            <div class="flex flex-col gap-1.5 mt-1">
+              ${(notice.evaluationCriteria || []).map(cr => `
+                <div class="flex items-center justify-between p-2 rounded bg-slate-950/60 border border-slate-800/80">
+                  <span class="text-slate-200"><strong>${cr.name}:</strong> ${cr.requirementText}</span>
+                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-mono font-bold">Peso ${cr.weight}%</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-3 border-t border-slate-800">
+            <a href="https://www.gov.br/cnpq/pt-br/assuntos/chamadas-publicas" target="_blank" rel="noopener noreferrer" class="text-xs text-aura-400 hover:underline flex items-center gap-1">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Abrir Página Oficial do Edital
+            </a>
+            <div class="flex items-center gap-2">
+              <button onclick="AURA.closeModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">${isEn ? 'Close' : 'Fechar'}</button>
+              <button onclick="AURA.closeModal(); AURA.createProjectFromNotice('${notice.id}')" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 shadow-md shadow-emerald-600/30">
+                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> ${isEn ? 'Create Project from Call' : 'Criar Projeto deste Edital'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    lucide.createIcons();
+  }
+
   close() {
     document.getElementById('modal-container').innerHTML = '';
   }
 }
 
 window.auraModals = new AuraModals();
+
