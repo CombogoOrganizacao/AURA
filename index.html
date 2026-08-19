@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURA — Ambiente Unificado de Revisão Acadêmica</title>
+  <!-- Google Fonts: Inter e Merriweather / Lora para tipografia acadêmica premium -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Lucide Icons via CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- DOCX/PDF export & parsing utilities -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- Tailwind via CDN para prototipagem rápida e visualização dinâmica -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['Lora', 'Merriweather', 'serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            aura: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              200: '#b9ddfd',
+              300: '#7cc2fb',
+              400: '#36a3f7',
+              500: '#0c87eb',
+              600: '#026bc9',
+              700: '#0355a2',
+              800: '#074885',
+              900: '#0c3d6e',
+              950: '#082749',
+            },
+            academic: {
+              gold: '#c69214',
+              emerald: '#059669',
+              ruby: '#dc2626',
+              amber: '#d97706',
+              slate: '#1e293b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased overflow-x-hidden selection:bg-aura-500 selection:text-white">
+  
+  <!-- APP HEADER / TOPBAR -->
+  <header id="app-header" class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 lg:px-8 py-3 flex items-center justify-between transition-all">
+    <div class="flex items-center gap-6">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="AURA.navigate('home')">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-aura-600 via-aura-500 to-indigo-400 p-[2px] shadow-lg shadow-aura-500/20">
+          <div class="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center">
+            <span class="text-xl font-black tracking-wider bg-gradient-to-r from-aura-400 to-indigo-300 bg-clip-text text-transparent">A</span>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-bold tracking-tight text-white">AURA</h1>
+            <span class="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-aura-500/10 text-aura-400 border border-aura-500/20">v2.5 Pro</span>
+          </div>
+          <p class="text-[11px] text-slate-400 font-normal">Ambiente Unificado de Revisão Acadêmica</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="hidden md:flex items-center gap-1 bg-slate-800/60 p-1 rounded-lg border border-slate-700/50">
+        <button id="nav-btn-home" onclick="AURA.navigate('home')" class="nav-tab px-3.5 py-1.5 rounded-md text-xs font-medium transition-all text-white bg-slate-700/80 shadow-sm flex items-center gap-2">
+          <i data-lucide="compass" class="w-4 h-4 text-aura-400"></i> Início
+        </button>
+        <button id="nav-btn-editor" onclick="AURA.navigate('editor')" class="nav-tab px-3.5 py-1.5 rounded-md text-xs font-medium transition-all text-slate-300 hover:text-white flex items-center gap-2">
+          <i data-lucide="file-edit" class="w-4 h-4 text-indigo-400"></i> Editor & Normas
+        </button>
+        <button id="nav-btn-notices" onclick="AURA.navigate('notices')" class="nav-tab px-3.5 py-1.5 rounded-md text-xs font-medium transition-all text-slate-300 hover:text-white flex items-center gap-2">
+          <i data-lucide="graduation-cap" class="w-4 h-4 text-amber-400"></i> Central de Editais
+        </button>
+        <button id="nav-btn-dashboard" onclick="AURA.navigate('dashboard')" class="nav-tab px-3.5 py-1.5 rounded-md text-xs font-medium transition-all text-slate-300 hover:text-white flex items-center gap-2">
+          <i data-lucide="layout-grid" class="w-4 h-4 text-emerald-400"></i> Meus Trabalhos
+        </button>
+      </nav>
+    </div>
+
+    <!-- Right Header Actions -->
+    <div class="flex items-center gap-3">
+      <!-- Active Document Badge (when in editor) -->
+      <div id="header-doc-badge" class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="header-doc-title" class="font-medium text-slate-200 truncate max-w-[200px]">Artigo Sem Título</span>
+        <span id="header-doc-standard" class="px-1.5 py-0.5 rounded bg-aura-500/20 text-aura-300 text-[10px] font-bold">ABNT</span>
+        <span id="header-doc-score" class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">92%</span>
+      </div>
+
+      <!-- Quick Actions -->
+      <button onclick="AURA.openNewDocModal()" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-aura-600 to-indigo-600 hover:from-aura-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-md shadow-aura-600/30 flex items-center gap-1.5 transition-all">
+        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Novo Trabalho
+      </button>
+
+      <!-- Language / System Status -->
+      <button onclick="AURA.toggleQuickSettings()" title="Configurações de Linguagem e UTF-8" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700">
+        <i data-lucide="settings" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <main id="app-main" class="flex-1 flex flex-col relative overflow-y-auto">
+    <!-- View 1: Home / Onboarding (4 Portais Principais) -->
+    <section id="view-home" class="view-section active flex-1"></section>
+
+    <!-- View 2: Editor Acadêmico & Normas -->
+    <section id="view-editor" class="view-section hidden flex-1 flex flex-col"></section>
+
+    <!-- View 3: Central de Editais & Publicações -->
+    <section id="view-notices" class="view-section hidden flex-1"></section>
+
+    <!-- View 4: Meus Trabalhos / Dashboard -->
+    <section id="view-dashboard" class="view-section hidden flex-1"></section>
+  </main>
+
+  <!-- MODALS CONTAINER -->
+  <div id="modal-container" class="relative z-50"></div>
+
+  <!-- TOAST NOTIFICATIONS -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- CORE SCRIPTS (Modular & Clean) -->
+  <script src="js/engine/standards.js"></script>
+  <script src="js/engine/rulesEngine.js"></script>
+  <script src="js/engine/documentParser.js"></script>
+  <script src="js/engine/noticeParser.js"></script>
+  <script src="js/engine/languageAndStats.js"></script>
+  <script src="js/engine/exportEngine.js"></script>
+  <script src="js/mock/sampleData.js"></script>
+  <script src="js/components/homeView.js"></script>
+  <script src="js/components/editorView.js"></script>
+  <script src="js/components/noticesView.js"></script>
+  <script src="js/components/dashboardView.js"></script>
+  <script src="js/components/modals.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

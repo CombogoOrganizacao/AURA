@@ -1,0 +1,191 @@
+/* AURA — Design System & Academic Page Layouts */
+
+:root {
+  --primary-glow: radial-gradient(rgba(12, 135, 235, 0.15), rgba(99, 102, 241, 0.05));
+  --card-bg-glass: rgba(30, 41, 59, 0.7);
+  --border-glass: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(51, 65, 85, 0.8);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 1);
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: var(--card-bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
+}
+
+.glass-card-hover {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glass-card-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 163, 247, 0.4);
+  box-shadow: 0 12px 30px -10px rgba(12, 135, 235, 0.25);
+}
+
+/* Academic Page Simulation Container */
+.academic-page-container {
+  background-color: #0b0f17;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.08) 0px, transparent 50%);
+}
+
+/* A4 Sheet Simulation */
+.academic-sheet {
+  background: #ffffff;
+  color: #1a202c;
+  box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+  min-height: 297mm;
+  width: 210mm;
+  margin: 0 auto;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* ABNT Sheet Margins (Superior 3cm, Esquerda 3cm, Inferior 2cm, Direita 2cm) */
+.sheet-standard-abnt {
+  padding-top: 30mm;
+  padding-left: 30mm;
+  padding-bottom: 20mm;
+  padding-right: 20mm;
+  font-family: 'Lora', 'Times New Roman', serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  text-align: justify;
+}
+
+/* APA Sheet Margins (1 inch / 2.54cm em todos os lados) */
+.sheet-standard-apa {
+  padding: 25.4mm;
+  font-family: 'Lora', 'Times New Roman', serif;
+  font-size: 12pt;
+  line-height: 2.0;
+  text-align: left;
+}
+
+/* IEEE Sheet (2 colunas, margens específicas) */
+.sheet-standard-ieee {
+  padding-top: 19mm;
+  padding-bottom: 25.4mm;
+  padding-left: 14.3mm;
+  padding-right: 14.3mm;
+  font-family: 'Lora', 'Times New Roman', serif;
+  font-size: 10pt;
+  line-height: 1.15;
+  text-align: justify;
+}
+
+.sheet-standard-ieee .document-body-content {
+  column-count: 2;
+  column-gap: 6.3mm;
+}
+
+/* Academic Elements Rendering */
+.academic-heading-1 {
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.15em;
+  break-after: avoid;
+}
+
+.academic-heading-2 {
+  font-weight: 700;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.05em;
+  break-after: avoid;
+}
+
+.academic-paragraph {
+  text-indent: 1.25cm;
+  margin-bottom: 0.5rem;
+}
+
+.academic-long-quote {
+  margin-left: 4cm;
+  font-size: 10pt;
+  line-height: 1.0;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  font-style: normal;
+  border-left: 2px solid #cbd5e1;
+  padding-left: 0.75rem;
+}
+
+/* Search and Highlight Match */
+.search-highlight {
+  background-color: #fef08a !important;
+  color: #854d0e !important;
+  font-weight: bold;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.search-highlight-current {
+  background-color: #f97316 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 2px #ea580c;
+}
+
+/* Spell Error Badges */
+.spell-error-pt {
+  text-decoration: underline wavy #ef4444;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.spell-error-pt:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.spell-warning {
+  text-decoration: underline wavy #f59e0b;
+  text-underline-offset: 3px;
+}
+
+/* Repeated Word Highlight */
+.repeated-word-highlight {
+  background-color: rgba(168, 85, 247, 0.2);
+  border-bottom: 2px dashed #a855f7;
+  border-radius: 2px;
+}
+
+/* Printable Styles */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  #app-header, .no-print {
+    display: none !important;
+  }
+  .academic-sheet {
+    box-shadow: none;
+    margin: 0;
+    width: 100%;
+    min-height: auto;
+  }
+}
