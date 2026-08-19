@@ -262,16 +262,24 @@ body {
 .spell-warning {
   text-decoration: underline wavy #f59e0b;
   text-underline-offset: 3px;
-}
-
-/* Visual Page Break / Divisórias de Página A4 */
+/* Visual Page Break / Divisórias de Página A4 Realista */
 .page-break-divider {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 3rem 0;
+  margin: 40px -30mm;
+  padding: 24px 0;
+  background: #090d16;
   position: relative;
   user-select: none;
+  box-shadow: inset 0 6px 12px -4px rgba(0, 0, 0, 0.6), inset 0 -6px 12px -4px rgba(0, 0, 0, 0.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+@media (max-width: 767px) {
+  .page-break-divider {
+    margin: 30px -16px;
+  }
 }
 .page-break-divider::before {
   content: '';
@@ -279,24 +287,34 @@ body {
   left: 0;
   right: 0;
   top: 50%;
-  border-top: 1.5px dashed #cbd5e1;
+  border-top: 1.5px dashed rgba(148, 163, 184, 0.3);
   z-index: 1;
 }
 .page-break-label {
   position: relative;
   z-index: 2;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 10px;
+  background: #1e293b;
+  color: #94a3b8;
+  font-size: 11px;
   font-weight: 700;
-  padding: 4px 12px;
+  padding: 5px 16px;
   border-radius: 9999px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #334155;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.page-break-label strong {
+  color: #38bdf8;
+}
+
+/* Page Indicator Watermark / Régua Lateral */
+.academic-page-block {
+  position: relative;
+  min-height: 240mm;
 }
 
 /* Sticky / Fixed Sidebars & Sticky Toolbar in Editor View */

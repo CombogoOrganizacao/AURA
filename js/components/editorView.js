@@ -258,7 +258,7 @@ class AuraEditorView {
               </div>
 
               <!-- BLOCO PRÉ-TEXTUAL (PÁGINA 1) -->
-              <div id="doc-pretextual" class="mb-8">
+              <div id="doc-pretextual" class="mb-8 academic-page-block" data-page="1">
                 <!-- Título -->
                 <h1 
                   contenteditable="true" 
@@ -299,16 +299,16 @@ class AuraEditorView {
               </div>
 
               <!-- DIVISÓRIA VISUAL DE PÁGINA A4 (PÁGINA 1 → PÁGINA 2) -->
-              <div class="page-break-divider no-print">
+              <div class="page-break-divider no-print" data-break-after="1">
                 <span class="page-break-label">
-                  <i data-lucide="scissors" class="w-3 h-3 text-slate-400"></i> Divisória de Página A4 • Início do Corpo Textual (Pág. 2)
+                  <i data-lucide="scissors" class="w-3.5 h-3.5 text-sky-400"></i> Quebra de Folha A4 • Início da <strong>Página 2</strong>
                 </span>
               </div>
 
               <!-- BLOCO TEXTUAL (SEÇÕES DO ARTIGO/PROJETO) -->
               <div class="document-body-content flex flex-col gap-6" id="doc-sections-container">
                 ${(currentDoc.sections || []).map((sec, idx) => `
-                  <section id="section-${sec.id}" class="academic-section-block">
+                  <section id="section-${sec.id}" class="academic-section-block" data-section-idx="${idx}">
                     <h2 
                       contenteditable="true" 
                       oninput="AURA.updateSectionTitle('${sec.id}', this.innerText)"
@@ -321,10 +321,10 @@ class AuraEditorView {
                       class="academic-section-content text-justify focus:outline-none focus:bg-slate-50/50 p-1 rounded min-h-[60px]"
                     >${sec.content.replace(/\n\n/g, '</p><p class="academic-paragraph">').replace(/^/, '<p class="academic-paragraph">') + '</p>'}</div>
                   </section>
-                  ${idx === 1 ? `
-                    <div class="page-break-divider no-print">
+                  ${(idx > 0 && idx % 2 === 1) ? `
+                    <div class="page-break-divider no-print" data-break-after="${idx + 2}">
                       <span class="page-break-label">
-                        <i data-lucide="scissors" class="w-3 h-3 text-slate-400"></i> Divisória de Página A4 • Continuação Textual (Pág. 3)
+                        <i data-lucide="scissors" class="w-3.5 h-3.5 text-sky-400"></i> Quebra de Folha A4 • Início da <strong>Página ${Math.floor(idx / 2) + 3}</strong>
                       </span>
                     </div>
                   ` : ''}
@@ -334,12 +334,12 @@ class AuraEditorView {
               <!-- DIVISÓRIA VISUAL DE PÁGINA A4 (ELEMENTOS PÓS-TEXTUAIS) -->
               <div class="page-break-divider no-print">
                 <span class="page-break-label">
-                  <i data-lucide="scissors" class="w-3 h-3 text-slate-400"></i> Divisória de Página A4 • Elementos Pós-Textuais
+                  <i data-lucide="scissors" class="w-3.5 h-3.5 text-sky-400"></i> Quebra de Folha A4 • <strong>Referências Finais</strong>
                 </span>
               </div>
 
               <!-- BLOCO PÓS-TEXTUAL (REFERÊNCIAS) -->
-              <div id="doc-references" class="mt-8 pt-6 border-t border-slate-300">
+              <div id="doc-references" class="mt-8 pt-6 border-t border-slate-300 academic-page-block">
                 <h2 class="academic-heading-1 text-center font-bold uppercase mb-4">
                   ${stdId === 'mla' ? 'WORKS CITED' : (stdId === 'chicago' ? 'BIBLIOGRAPHY' : (stdId === 'apa' || stdId === 'ieee' ? 'REFERENCES' : 'REFERÊNCIAS'))}
                 </h2>

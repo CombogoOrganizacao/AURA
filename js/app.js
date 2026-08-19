@@ -608,6 +608,27 @@ class AuraApp {
     if (floatWords) floatWords.innerText = stats.words;
     if (floatChars) floatChars.innerText = stats.charsWithSpaces;
     if (floatPages) floatPages.innerText = `~${stats.estimatedPages}`;
+
+    // Recalcular altura e indicadores visuais das quebras de folha A4
+    this.recalculateA4PageBreaks();
+  }
+
+  recalculateA4PageBreaks() {
+    const sheet = document.getElementById('academic-active-sheet');
+    if (!sheet) return;
+    
+    // Atualizar números de página nas quebras
+    const breaks = sheet.querySelectorAll('.page-break-divider');
+    breaks.forEach((b, idx) => {
+      const label = b.querySelector('.page-break-label strong');
+      if (label) {
+        if (idx === breaks.length - 1 && b.getAttribute('data-break-after') === null) {
+          label.innerText = 'Referências Finais';
+        } else {
+          label.innerText = `Página ${idx + 2}`;
+        }
+      }
+    });
   }
 
   // Zoom da folha (+ e -)
