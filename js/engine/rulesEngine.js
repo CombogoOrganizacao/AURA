@@ -218,8 +218,11 @@ class AuraRulesEngine {
 
     let orphanCitations = 0;
     citationsInText.forEach(cite => {
-      const match = referencesList.some(ref => ref.toLowerCase().includes(cite.author.toLowerCase()));
-      if (!match) orphanCitations++;
+      if (cite && cite.author) {
+        const authorClean = cite.author.toLowerCase();
+        const match = referencesList.some(ref => typeof ref === 'string' && ref.toLowerCase().includes(authorClean));
+        if (!match) orphanCitations++;
+      }
     });
 
     if (orphanCitations > 0) {

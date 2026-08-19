@@ -113,6 +113,7 @@ class AuraModals {
 
   showExportModal(currentDoc) {
     const container = document.getElementById('modal-container');
+    const t = (key) => window.AURA ? window.AURA.t(key) : key;
     const isEn = window.AURA && window.AURA.currentLang === 'en';
 
     container.innerHTML = `

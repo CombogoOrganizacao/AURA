@@ -6,7 +6,8 @@
 class AuraApp {
   constructor() {
     this.currentView = 'home';
-    this.activeDocument = window.AURA_SAMPLE_DOCUMENTS[0];
+    this.openDocuments = [...(window.AURA_SAMPLE_DOCUMENTS || [])];
+    this.activeDocument = this.openDocuments[0] || window.AURA_SAMPLE_DOCUMENTS[0];
     this.activeNotice = window.AURA_SAMPLE_NOTICES[0];
     this.pendingAIDiff = null;
     this.spellLanguage = 'pt';
@@ -20,6 +21,58 @@ class AuraApp {
     // Find & Replace Search Navigation State
     this.searchMatches = [];
     this.currentSearchIndex = -1;
+  }
+
+  // --- MULTI-DOCUMENT TAB MANAGEMENT (DRAGGABLE TABS) ---
+
+  openDocument(docId) {
+    let doc = this.openDocuments.find(d => d.id === docId);
+    if (!doc) {
+      const sample = (window.AURA_SAMPLE_DOCUMENTS || []).find(d => d.id === docId);
+      if (sample) {
+        doc = JSON.parse(JSON.stringify(sample));
+        this.openDocuments.push(doc);
+      }
+    }
+    if (doc) {
+      this.activeDocument = doc;
+      this.saveStateToHistory();
+      this.navigate('editor');
+    }
+  }
+
+  closeDocumentTab(e, docId) {
+    if (e) e.stopPropagation();
+    if (this.openDocuments.length <= 1) {
+      this.showToast('Ao menos um documento deve permanecer aberto.', 'warning');
+      return;
+    }
+
+    const idx = this.openDocuments.findIndex(d => d.id === docId);
+    if (idx !== -1) {
+      this.openDocuments.splice(idx, 1);
+      if (this.activeDocument.id === docId) {
+        this.activeDocument = this.openDocuments[Math.max(0, idx - 1)];
+        this.saveStateToHistory();
+      }
+      this.navigate('editor');
+      this.showToast('Aba fechada.', 'info');
+    }
+  }
+
+  handleTabDragStart(event, idx) {
+    event.dataTransfer.setData('text/plain', idx);
+    event.dataTransfer.effectAllowed = 'move';
+  }
+
+  handleTabDrop(event, targetIdx) {
+    event.preventDefault();
+    const sourceIdx = parseInt(event.dataTransfer.getData('text/plain'), 10);
+    if (isNaN(sourceIdx) || sourceIdx === targetIdx || !this.openDocuments) return;
+
+    const [moved] = this.openDocuments.splice(sourceIdx, 1);
+    this.openDocuments.splice(targetIdx, 0, moved);
+    this.navigate('editor');
   }
 
   saveStateToHistory() {
@@ -505,15 +558,14 @@ class AuraApp {
 
   updateSpeechUI(isPlaying) {
     const btn = document.getElementById('btn-speech-read');
-    const label = document.getElementById('speech-label');
     const icon = document.getElementById('speech-icon');
-    if (btn && label) {
+    if (btn) {
       if (isPlaying) {
-        btn.className = 'px-2.5 py-1 rounded-xl bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 flex items-center gap-1.5 font-bold transition-all shadow-lg animate-pulse';
-        label.innerText = 'Parar Leitura';
+        btn.className = 'p-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 flex items-center justify-center font-bold transition-all shadow-lg animate-pulse';
+        btn.setAttribute('title', 'Parar Leitura');
       } else {
-        btn.className = 'px-2.5 py-1 rounded-xl bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-500/50 flex items-center gap-1.5 font-bold transition-all shadow-md';
-        label.innerText = 'Apresentar por Voz';
+        btn.className = 'p-2 rounded-xl bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-500/50 flex items-center justify-center font-bold transition-all shadow-md';
+        btn.setAttribute('title', 'Apresentação Oral com Voz Didática');
       }
     }
   }
@@ -955,7 +1007,7 @@ class AuraApp {
     const stdId = document.getElementById('modal-new-standard').value;
     const authors = document.getElementById('modal-new-authors').value || 'Pesquisador(a)';
 
-    this.activeDocument = {
+    const newDoc = {
       id: 'doc_' + Date.now(),
       title,
       standardId: stdId,
@@ -973,7 +1025,12 @@ class AuraApp {
       ]
     };
 
+    if (!this.openDocuments) this.openDocuments = [];
+    this.openDocuments.push(newDoc);
+    this.activeDocument = newDoc;
+
     this.closeModal();
+    this.saveStateToHistory();
     this.navigate('editor');
     this.showToast('Documento criado com sucesso!', 'success');
   }
@@ -1030,7 +1087,7 @@ class AuraApp {
 
   createProjectFromNotice(noticeId) {
     const notice = window.AURA_SAMPLE_NOTICES.find(n => n.id === noticeId) || this.activeNotice;
-    this.activeDocument = {
+    const newDoc = {
       id: 'doc_notice_' + Date.now(),
       title: 'Projeto de Pesquisa — ' + notice.title,
       standardId: 'abnt',
@@ -1054,6 +1111,11 @@ class AuraApp {
       ]
     };
 
+    if (!this.openDocuments) this.openDocuments = [];
+    this.openDocuments.push(newDoc);
+    this.activeDocument = newDoc;
+
+    this.saveStateToHistory();
     this.navigate('editor');
     this.showToast('Template do Edital gerado com sucesso no editor!', 'success');
   }

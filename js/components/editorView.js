@@ -27,110 +27,138 @@ class AuraEditorView {
     const currentDoc = docData;
     const stdId = currentDoc.standardId || 'abnt';
     const std = window.AURA_STANDARDS[stdId] || window.AURA_STANDARDS.abnt;
+    const openDocs = (window.AURA && window.AURA.openDocuments) || [currentDoc];
     const stats = window.auraLanguage ? window.auraLanguage.calculateStats(this.getFullDocumentText(currentDoc)) : { words: 0, charsWithSpaces: 0, estimatedPages: 0 };
     const t = (key) => window.AURA ? window.AURA.t(key) : key;
 
     container.innerHTML = `
       <div class="flex-1 flex flex-col min-h-[calc(100vh-61px)] bg-slate-950">
         
-        <!-- EDITOR TOP TOOLBAR (Header e Ferramentas) -->
-        <div class="bg-slate-900 border-b border-slate-800 px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2 text-xs z-40 whitespace-nowrap overflow-visible relative">
+        <!-- EDITOR TOP TOOLBAR (Header, Ferramentas & Abas de Documentos - FIXO) -->
+        <div class="editor-sticky-toolbar bg-slate-900 border-b border-slate-800 shadow-md">
           
-          <!-- History & Basic Formatting -->
-          <div class="flex items-center gap-1 flex-shrink-0">
-            <!-- Undo / Redo -->
-            <button onclick="AURA.undo()" title="Desfazer (Ctrl+Z)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center gap-1 font-medium">
-              <i data-lucide="undo-2" class="w-4 h-4 text-aura-400"></i>
-              <span class="hidden sm:inline">Desfazer</span>
-            </button>
-            <button onclick="AURA.redo()" title="Refazer (Ctrl+Y)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center gap-1 font-medium">
-              <i data-lucide="redo-2" class="w-4 h-4 text-aura-400"></i>
-              <span class="hidden sm:inline">Refazer</span>
-            </button>
-            <div class="h-4 w-px bg-slate-700 mx-1"></div>
-
-            <!-- Seleção de Fontes Oficiais Acadêmicas -->
-            <div class="flex items-center gap-1">
-              <select onchange="AURA.changeDocFont(this.value)" id="editor-font-select" class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white font-medium focus:outline-none focus:border-aura-500">
-                <option value="Times New Roman" selected>Times New Roman (ABNT / APA / IEEE)</option>
-                <option value="Arial">Arial (ABNT / Vancouver)</option>
-                <option value="Calibri">Calibri (APA 7th)</option>
-                <option value="Georgia">Georgia (Chicago 17th)</option>
-                <option value="Helvetica">Helvetica (Vancouver)</option>
-              </select>
-            </div>
-            <div class="h-4 w-px bg-slate-700 mx-1"></div>
-
-            <button onclick="AURA.execCommand('bold')" title="Negrito (Ctrl+B)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="bold" class="w-4 h-4"></i></button>
-            <button onclick="AURA.execCommand('italic')" title="Itálico (Ctrl+I)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="italic" class="w-4 h-4"></i></button>
-            <button onclick="AURA.execCommand('underline')" title="Sublinhado (Ctrl+U)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="underline" class="w-4 h-4"></i></button>
-            <div class="h-4 w-px bg-slate-700 mx-1"></div>
-
-            <!-- Intuitive Citation Selector Dropdown (Fixed z-index) -->
-            <div class="relative inline-block text-left z-50">
-              <button onclick="AURA.toggleCitationMenu()" id="btn-citation-dropdown" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1.5 font-medium border border-slate-700 shadow-sm">
-                <i data-lucide="bookmark" class="w-3.5 h-3.5 text-indigo-400"></i>
-                <span>Citação</span>
-                <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
+          <!-- Toolbar Principal de Formatação -->
+          <div class="px-3 sm:px-4 py-2 flex items-center justify-between gap-2 text-xs z-40 whitespace-nowrap overflow-x-auto relative border-b border-slate-800/80">
+            <!-- History & Basic Formatting -->
+            <div class="flex items-center gap-1 flex-shrink-0">
+              <!-- Undo / Redo -->
+              <button onclick="AURA.undo()" title="Desfazer (Ctrl+Z)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center gap-1 font-medium">
+                <i data-lucide="undo-2" class="w-4 h-4 text-aura-400"></i>
+                <span class="hidden sm:inline">Desfazer</span>
               </button>
-              <div id="citation-dropdown-menu" class="hidden absolute left-0 top-full mt-1.5 w-60 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl z-[100] py-1.5 flex flex-col gap-1 text-xs backdrop-blur-xl">
-                <button onclick="AURA.insertDirectCitation()" class="px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-white flex flex-col">
-                  <span class="font-bold text-indigo-300">Citação Direta Curta</span>
-                  <span class="text-[10px] text-slate-400">Até 3 linhas entre aspas ("...")</span>
-                </button>
-                <button onclick="AURA.insertLongQuote()" class="px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-white flex flex-col">
-                  <span class="font-bold text-aura-300">Citação Direta Longa</span>
-                  <span class="text-[10px] text-slate-400">+3 linhas, recuo 4cm e corpo 10pt</span>
-                </button>
-                <button onclick="AURA.insertIndirectCitation()" class="px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-white flex flex-col">
-                  <span class="font-bold text-emerald-300">Citação Indireta / Paráfrase</span>
-                  <span class="text-[10px] text-slate-400">Ideia com autor (Autor, Ano)</span>
-                </button>
-                <button onclick="AURA.insertApudCitation()" class="px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-white flex flex-col">
-                  <span class="font-bold text-amber-300">Citação de Outro Autor (Apud)</span>
-                  <span class="text-[10px] text-slate-400">Citação de citação (Silva apud Souza)</span>
-                </button>
+              <button onclick="AURA.redo()" title="Refazer (Ctrl+Y)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center gap-1 font-medium">
+                <i data-lucide="redo-2" class="w-4 h-4 text-aura-400"></i>
+                <span class="hidden sm:inline">Refazer</span>
+              </button>
+              <div class="h-4 w-px bg-slate-700 mx-1"></div>
+
+              <!-- Seleção de Fontes Oficiais Acadêmicas -->
+              <div class="flex items-center gap-1">
+                <select onchange="AURA.changeDocFont(this.value)" id="editor-font-select" class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white font-medium focus:outline-none focus:border-aura-500">
+                  <option value="Times New Roman" selected>Times New Roman (ABNT / APA / IEEE)</option>
+                  <option value="Arial">Arial (ABNT / Vancouver)</option>
+                  <option value="Calibri">Calibri (APA 7th)</option>
+                  <option value="Georgia">Georgia (Chicago 17th)</option>
+                  <option value="Helvetica">Helvetica (Vancouver)</option>
+                </select>
               </div>
+              <div class="h-4 w-px bg-slate-700 mx-1"></div>
+
+              <button onclick="AURA.execCommand('bold')" title="Negrito (Ctrl+B)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="bold" class="w-4 h-4"></i></button>
+              <button onclick="AURA.execCommand('italic')" title="Itálico (Ctrl+I)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="italic" class="w-4 h-4"></i></button>
+              <button onclick="AURA.execCommand('underline')" title="Sublinhado (Ctrl+U)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="underline" class="w-4 h-4"></i></button>
+              <div class="h-4 w-px bg-slate-700 mx-1"></div>
+
+              <!-- Intuitive Citation Selector Dropdown (Fixed z-index) -->
+              <div class="relative inline-block text-left z-50">
+                <button onclick="AURA.toggleCitationMenu()" id="btn-citation-dropdown" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1.5 font-medium border border-slate-700 shadow-sm">
+                  <i data-lucide="bookmark" class="w-3.5 h-3.5 text-indigo-400"></i>
+                  <span>Citação</span>
+                  <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
+                </button>
+                <div id="citation-dropdown-menu" class="hidden absolute left-0 top-full mt-1.5 w-60 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl z-[100] py-1.5 flex flex-col gap-1 text-xs backdrop-blur-xl">
+                  <button onclick="AURA.insertDirectCitation()" class="px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-white flex flex-col">
+                    <span class="font-bold text-indigo-300">Citação Direta Curta</span>
+                    <span class="text-[10px] text-slate-400">Até 3 linhas entre aspas ("...")</span>
+                  </button>
+                  <button onclick="AURA.insertLongQuote()" class="px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-white flex flex-col">
+                    <span class="font-bold text-aura-300">Citação Direta Longa</span>
+                    <span class="text-[10px] text-slate-400">+3 linhas, recuo 4cm e corpo 10pt</span>
+                  </button>
+                  <button onclick="AURA.insertIndirectCitation()" class="px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-white flex flex-col">
+                    <span class="font-bold text-emerald-300">Citação Indireta / Paráfrase</span>
+                    <span class="text-[10px] text-slate-400">Ideia com autor (Autor, Ano)</span>
+                  </button>
+                  <button onclick="AURA.insertApudCitation()" class="px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-white flex flex-col">
+                    <span class="font-bold text-amber-300">Citação de Outro Autor (Apud)</span>
+                    <span class="text-[10px] text-slate-400">Citação de citação (Silva apud Souza)</span>
+                  </button>
+                </div>
+              </div>
+
+              <button onclick="AURA.insertImageModal()" title="Inserir Imagem / Figura com Legenda ABNT" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
+                <i data-lucide="image" class="w-3.5 h-3.5 text-emerald-400"></i> <span class="hidden sm:inline">Figura</span>
+              </button>
+              <button onclick="AURA.insertTable()" title="Inserir Tabela Acadêmica com Fonte" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
+                <i data-lucide="table" class="w-3.5 h-3.5 text-blue-400"></i> <span class="hidden sm:inline">Tabela</span>
+              </button>
+              <button onclick="AURA.openHeaderFooterModal()" title="Configurar Numeração, Cabeçalho e Rodapé" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
+                <i data-lucide="layout-template" class="w-3.5 h-3.5 text-purple-400"></i> <span class="hidden sm:inline">Cabeçalho/Rodapé</span>
+              </button>
             </div>
 
-            <button onclick="AURA.insertImageModal()" title="Inserir Imagem / Figura com Legenda ABNT" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
-              <i data-lucide="image" class="w-3.5 h-3.5 text-emerald-400"></i> <span class="hidden sm:inline">Figura</span>
-            </button>
-            <button onclick="AURA.insertTable()" title="Inserir Tabela Acadêmica com Fonte" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
-              <i data-lucide="table" class="w-3.5 h-3.5 text-blue-400"></i> <span class="hidden sm:inline">Tabela</span>
-            </button>
-            <button onclick="AURA.openHeaderFooterModal()" title="Configurar Numeração, Cabeçalho e Rodapé" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
-              <i data-lucide="layout-template" class="w-3.5 h-3.5 text-purple-400"></i> <span class="hidden sm:inline">Cabeçalho/Rodapé</span>
-            </button>
+            <!-- Standard Selector & Export Action -->
+            <div class="flex items-center gap-2 sm:gap-3 text-slate-400 flex-shrink-0">
+              <div class="flex items-center gap-1.5">
+                <span class="text-slate-400 hidden sm:inline">${t('standard')}:</span>
+                <select onchange="AURA.changeDocumentStandard(this.value)" class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white font-medium focus:outline-none focus:border-aura-500">
+                  <option value="abnt" ${stdId === 'abnt' ? 'selected' : ''}>ABNT (Brasil)</option>
+                  <option value="apa" ${stdId === 'apa' ? 'selected' : ''}>APA 7th (Internacional)</option>
+                  <option value="ieee" ${stdId === 'ieee' ? 'selected' : ''}>IEEE (2 Colunas)</option>
+                  <option value="vancouver" ${stdId === 'vancouver' ? 'selected' : ''}>Vancouver (Medicina)</option>
+                  <option value="chicago" ${stdId === 'chicago' ? 'selected' : ''}>Chicago 17th (Humanas)</option>
+                  <option value="mla" ${stdId === 'mla' ? 'selected' : ''}>MLA 9th (Letras)</option>
+                </select>
+              </div>
+
+              <!-- Export Button -->
+              <button onclick="AURA.openExportModal()" class="px-2.5 sm:px-3 py-1 rounded bg-aura-600 hover:bg-aura-500 text-white font-semibold flex items-center gap-1 transition-all shadow-md shadow-aura-600/30">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">${t('export')}</span>
+              </button>
+            </div>
           </div>
 
-          <!-- Document Limits & Live Stats Indicators -->
-          <div class="flex items-center gap-2 sm:gap-3 text-slate-400 flex-shrink-0">
-            <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800/60 border border-slate-700/50">
-              <i data-lucide="file-text" class="w-3.5 h-3.5 text-aura-400"></i>
-              <span id="stat-words" class="text-slate-200 font-bold">${stats.words}</span> <span class="hidden md:inline">${t('words')}</span>
-              <span class="text-slate-600">|</span>
-              <span id="stat-chars" class="text-slate-200 font-bold">${stats.charsWithSpaces}</span> <span class="hidden md:inline">${t('characters')}</span>
-              <span class="text-slate-600">|</span>
-              <span id="stat-pages" class="text-slate-200 font-bold">~${stats.estimatedPages}</span> ${t('pages')}
-            </div>
-
-            <!-- Standard Selector Quick Switch (ABNT / APA / IEEE / Vancouver / Chicago / MLA) -->
-            <div class="flex items-center gap-1.5">
-              <span class="text-slate-400 hidden sm:inline">${t('standard')}:</span>
-              <select onchange="AURA.changeDocumentStandard(this.value)" class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white font-medium focus:outline-none focus:border-aura-500">
-                <option value="abnt" ${stdId === 'abnt' ? 'selected' : ''}>ABNT (Brasil)</option>
-                <option value="apa" ${stdId === 'apa' ? 'selected' : ''}>APA 7th (Internacional)</option>
-                <option value="ieee" ${stdId === 'ieee' ? 'selected' : ''}>IEEE (2 Colunas)</option>
-                <option value="vancouver" ${stdId === 'vancouver' ? 'selected' : ''}>Vancouver (Medicina)</option>
-                <option value="chicago" ${stdId === 'chicago' ? 'selected' : ''}>Chicago 17th (Humanas)</option>
-                <option value="mla" ${stdId === 'mla' ? 'selected' : ''}>MLA 9th (Letras)</option>
-              </select>
-            </div>
-
-            <!-- Export Button -->
-            <button onclick="AURA.openExportModal()" class="px-2.5 sm:px-3 py-1 rounded bg-aura-600 hover:bg-aura-500 text-white font-semibold flex items-center gap-1 transition-all shadow-md shadow-aura-600/30">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">${t('export')}</span>
+          <!-- ABAS DE TRABALHOS ABERTOS (DRAGGABLE MULTI-DOCUMENT TABS) -->
+          <div class="px-3 sm:px-4 py-1.5 bg-slate-950 flex items-center gap-1.5 overflow-x-auto text-xs border-t border-slate-800/40 select-none">
+            <span class="text-[10px] text-slate-500 uppercase tracking-wider font-bold mr-1 flex items-center gap-1">
+              <i data-lucide="files" class="w-3 h-3 text-slate-400"></i> Abas:
+            </span>
+            ${openDocs.map((doc, dIdx) => {
+              const isActive = doc.id === currentDoc.id;
+              return `
+                <div 
+                  draggable="true"
+                  ondragstart="AURA.handleTabDragStart(event, ${dIdx})"
+                  ondragover="event.preventDefault()"
+                  ondrop="AURA.handleTabDrop(event, ${dIdx})"
+                  onclick="AURA.openDocument('${doc.id}')"
+                  class="group flex items-center gap-2 px-3 py-1 rounded-t-lg transition-all cursor-pointer border ${isActive ? 'bg-slate-900 border-slate-700 text-white font-bold border-b-transparent shadow-sm' : 'bg-slate-900/50 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'}"
+                  title="${doc.title}"
+                >
+                  <i data-lucide="file-text" class="w-3.5 h-3.5 ${isActive ? 'text-aura-400' : 'text-slate-500'}"></i>
+                  <span class="truncate max-w-[140px] sm:max-w-[200px] text-[11px]">${doc.title || 'Documento sem título'}</span>
+                  <button 
+                    onclick="AURA.closeDocumentTab(event, '${doc.id}')"
+                    class="opacity-0 group-hover:opacity-100 hover:bg-slate-700 rounded p-0.5 text-slate-400 hover:text-rose-400 transition-opacity"
+                    title="Fechar Aba"
+                  >
+                    <i data-lucide="x" class="w-3 h-3"></i>
+                  </button>
+                </div>
+              `;
+            }).join('')}
+            <button onclick="AURA.openNewDocModal()" title="Novo Trabalho" class="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all ml-1">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
             </button>
           </div>
 
@@ -165,7 +193,7 @@ class AuraEditorView {
               <div class="px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">${t('pre_textual')}</div>
               <div onclick="AURA.scrollToElement('doc-pretextual')" class="tree-item px-2.5 py-1.5 rounded bg-slate-800/40 text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer flex items-center gap-2">
                 <i data-lucide="file" class="w-3.5 h-3.5 text-slate-400"></i> 
-                <span class="truncate" id="sidebar-title-display">${currentDoc.title || (isEn ? 'Title & Authors' : 'Título & Autoria')}</span>
+                <span class="truncate" id="sidebar-title-display">${currentDoc.title || 'Título & Autoria'}</span>
               </div>
               <div onclick="AURA.scrollToElement('doc-abstract')" class="tree-item px-2.5 py-1.5 rounded bg-slate-800/40 text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer flex items-center gap-2">
                 <i data-lucide="align-left" class="w-3.5 h-3.5 text-indigo-400"></i> 
@@ -194,9 +222,9 @@ class AuraEditorView {
           </aside>
 
           <!-- CENTER: CANVAS COM FOLHA ACADÊMICA REAL -->
-          <div class="flex-1 academic-page-container overflow-y-auto p-4 lg:p-8 flex justify-center" id="editor-sheet-container">
+          <div class="flex-1 academic-page-container overflow-y-auto p-4 lg:p-8 flex justify-center pb-24" id="editor-sheet-container">
             
-            <!-- Folha A4 Formatada Conforme Norma -->
+            <!-- Inserção de Botão de Acessibilidade (Leitura com Voz Didática Feminina) e Zoom / Folha A4 -->
             <div class="academic-sheet sheet-standard-${stdId} relative rounded shadow-2xl transition-all" id="academic-active-sheet">
               
               <!-- Cabeçalho de Página e Numeração Dinâmica Conforme Configuração -->
@@ -209,7 +237,7 @@ class AuraEditorView {
                 </div>
               </div>
 
-              <!-- BLOCO PRÉ-TEXTUAL -->
+              <!-- BLOCO PRÉ-TEXTUAL (PÁGINA 1) -->
               <div id="doc-pretextual" class="mb-8">
                 <!-- Título -->
                 <h1 
@@ -250,6 +278,13 @@ class AuraEditorView {
                 </div>
               </div>
 
+              <!-- DIVISÓRIA VISUAL DE PÁGINA A4 (PÁGINA 1 → PÁGINA 2) -->
+              <div class="page-break-divider no-print">
+                <span class="page-break-label">
+                  <i data-lucide="scissors" class="w-3 h-3 text-slate-400"></i> Divisória de Página A4 • Início do Corpo Textual (Pág. 2)
+                </span>
+              </div>
+
               <!-- BLOCO TEXTUAL (SEÇÕES DO ARTIGO/PROJETO) -->
               <div class="document-body-content flex flex-col gap-6" id="doc-sections-container">
                 ${(currentDoc.sections || []).map((sec, idx) => `
@@ -266,11 +301,25 @@ class AuraEditorView {
                       class="academic-section-content text-justify focus:outline-none focus:bg-slate-50/50 p-1 rounded min-h-[60px]"
                     >${sec.content.replace(/\n\n/g, '</p><p class="academic-paragraph">').replace(/^/, '<p class="academic-paragraph">') + '</p>'}</div>
                   </section>
+                  ${idx === 1 ? `
+                    <div class="page-break-divider no-print">
+                      <span class="page-break-label">
+                        <i data-lucide="scissors" class="w-3 h-3 text-slate-400"></i> Divisória de Página A4 • Continuação Textual (Pág. 3)
+                      </span>
+                    </div>
+                  ` : ''}
                 `).join('')}
               </div>
 
+              <!-- DIVISÓRIA VISUAL DE PÁGINA A4 (ELEMENTOS PÓS-TEXTUAIS) -->
+              <div class="page-break-divider no-print">
+                <span class="page-break-label">
+                  <i data-lucide="scissors" class="w-3 h-3 text-slate-400"></i> Divisória de Página A4 • Elementos Pós-Textuais
+                </span>
+              </div>
+
               <!-- BLOCO PÓS-TEXTUAL (REFERÊNCIAS) -->
-              <div id="doc-references" class="mt-12 pt-6 border-t border-slate-300">
+              <div id="doc-references" class="mt-8 pt-6 border-t border-slate-300">
                 <h2 class="academic-heading-1 text-center font-bold uppercase mb-4">
                   ${stdId === 'mla' ? 'WORKS CITED' : (stdId === 'chicago' ? 'BIBLIOGRAPHY' : (stdId === 'apa' || stdId === 'ieee' ? 'REFERENCES' : 'REFERÊNCIAS'))}
                 </h2>
@@ -295,8 +344,8 @@ class AuraEditorView {
 
             </div>
 
-            <!-- FLOATING STATS PILL & ZOOM / AUDIO CONTROLS (CANTO INFERIOR ESQUERDO) -->
-            <div class="fixed bottom-6 left-6 z-40 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 shadow-2xl rounded-2xl p-2 sm:px-3 sm:py-2 flex items-center gap-3 text-xs text-slate-300 animate-fade-in">
+            <!-- FLOATING STATS PILL & ZOOM / AUDIO CONTROLS (CENTRALIZADO COM A PÁGINA) -->
+            <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 shadow-2xl rounded-2xl px-4 py-2 flex items-center gap-3 text-xs text-slate-300 animate-fade-in no-print">
               <!-- Métricas Reais -->
               <div class="flex items-center gap-2 font-mono">
                 <span class="flex items-center gap-1">
@@ -327,10 +376,9 @@ class AuraEditorView {
 
               <div class="h-4 w-px bg-slate-700"></div>
 
-              <!-- Botão de Acessibilidade: Leitura em Voz Didática Feminina (Apresentação Oral) -->
-              <button onclick="AURA.toggleSpeechPresentation()" id="btn-speech-read" title="Apresentação do Artigo com Voz Suave e Didática" class="px-2.5 py-1 rounded-xl bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-500/50 flex items-center gap-1.5 font-bold transition-all shadow-md">
-                <i data-lucide="volume-2" class="w-3.5 h-3.5 text-purple-300" id="speech-icon"></i>
-                <span class="hidden sm:inline" id="speech-label">Apresentar por Voz</span>
+              <!-- Botão de Acessibilidade: Leitura em Voz Didática Feminina (Apenas Ícone Profissional) -->
+              <button onclick="AURA.toggleSpeechPresentation()" id="btn-speech-read" title="Apresentação Oral com Voz Didática" class="p-2 rounded-xl bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-500/50 flex items-center justify-center font-bold transition-all shadow-md">
+                <i data-lucide="volume-2" class="w-4 h-4 text-purple-300" id="speech-icon"></i>
               </button>
             </div>
 

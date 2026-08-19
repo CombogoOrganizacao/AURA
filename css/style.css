@@ -264,12 +264,53 @@ body {
   text-underline-offset: 3px;
 }
 
-/* Sticky / Fixed Sidebars in Editor View */
+/* Visual Page Break / Divisórias de Página A4 */
+.page-break-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 3rem 0;
+  position: relative;
+  user-select: none;
+}
+.page-break-divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1.5px dashed #cbd5e1;
+  z-index: 1;
+}
+.page-break-label {
+  position: relative;
+  z-index: 2;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  border: 1px solid #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Sticky / Fixed Sidebars & Sticky Toolbar in Editor View */
+.editor-sticky-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
 @media (min-width: 768px) {
   .editor-sticky-sidebar {
     position: sticky;
-    top: 57px; /* Below toolbar */
-    height: calc(100vh - 114px);
+    top: 96px; /* Below header and document tabs */
+    height: calc(100vh - 156px);
     overflow-y: auto;
   }
 }
