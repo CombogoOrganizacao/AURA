@@ -241,125 +241,161 @@ class AuraEditorView {
             </div>
           </aside>
 
-          <!-- CENTER: CANVAS COM FOLHA ACADÊMICA REAL -->
-          <div class="flex-1 academic-page-container overflow-y-auto p-4 lg:p-8 flex justify-center pb-24" id="editor-sheet-container">
+          <!-- CENTER: CANVAS COM FOLHAS ACADÊMICAS REAIS A4 (ESTILO WORD / GOOGLE DOCS) -->
+          <div class="flex-1 academic-page-container overflow-y-auto p-4 sm:p-6 lg:p-10 flex flex-col items-center pb-28" id="editor-sheet-container">
             
-            <!-- Inserção de Botão de Acessibilidade (Leitura com Voz Didática Feminina) e Zoom / Folha A4 -->
-            <div class="academic-sheet sheet-standard-${stdId} relative rounded shadow-2xl transition-all" id="academic-active-sheet">
+            <div id="academic-sheets-wrapper" class="w-full max-w-[210mm] flex flex-col items-center transition-all">
               
-              <!-- Cabeçalho de Página e Numeração Dinâmica Conforme Configuração -->
-              <div class="flex items-center justify-between text-[10pt] font-mono text-slate-500 mb-6 pb-2 border-b border-slate-200 select-none">
-                <div class="text-left font-sans text-xs text-slate-400 uppercase tracking-wider" id="sheet-header-text">
-                  ${(currentDoc.pageConfig && currentDoc.pageConfig.headerText) || ''}
-                </div>
-                <div class="text-right font-mono font-bold text-slate-500" id="sheet-page-num">
-                  ${this.formatPageNumber(currentDoc.pageConfig, 1)}
-                </div>
-              </div>
-
-              <!-- BLOCO PRÉ-TEXTUAL (PÁGINA 1) -->
-              <div id="doc-pretextual" class="mb-8 academic-page-block" data-page="1">
-                <!-- Título -->
-                <h1 
-                  contenteditable="true" 
-                  id="doc-title-input"
-                  oninput="AURA.updateDocTitle(this.innerText)"
-                  class="text-center font-bold text-xl uppercase mb-4 focus:outline-none focus:ring-1 focus:ring-aura-500 rounded p-1"
-                  placeholder="DIGITE O TÍTULO DO SEU TRABALHO CIENTÍFICO"
-                >${currentDoc.title || 'DIGITE O TÍTULO DO SEU TRABALHO'}</h1>
-
-                <!-- Autoria -->
-                <div 
-                  contenteditable="true" 
-                  id="doc-authors-input"
-                  oninput="AURA.updateDocAuthors(this.innerText)"
-                  class="text-center text-sm font-medium mb-8 text-slate-700 focus:outline-none focus:ring-1 focus:ring-aura-500 rounded p-1"
-                >${currentDoc.authors || 'Nome do(a) Autor(a) — Instituição / Programa de Pós-Graduação'}</div>
-
-                <!-- Resumo -->
-                <div id="doc-abstract" class="bg-slate-50 p-4 rounded border border-slate-200 text-justify text-sm leading-relaxed mb-6">
-                  <div class="font-bold text-xs uppercase mb-1">${stdId === 'apa' || stdId === 'ieee' || stdId === 'mla' ? 'ABSTRACT' : 'RESUMO'}</div>
-                  <div 
-                    contenteditable="true" 
-                    id="doc-abstract-input"
-                    oninput="AURA.updateDocAbstract(this.innerText)"
-                    class="focus:outline-none focus:bg-white p-1 rounded"
-                  >${currentDoc.abstract || 'Insira aqui o resumo do seu trabalho de acordo com a norma selecionada...'}</div>
-                  
-                  <div class="mt-3 text-xs font-bold">
-                    ${stdId === 'apa' || stdId === 'ieee' || stdId === 'mla' ? 'Keywords:' : 'Palavras-chave:'} 
-                    <span 
-                      contenteditable="true" 
-                      id="doc-keywords-input"
-                      oninput="AURA.updateDocKeywords(this.innerText)"
-                      class="font-normal font-sans focus:outline-none"
-                    >${(currentDoc.keywords || []).join('; ')}</span>.
+              <!-- FOLHA A4 - PÁGINA 1 (PRÉ-TEXTUAL & INTRODUÇÃO) -->
+              <div class="academic-page-sheet sheet-standard-${stdId}" id="academic-sheet-1" data-page="1">
+                <!-- Cabeçalho de Página e Numeração Conforme Configuração -->
+                <div class="flex items-center justify-between text-[10pt] font-mono text-slate-500 mb-6 pb-2 border-b border-slate-200 select-none">
+                  <div class="text-left font-sans text-xs text-slate-400 uppercase tracking-wider">
+                    ${(currentDoc.pageConfig && currentDoc.pageConfig.headerText) || ''}
+                  </div>
+                  <div class="text-right font-mono font-bold text-slate-500">
+                    ${this.formatPageNumber(currentDoc.pageConfig, 1)}
                   </div>
                 </div>
-              </div>
 
-              <!-- DIVISÓRIA VISUAL DE PÁGINA A4 (PÁGINA 1 → PÁGINA 2) -->
-              <div class="page-break-divider no-print" data-break-after="1">
-                <span class="page-break-label">
-                  <i data-lucide="scissors" class="w-3.5 h-3.5 text-sky-400"></i> Quebra de Folha A4 • Início da <strong>Página 2</strong>
-                </span>
-              </div>
+                <!-- BLOCO PRÉ-TEXTUAL -->
+                <div id="doc-pretextual" class="mb-6">
+                  <!-- Título -->
+                  <h1 
+                    contenteditable="true" 
+                    id="doc-title-input"
+                    oninput="AURA.updateDocTitle(this.innerText)"
+                    class="text-center font-bold text-xl uppercase mb-4 focus:outline-none focus:ring-1 focus:ring-aura-500 rounded p-1"
+                    placeholder="DIGITE O TÍTULO DO SEU TRABALHO CIENTÍFICO"
+                  >${currentDoc.title || 'DIGITE O TÍTULO DO SEU TRABALHO'}</h1>
 
-              <!-- BLOCO TEXTUAL (SEÇÕES DO ARTIGO/PROJETO) -->
-              <div class="document-body-content flex flex-col gap-6" id="doc-sections-container">
-                ${(currentDoc.sections || []).map((sec, idx) => `
-                  <section id="section-${sec.id}" class="academic-section-block" data-section-idx="${idx}">
-                    <h2 
-                      contenteditable="true" 
-                      oninput="AURA.updateSectionTitle('${sec.id}', this.innerText)"
-                      class="academic-heading-1 focus:outline-none focus:ring-1 focus:ring-aura-500 rounded"
-                    >${sec.title}</h2>
+                  <!-- Autoria -->
+                  <div 
+                    contenteditable="true" 
+                    id="doc-authors-input"
+                    oninput="AURA.updateDocAuthors(this.innerText)"
+                    class="text-center text-sm font-medium mb-6 text-slate-700 focus:outline-none focus:ring-1 focus:ring-aura-500 rounded p-1"
+                  >${currentDoc.authors || 'Nome do(a) Autor(a) — Instituição / Programa de Pós-Graduação'}</div>
+
+                  <!-- Resumo -->
+                  <div id="doc-abstract" class="bg-slate-50 p-4 rounded border border-slate-200 text-justify text-sm leading-relaxed mb-4">
+                    <div class="font-bold text-xs uppercase mb-1">${stdId === 'apa' || stdId === 'ieee' || stdId === 'mla' ? 'ABSTRACT' : 'RESUMO'}</div>
                     <div 
                       contenteditable="true" 
-                      id="content-${sec.id}"
-                      oninput="AURA.updateSectionContent('${sec.id}', this.innerHTML)"
+                      id="doc-abstract-input"
+                      oninput="AURA.updateDocAbstract(this.innerText)"
+                      class="focus:outline-none focus:bg-white p-1 rounded"
+                    >${currentDoc.abstract || 'Insira aqui o resumo do seu trabalho de acordo com a norma selecionada...'}</div>
+                    
+                    <div class="mt-3 text-xs font-bold">
+                      ${stdId === 'apa' || stdId === 'ieee' || stdId === 'mla' ? 'Keywords:' : 'Palavras-chave:'} 
+                      <span 
+                        contenteditable="true" 
+                        id="doc-keywords-input"
+                        oninput="AURA.updateDocKeywords(this.innerText)"
+                        class="font-normal font-sans focus:outline-none"
+                      >${(currentDoc.keywords || []).join('; ')}</span>.
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Seção 1: Introdução / Contexto Inicial -->
+                ${currentDoc.sections && currentDoc.sections[0] ? `
+                  <section id="section-${currentDoc.sections[0].id}" class="academic-section-block">
+                    <h2 
+                      contenteditable="true" 
+                      oninput="AURA.updateSectionTitle('${currentDoc.sections[0].id}', this.innerText)"
+                      class="academic-heading-1 focus:outline-none focus:ring-1 focus:ring-aura-500 rounded"
+                    >${currentDoc.sections[0].title}</h2>
+                    <div 
+                      contenteditable="true" 
+                      id="content-${currentDoc.sections[0].id}"
+                      oninput="AURA.updateSectionContent('${currentDoc.sections[0].id}', this.innerHTML)"
                       class="academic-section-content text-justify focus:outline-none focus:bg-slate-50/50 p-1 rounded min-h-[60px]"
-                    >${sec.content.replace(/\n\n/g, '</p><p class="academic-paragraph">').replace(/^/, '<p class="academic-paragraph">') + '</p>'}</div>
+                    >${currentDoc.sections[0].content.replace(/\n\n/g, '</p><p class="academic-paragraph">').replace(/^/, '<p class="academic-paragraph">') + '</p>'}</div>
                   </section>
-                  ${(idx > 0 && idx % 2 === 1) ? `
-                    <div class="page-break-divider no-print" data-break-after="${idx + 2}">
-                      <span class="page-break-label">
-                        <i data-lucide="scissors" class="w-3.5 h-3.5 text-sky-400"></i> Quebra de Folha A4 • Início da <strong>Página ${Math.floor(idx / 2) + 3}</strong>
-                      </span>
-                    </div>
-                  ` : ''}
-                `).join('')}
+                ` : ''}
+
+                <!-- Rodapé da Folha 1 -->
+                <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between text-[8.5pt] text-slate-400 select-none">
+                  <div>${(currentDoc.pageConfig && currentDoc.pageConfig.footerText) || ''}</div>
+                  <div class="text-[8pt] text-slate-300 uppercase">${stdId.toUpperCase()} • PÁG. 1</div>
+                </div>
               </div>
 
-              <!-- DIVISÓRIA VISUAL DE PÁGINA A4 (ELEMENTOS PÓS-TEXTUAIS) -->
-              <div class="page-break-divider no-print">
-                <span class="page-break-label">
-                  <i data-lucide="scissors" class="w-3.5 h-3.5 text-sky-400"></i> Quebra de Folha A4 • <strong>Referências Finais</strong>
-                </span>
-              </div>
+              <!-- FOLHA A4 - PÁGINA 2 (CORPO PRINCIPAL / METODOLOGIA / RESULTADOS) -->
+              <div class="academic-page-sheet sheet-standard-${stdId}" id="academic-sheet-2" data-page="2">
+                <!-- Cabeçalho de Página e Numeração -->
+                <div class="flex items-center justify-between text-[10pt] font-mono text-slate-500 mb-6 pb-2 border-b border-slate-200 select-none">
+                  <div class="text-left font-sans text-xs text-slate-400 uppercase tracking-wider">
+                    ${(currentDoc.pageConfig && currentDoc.pageConfig.headerText) || ''}
+                  </div>
+                  <div class="text-right font-mono font-bold text-slate-500">
+                    ${this.formatPageNumber(currentDoc.pageConfig, 2)}
+                  </div>
+                </div>
 
-              <!-- BLOCO PÓS-TEXTUAL (REFERÊNCIAS) -->
-              <div id="doc-references" class="mt-8 pt-6 border-t border-slate-300 academic-page-block">
-                <h2 class="academic-heading-1 text-center font-bold uppercase mb-4">
-                  ${stdId === 'mla' ? 'WORKS CITED' : (stdId === 'chicago' ? 'BIBLIOGRAPHY' : (stdId === 'apa' || stdId === 'ieee' ? 'REFERENCES' : 'REFERÊNCIAS'))}
-                </h2>
-                <div id="doc-references-list" class="flex flex-col gap-3 text-xs">
-                  ${(currentDoc.references || []).map((ref, idx) => `
-                    <div class="flex items-start justify-between gap-2 p-1 hover:bg-slate-50 rounded group">
-                      <p contenteditable="true" oninput="AURA.updateReference(${idx}, this.innerText)" class="flex-1 focus:outline-none">${ref}</p>
-                      <button onclick="AURA.deleteReference(${idx})" class="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-xs px-1">✕</button>
-                    </div>
+                <!-- Seções do Meio -->
+                <div class="document-body-content flex flex-col gap-6" id="doc-sections-container">
+                  ${(currentDoc.sections || []).slice(1).map((sec, idx) => `
+                    <section id="section-${sec.id}" class="academic-section-block">
+                      <h2 
+                        contenteditable="true" 
+                        oninput="AURA.updateSectionTitle('${sec.id}', this.innerText)"
+                        class="academic-heading-1 focus:outline-none focus:ring-1 focus:ring-aura-500 rounded"
+                      >${sec.title}</h2>
+                      <div 
+                        contenteditable="true" 
+                        id="content-${sec.id}"
+                        oninput="AURA.updateSectionContent('${sec.id}', this.innerHTML)"
+                        class="academic-section-content text-justify focus:outline-none focus:bg-slate-50/50 p-1 rounded min-h-[60px]"
+                      >${sec.content.replace(/\n\n/g, '</p><p class="academic-paragraph">').replace(/^/, '<p class="academic-paragraph">') + '</p>'}</div>
+                    </section>
                   `).join('')}
                 </div>
-                <button onclick="AURA.addReferencePrompt()" class="mt-3 text-xs text-aura-600 hover:text-aura-800 font-bold flex items-center gap-1 no-print">
-                  <i data-lucide="plus" class="w-3 h-3"></i> ${window.AURA && window.AURA.currentLang === 'en' ? 'Add Bibliographic Reference' : 'Adicionar Referência Bibliográfica'}
-                </button>
+
+                <!-- Rodapé da Folha 2 -->
+                <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between text-[8.5pt] text-slate-400 select-none">
+                  <div>${(currentDoc.pageConfig && currentDoc.pageConfig.footerText) || ''}</div>
+                  <div class="text-[8pt] text-slate-300 uppercase">${stdId.toUpperCase()} • PÁG. 2</div>
+                </div>
               </div>
 
-              <!-- Rodapé da Página Conforme Configuração -->
-              <div class="mt-10 pt-3 border-t border-slate-200 flex items-center justify-between text-[9pt] text-slate-400 select-none" id="sheet-footer-bar">
-                <div>${(currentDoc.pageConfig && currentDoc.pageConfig.footerText) || ''}</div>
-                <div class="text-[8pt] text-slate-300 uppercase">${stdId.toUpperCase()} Compliance</div>
+              <!-- FOLHA A4 - PÁGINA 3 (ELEMENTOS PÓS-TEXTUAIS & REFERÊNCIAS BIBLIOGRÁFICAS) -->
+              <div class="academic-page-sheet sheet-standard-${stdId}" id="academic-sheet-3" data-page="3">
+                <!-- Cabeçalho de Página e Numeração -->
+                <div class="flex items-center justify-between text-[10pt] font-mono text-slate-500 mb-6 pb-2 border-b border-slate-200 select-none">
+                  <div class="text-left font-sans text-xs text-slate-400 uppercase tracking-wider">
+                    ${(currentDoc.pageConfig && currentDoc.pageConfig.headerText) || ''}
+                  </div>
+                  <div class="text-right font-mono font-bold text-slate-500">
+                    ${this.formatPageNumber(currentDoc.pageConfig, 3)}
+                  </div>
+                </div>
+
+                <!-- Referências -->
+                <div id="doc-references" class="flex-1">
+                  <h2 class="academic-heading-1 text-center font-bold uppercase mb-4">
+                    ${stdId === 'mla' ? 'WORKS CITED' : (stdId === 'chicago' ? 'BIBLIOGRAPHY' : (stdId === 'apa' || stdId === 'ieee' ? 'REFERENCES' : 'REFERÊNCIAS'))}
+                  </h2>
+                  <div id="doc-references-list" class="flex flex-col gap-3 text-xs">
+                    ${(currentDoc.references || []).map((ref, idx) => `
+                      <div class="flex items-start justify-between gap-2 p-1.5 hover:bg-slate-50 rounded group">
+                        <p contenteditable="true" oninput="AURA.updateReference(${idx}, this.innerText)" class="flex-1 focus:outline-none">${ref}</p>
+                        <button onclick="AURA.deleteReference(${idx})" class="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-xs px-1">✕</button>
+                      </div>
+                    `).join('')}
+                  </div>
+                  <button onclick="AURA.addReferencePrompt()" class="mt-4 text-xs text-aura-600 hover:text-aura-800 font-bold flex items-center gap-1 no-print">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> ${window.AURA && window.AURA.currentLang === 'en' ? 'Add Bibliographic Reference' : 'Adicionar Referência Bibliográfica'}
+                  </button>
+                </div>
+
+                <!-- Rodapé da Folha 3 -->
+                <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between text-[8.5pt] text-slate-400 select-none">
+                  <div>${(currentDoc.pageConfig && currentDoc.pageConfig.footerText) || ''}</div>
+                  <div class="text-[8pt] text-slate-300 uppercase">${stdId.toUpperCase()} • PÁG. 3</div>
+                </div>
               </div>
 
             </div>

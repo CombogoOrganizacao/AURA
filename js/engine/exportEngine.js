@@ -156,15 +156,19 @@ class AuraExportEngine {
 
           <div style="height: 12pt;"></div>
 
-          ${(documentData.sections || []).map(sec => `
-            <h1 class="academic-h1">${sec.title}</h1>
-            ${processSectionContent(sec.content)}
+          ${(documentData.sections || []).map((sec, idx) => `
+            <div style="${idx > 0 && idx % 2 === 1 ? 'page-break-before: always; mso-break-type: section-break;' : ''}">
+              <h1 class="academic-h1">${sec.title}</h1>
+              ${processSectionContent(sec.content)}
+            </div>
           `).join('')}
 
-          <h1 class="academic-h1">${stdId === 'mla' ? 'WORKS CITED' : (stdId === 'chicago' ? 'BIBLIOGRAPHY' : (stdId === 'apa' || stdId === 'ieee' ? 'REFERENCES' : 'REFERÊNCIAS'))}</h1>
-          ${(documentData.references || []).map(ref => `
-            <p class="reference-item">${ref}</p>
-          `).join('')}
+          <div style="page-break-before: always; mso-break-type: section-break;">
+            <h1 class="academic-h1">${stdId === 'mla' ? 'WORKS CITED' : (stdId === 'chicago' ? 'BIBLIOGRAPHY' : (stdId === 'apa' || stdId === 'ieee' ? 'REFERENCES' : 'REFERÊNCIAS'))}</h1>
+            ${(documentData.references || []).map(ref => `
+              <p class="reference-item">${ref}</p>
+            `).join('')}
+          </div>
         </div>
       </body>
       </html>

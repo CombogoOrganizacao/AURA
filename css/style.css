@@ -43,161 +43,120 @@ body {
   box-shadow: 0 12px 30px -10px rgba(12, 135, 235, 0.25);
 }
 
-/* Academic Page Simulation Container */
+/* Academic Canvas Background */
 .academic-page-container {
   background-color: #0b0f17;
   background-image: 
     radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.08) 0px, transparent 50%),
     radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.08) 0px, transparent 50%);
+  min-height: 100vh;
 }
 
-/* A4 Sheet Simulation (Mobile First Responsive) */
-.academic-sheet {
+/* Individual Physical A4 Sheet Container (Word Style) */
+.academic-page-sheet {
   background: #ffffff;
   color: #1a202c;
-  box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0,0,0,0.05);
-  transition: all 0.3s ease;
-  min-height: auto;
   width: 100%;
   max-width: 210mm;
-  margin: 0 auto;
+  min-height: 297mm;
+  margin: 0 auto 36px auto;
   position: relative;
   box-sizing: border-box;
+  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-@media (min-width: 768px) {
-  .academic-sheet {
-    min-height: 297mm;
-  }
+.academic-page-sheet:last-child {
+  margin-bottom: 60px;
 }
 
-/* ABNT Sheet Margins (Superior 3cm, Esquerda 3cm, Inferior 2cm, Direita 2cm) */
+/* Margens ABNT Físicas (Superior 3cm, Esquerda 3cm, Inferior 2cm, Direita 2cm) */
 .sheet-standard-abnt {
-  padding: 18px 16px;
-  font-family: 'Lora', 'Times New Roman', 'Arial', serif;
-  font-size: 11pt;
+  padding-top: 30mm;
+  padding-left: 30mm;
+  padding-bottom: 20mm;
+  padding-right: 20mm;
+  font-family: 'Times New Roman', 'Lora', serif;
+  font-size: 12pt;
   line-height: 1.5;
   text-align: justify;
 }
 
-@media (min-width: 768px) {
-  .sheet-standard-abnt {
-    padding-top: 30mm;
-    padding-left: 30mm;
-    padding-bottom: 20mm;
-    padding-right: 20mm;
-    font-size: 12pt;
-    line-height: 1.5;
-    text-align: justify;
+@media (max-width: 767px) {
+  .academic-page-sheet {
+    min-height: auto;
+    margin-bottom: 24px;
+    padding: 24px 16px !important;
   }
 }
 
-/* APA Sheet Margins (1 inch / 2.54cm em todos os lados, entrelinhas 2.0, alinhado à esquerda) */
+/* Margens APA 7th (2.54cm em todos os lados) */
 .sheet-standard-apa {
-  padding: 18px 16px;
-  font-family: 'Times New Roman', 'Calibri', 'Arial', serif;
-  font-size: 11pt;
-  line-height: 1.8;
+  padding-top: 25.4mm;
+  padding-left: 25.4mm;
+  padding-bottom: 25.4mm;
+  padding-right: 25.4mm;
+  font-family: 'Times New Roman', 'Calibri', serif;
+  font-size: 12pt;
+  line-height: 2.0;
   text-align: left;
 }
 
-@media (min-width: 768px) {
-  .sheet-standard-apa {
-    padding-top: 25.4mm;
-    padding-left: 25.4mm;
-    padding-bottom: 25.4mm;
-    padding-right: 25.4mm;
-    font-size: 12pt;
-    line-height: 2.0;
-    text-align: left;
-  }
-}
-
-/* IEEE Sheet (2 colunas, margens superiores 1.9cm, inf 2.54cm, lat 1.43cm) */
+/* Margens IEEE (2 colunas, sup 1.9cm, inf 2.54cm, lat 1.43cm) */
 .sheet-standard-ieee {
-  padding: 16px 14px;
+  padding-top: 19mm;
+  padding-bottom: 25.4mm;
+  padding-left: 14.3mm;
+  padding-right: 14.3mm;
   font-family: 'Times New Roman', serif;
   font-size: 10pt;
   line-height: 1.15;
   text-align: justify;
 }
-
 @media (min-width: 768px) {
-  .sheet-standard-ieee {
-    padding-top: 19mm;
-    padding-bottom: 25.4mm;
-    padding-left: 14.3mm;
-    padding-right: 14.3mm;
-    font-size: 10pt;
-    line-height: 1.15;
-  }
   .sheet-standard-ieee .document-body-content {
     column-count: 2;
     column-gap: 6.3mm;
   }
 }
 
-/* Vancouver (ICMJE - Medicina/Saúde: Margens 2.5cm, Entrelinhas 1.5, Justificado) */
+/* Margens Vancouver (2.5cm) */
 .sheet-standard-vancouver {
-  padding: 18px 16px;
-  font-family: 'Arial', 'Helvetica', 'Times New Roman', sans-serif;
-  font-size: 11pt;
+  padding-top: 25mm;
+  padding-bottom: 25mm;
+  padding-left: 25mm;
+  padding-right: 25mm;
+  font-family: 'Arial', 'Helvetica', sans-serif;
+  font-size: 12pt;
   line-height: 1.5;
   text-align: justify;
 }
 
-@media (min-width: 768px) {
-  .sheet-standard-vancouver {
-    padding-top: 25mm;
-    padding-left: 25mm;
-    padding-bottom: 25mm;
-    padding-right: 25mm;
-    font-size: 12pt;
-    line-height: 1.5;
-    text-align: justify;
-  }
-}
-
-/* Chicago 17th (Humanas/Sociais: Margens 2.54cm / 1 inch, Entrelinhas 2.0, Alinhado à esquerda) */
+/* Margens Chicago 17th (2.54cm) */
 .sheet-standard-chicago {
-  padding: 18px 16px;
+  padding-top: 25.4mm;
+  padding-bottom: 25.4mm;
+  padding-left: 25.4mm;
+  padding-right: 25.4mm;
   font-family: 'Times New Roman', 'Georgia', serif;
-  font-size: 11pt;
-  line-height: 1.8;
+  font-size: 12pt;
+  line-height: 2.0;
   text-align: left;
 }
 
-@media (min-width: 768px) {
-  .sheet-standard-chicago {
-    padding-top: 25.4mm;
-    padding-left: 25.4mm;
-    padding-bottom: 25.4mm;
-    padding-right: 25.4mm;
-    font-size: 12pt;
-    line-height: 2.0;
-    text-align: left;
-  }
-}
-
-/* MLA 9th (Letras/Linguística: Margens 2.54cm / 1 inch, Entrelinhas 2.0, Alinhado à esquerda) */
+/* Margens MLA 9th (2.54cm) */
 .sheet-standard-mla {
-  padding: 18px 16px;
+  padding-top: 25.4mm;
+  padding-bottom: 25.4mm;
+  padding-left: 25.4mm;
+  padding-right: 25.4mm;
   font-family: 'Times New Roman', serif;
-  font-size: 11pt;
-  line-height: 1.8;
+  font-size: 12pt;
+  line-height: 2.0;
   text-align: left;
-}
-
-@media (min-width: 768px) {
-  .sheet-standard-mla {
-    padding-top: 25.4mm;
-    padding-left: 25.4mm;
-    padding-bottom: 25.4mm;
-    padding-right: 25.4mm;
-    font-size: 12pt;
-    line-height: 2.0;
-    text-align: left;
-  }
 }
 
 /* Academic Elements Rendering */

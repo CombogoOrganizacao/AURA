@@ -631,17 +631,17 @@ class AuraApp {
     });
   }
 
-  // Zoom da folha (+ e -)
+  // Zoom das folhas A4 (+ e -)
   adjustSheetZoom(delta) {
     if (!this.sheetZoom) this.sheetZoom = 1.0;
-    this.sheetZoom = Math.max(0.7, Math.min(1.6, this.sheetZoom + delta));
+    this.sheetZoom = Math.max(0.7, Math.min(1.5, this.sheetZoom + delta));
     
-    const sheet = document.getElementById('academic-active-sheet');
+    const wrapper = document.getElementById('academic-sheets-wrapper');
     const zoomDisplay = document.getElementById('sheet-zoom-level');
     
-    if (sheet) {
-      sheet.style.transform = `scale(${this.sheetZoom})`;
-      sheet.style.transformOrigin = 'top center';
+    if (wrapper) {
+      wrapper.style.transform = `scale(${this.sheetZoom})`;
+      wrapper.style.transformOrigin = 'top center';
     }
     if (zoomDisplay) {
       zoomDisplay.innerText = `${Math.round(this.sheetZoom * 100)}%`;
