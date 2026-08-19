@@ -11,7 +11,6 @@ window.AURA_TRANSLATIONS = {
     nav_notices: 'Central de Editais',
     nav_dashboard: 'Meus Trabalhos',
     btn_new_doc: 'Novo Trabalho',
-    settings_title: 'Configurações de Linguagem e UTF-8',
     
     // Home Hero
     hero_badge: 'Motor de Regras Acadêmicas & Editais Integrado',
@@ -72,18 +71,62 @@ window.AURA_TRANSLATIONS = {
     references: 'Referências',
     auto_format_btn: 'Corrigir Formatação (1-Click)',
     untitled_article: 'Artigo Sem Título',
+    tab_ai: 'Assistente IA',
+    tab_find: 'Localizar',
+    tab_compliance: 'Conformidade',
+    ai_paraphrase_title: 'Reformulação & Estilo Acadêmico',
+    ai_paraphrase_desc: 'Transforme trechos em registro científico formal de alto impacto.',
+    compliance_score_label: 'Conformidade Normativa',
+    compliance_rules_passed: 'regras verificadas com sucesso',
+
+    // Notices View
+    notice_deadline: 'Prazo final:',
+    notice_modality: 'Modalidade:',
+    notice_duration: 'Vigência:',
+    notice_months: 'meses',
+    notice_btn_analyze: 'Analisar Outro Edital',
+    notice_btn_create_proj: 'Criar Projeto deste Edital',
+    kpi_readiness: 'Índice de Prontidão',
+    kpi_readiness_sub: 'Altamente competitivo',
+    kpi_requirements: 'Requisitos do Candidato',
+    kpi_requirements_sub: '1 pendência documental',
+    kpi_documentation: 'Documentação',
+    kpi_documentation_sub: '2 anexos restantes',
+    kpi_budget: 'Teto Orçamentário',
+    kpi_budget_sub: 'Dentro do limite ✓',
+    eval_matrix_title: 'Matriz de Critérios de Avaliação',
+    eval_matrix_desc: 'Pontuação estimada da sua proposta com base nas regras do edital.',
+    download_report: 'Baixar Relatório',
+    official_rule: 'Regra Oficial do Edital:',
+    ai_feedback: 'Sugestão & Parecer da IA:',
+    weight: 'Peso:',
+
+    // Dashboard View
+    dash_title: 'Meus Trabalhos Acadêmicos',
+    dash_desc: 'Gerencie seus artigos, teses, dissertações e projetos para editais.',
+    dash_ready: 'Preparado',
+    dash_edited: 'Editado',
+    dash_open_editor: 'Abrir Editor →',
+    dash_presets_title: 'Meus Presets & Padrões Salvos',
+    dash_presets_desc: 'Modelos institucionais e configurações customizadas de formatação.',
+    dash_new_preset: 'Novo Preset',
+    dash_ready_use: 'Pronto para uso',
+    dash_apply: 'Aplicar',
 
     // Modals & General
     new_doc_title: 'Começar Novo Trabalho Científico',
     doc_title_label: 'Título do Trabalho:',
+    doc_title_placeholder: 'Digite o título definitivo ou provisório do trabalho...',
     doc_type_label: 'Tipo de Trabalho:',
     doc_standard_label: 'Norma Base:',
     doc_authors_label: 'Autor(es):',
+    doc_authors_placeholder: 'Nome completo dos autores e filiação institucional',
     cancel: 'Cancelar',
     create_doc_btn: 'Criar Documento',
     upload_file_title: 'Já possui seu arquivo?',
     upload_file_sub: 'Arraste seu arquivo aqui ou clique para selecionar do computador.',
-    paste_text_label: 'Ou cole o texto diretamente abaixo:'
+    paste_text_label: 'Ou cole o texto diretamente abaixo:',
+    paste_text_placeholder: 'Cole aqui o texto completo ou rascunho do trabalho...'
   },
   en: {
     // Header & Brand
@@ -93,7 +136,6 @@ window.AURA_TRANSLATIONS = {
     nav_notices: 'Calls & Grants Hub',
     nav_dashboard: 'My Projects',
     btn_new_doc: 'New Project',
-    settings_title: 'Language & UTF-8 Settings',
     
     // Home Hero
     hero_badge: 'Integrated Academic Rules & Calls Engine',
@@ -154,17 +196,61 @@ window.AURA_TRANSLATIONS = {
     references: 'References',
     auto_format_btn: 'Fix Formatting (1-Click)',
     untitled_article: 'Untitled Article',
+    tab_ai: 'AI Assistant',
+    tab_find: 'Find & Replace',
+    tab_compliance: 'Compliance',
+    ai_paraphrase_title: 'Academic Paraphrasing & Style',
+    ai_paraphrase_desc: 'Elevate drafts to high-impact formal academic tone.',
+    compliance_score_label: 'Normative Compliance',
+    compliance_rules_passed: 'rules verified successfully',
+
+    // Notices View
+    notice_deadline: 'Deadline:',
+    notice_modality: 'Type:',
+    notice_duration: 'Duration:',
+    notice_months: 'months',
+    notice_btn_analyze: 'Analyze Another Call',
+    notice_btn_create_proj: 'Create Project for this Call',
+    kpi_readiness: 'Readiness Index',
+    kpi_readiness_sub: 'Highly competitive',
+    kpi_requirements: 'Applicant Eligibility',
+    kpi_requirements_sub: '1 pending document',
+    kpi_documentation: 'Documentation',
+    kpi_documentation_sub: '2 attachments remaining',
+    kpi_budget: 'Budget Ceiling',
+    kpi_budget_sub: 'Within ceiling limit ✓',
+    eval_matrix_title: 'Evaluation Criteria Matrix',
+    eval_matrix_desc: 'Estimated score based on official funding guidelines and rubric.',
+    download_report: 'Download Report',
+    official_rule: 'Official Call Rule:',
+    ai_feedback: 'AI Assessment & Suggestions:',
+    weight: 'Weight:',
+
+    // Dashboard View
+    dash_title: 'My Academic Projects',
+    dash_desc: 'Manage your papers, theses, dissertations and research grant proposals.',
+    dash_ready: 'Ready',
+    dash_edited: 'Edited',
+    dash_open_editor: 'Open Editor →',
+    dash_presets_title: 'My Presets & Custom Standards',
+    dash_presets_desc: 'Institutional templates and saved formatting configurations.',
+    dash_new_preset: 'New Preset',
+    dash_ready_use: 'Ready to use',
+    dash_apply: 'Apply',
 
     // Modals & General
     new_doc_title: 'Start New Scientific Project',
     doc_title_label: 'Project Title:',
+    doc_title_placeholder: 'Enter formal paper or project title...',
     doc_type_label: 'Project Type:',
     doc_standard_label: 'Academic Standard:',
     doc_authors_label: 'Author(s):',
+    doc_authors_placeholder: 'Full author names and institutional affiliations',
     cancel: 'Cancel',
     create_doc_btn: 'Create Document',
     upload_file_title: 'Already have your file?',
     upload_file_sub: 'Drag & drop your file here or click to browse from computer.',
-    paste_text_label: 'Or paste raw text directly below:'
+    paste_text_label: 'Or paste raw text directly below:',
+    paste_text_placeholder: 'Paste your full paper or project draft text here...'
   }
 };
