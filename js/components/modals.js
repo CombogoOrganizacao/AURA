@@ -544,27 +544,43 @@ class AuraModals {
 
           <div class="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
             ${historyStack.map((item, idx) => {
-              let docPreview;
-              try { docPreview = JSON.parse(item); } catch (e) { docPreview = {}; }
+              let docPreview = {};
+              let timeStr = 'Agora';
+              let descStr = 'Edição';
+              if (item && item.doc) {
+                docPreview = item.doc;
+                timeStr = `${item.date || ''} às ${item.timestamp || ''}`;
+                descStr = item.desc || 'Edição no documento';
+              } else {
+                try { docPreview = JSON.parse(item); } catch (e) { docPreview = {}; }
+              }
+
               const isCurrent = idx === currentIndex;
               return `
-                <div class="p-3 rounded-xl border transition-all flex items-center justify-between ${isCurrent ? 'bg-indigo-950/50 border-indigo-500 text-white' : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800'}">
+                <div class="p-3 rounded-xl border transition-all flex items-center justify-between ${isCurrent ? 'bg-indigo-950/60 border-indigo-500 shadow-md text-white' : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800'}">
                   <div class="flex items-center gap-3">
-                    <div class="w-7 h-7 rounded-lg ${isCurrent ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'} flex items-center justify-center font-mono font-bold text-xs">
-                      #${idx + 1}
+                    <div class="w-8 h-8 rounded-lg ${isCurrent ? 'bg-indigo-600 text-white shadow' : 'bg-slate-800 text-slate-400'} flex items-center justify-center font-mono font-bold text-xs">
+                      v${idx + 1}
                     </div>
                     <div class="flex flex-col">
-                      <span class="font-bold text-xs leading-tight">${docPreview.title || 'Documento Acadêmico'}</span>
-                      <span class="text-[10px] text-slate-400 font-mono">${(docPreview.sections || []).length} seções • ${(docPreview.keywords || []).length} palavras-chave ${isCurrent ? '• (Versão Ativa)' : ''}</span>
+                      <div class="flex items-center gap-2">
+                        <span class="font-bold text-xs leading-tight">${docPreview.title || 'Documento Acadêmico'}</span>
+                        <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-indigo-300 font-mono">${descStr}</span>
+                      </div>
+                      <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5">
+                        <span class="text-indigo-400 font-semibold"><i data-lucide="clock" class="w-3 h-3 inline"></i> ${timeStr}</span>
+                        <span>• ${(docPreview.sections || []).length} seções</span>
+                        ${isCurrent ? '<span class="text-emerald-400 font-bold">• (Versão Atual)</span>' : ''}
+                      </div>
                     </div>
                   </div>
 
                   <div>
                     ${isCurrent ? `
-                      <span class="px-2 py-1 rounded bg-indigo-600 text-[10px] font-bold text-white uppercase">Atual</span>
+                      <span class="px-2.5 py-1 rounded bg-indigo-600/80 text-[10px] font-bold text-white uppercase shadow-sm">Ativa</span>
                     ` : `
-                      <button onclick="AURA.restoreHistorySnapshot(${idx})" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1 border border-slate-700">
-                        <i data-lucide="rotate-ccw" class="w-3 h-3"></i> Restaurar
+                      <button onclick="AURA.restoreHistorySnapshot(${idx})" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1 border border-slate-700 shadow-sm">
+                        <i data-lucide="rotate-ccw" class="w-3 h-3"></i> Alternar para esta
                       </button>
                     `}
                   </div>

@@ -168,13 +168,26 @@ class AuraApp {
     this.navigate('editor');
   }
 
-  saveStateToHistory() {
+  saveStateToHistory(description = 'Edição no documento') {
     if (!this.activeDocument) return;
-    const snapshot = JSON.stringify(this.activeDocument);
-    // If we're not at the top of history stack, truncate forward history
+    const snapshot = {
+      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      date: new Date().toLocaleDateString('pt-BR'),
+      desc: description,
+      doc: JSON.parse(JSON.stringify(this.activeDocument))
+    };
+
+    // Se não estiver no topo do histórico, trunca o histórico à frente
     if (this.historyIndex < this.historyStack.length - 1) {
       this.historyStack = this.historyStack.slice(0, this.historyIndex + 1);
     }
+    
+    // Evita duplicar se for rigorosamente idêntico ao último snapshot
+    const last = this.historyStack[this.historyStack.length - 1];
+    if (last && JSON.stringify(last.doc) === JSON.stringify(snapshot.doc)) {
+      return;
+    }
+
     this.historyStack.push(snapshot);
     if (this.historyStack.length > 50) this.historyStack.shift();
     this.historyIndex = this.historyStack.length - 1;
@@ -184,10 +197,11 @@ class AuraApp {
   undo() {
     if (this.historyIndex > 0) {
       this.historyIndex--;
-      this.activeDocument = JSON.parse(this.historyStack[this.historyIndex]);
+      const target = this.historyStack[this.historyIndex];
+      this.activeDocument = target.doc ? JSON.parse(JSON.stringify(target.doc)) : JSON.parse(target);
       this.persistDocuments();
       this.navigate('editor');
-      this.showToast(this.currentLang === 'en' ? 'Action undone.' : 'Ação desfeita (Desfazer).', 'info');
+      this.showToast(this.currentLang === 'en' ? 'Action undone.' : `Desfeito: Versão #${this.historyIndex + 1}`, 'info');
     } else {
       document.execCommand('undo', false, null);
     }
@@ -196,10 +210,11 @@ class AuraApp {
   redo() {
     if (this.historyIndex < this.historyStack.length - 1) {
       this.historyIndex++;
-      this.activeDocument = JSON.parse(this.historyStack[this.historyIndex]);
+      const target = this.historyStack[this.historyIndex];
+      this.activeDocument = target.doc ? JSON.parse(JSON.stringify(target.doc)) : JSON.parse(target);
       this.persistDocuments();
       this.navigate('editor');
-      this.showToast(this.currentLang === 'en' ? 'Action redone.' : 'Ação refeita (Refazer).', 'info');
+      this.showToast(this.currentLang === 'en' ? 'Action redone.' : `Refeito: Versão #${this.historyIndex + 1}`, 'info');
     } else {
       document.execCommand('redo', false, null);
     }
@@ -385,6 +400,7 @@ class AuraApp {
       this.updateHeaderBadge();
       const sidebarTitle = document.getElementById('sidebar-title-display');
       if (sidebarTitle) sidebarTitle.innerText = title.trim() || (this.currentLang === 'en' ? 'Title & Authors' : 'Título & Autoria');
+      this.saveHistoryDebounced('Alteração do Título');
       this.triggerAutoSave();
     }
   }
@@ -392,6 +408,7 @@ class AuraApp {
   updateDocAuthors(authors) {
     if (this.activeDocument) {
       this.activeDocument.authors = authors;
+      this.saveHistoryDebounced('Edição de Autores');
       this.triggerAutoSave();
     }
   }
@@ -401,6 +418,7 @@ class AuraApp {
       this.activeDocument.abstract = abstractText;
       this.refreshLiveState();
       this.refreshCompliancePanel();
+      this.saveHistoryDebounced('Edição do Resumo');
       this.triggerAutoSave();
     }
   }
@@ -409,6 +427,7 @@ class AuraApp {
     if (this.activeDocument) {
       this.activeDocument.keywords = keywordsText.split(';').map(k => k.trim()).filter(k => k.length > 0);
       this.refreshCompliancePanel();
+      this.saveHistoryDebounced('Edição de Palavras-chave');
       this.triggerAutoSave();
     }
   }
@@ -420,6 +439,7 @@ class AuraApp {
       sec.title = title;
       const sidebarSec = document.getElementById(`sidebar-sec-${secId}`);
       if (sidebarSec) sidebarSec.innerText = title.trim() || 'Nova Seção';
+      this.saveHistoryDebounced(`Edição de Título da Seção`);
       this.triggerAutoSave();
     }
   }
@@ -432,8 +452,16 @@ class AuraApp {
       tempDiv.innerHTML = html;
       sec.content = tempDiv.innerText;
       this.refreshLiveState();
+      this.saveHistoryDebounced(`Edição do Conteúdo da Seção`);
       this.triggerAutoSave();
     }
+  }
+
+  saveHistoryDebounced(desc = 'Edição') {
+    if (this.historyDebounceTimer) clearTimeout(this.historyDebounceTimer);
+    this.historyDebounceTimer = setTimeout(() => {
+      this.saveStateToHistory(desc);
+    }, 1200);
   }
 
   updateReference(idx, text) {
@@ -1074,13 +1102,15 @@ class AuraApp {
     lucide.createIcons();
   }
 
-  highlightAndScrollToText(targetText) {
-    this.openFindReplace();
+  highlightAndScrollToText(targetText, switchTab = false) {
+    if (switchTab) {
+      this.openFindReplace();
+    }
     const findInput = document.getElementById('find-input');
     if (findInput) {
       findInput.value = targetText;
-      this.onFindInputChange(targetText);
     }
+    this.onFindInputChange(targetText);
   }
 
   applySpellFix(oldText, newText) {

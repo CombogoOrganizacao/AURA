@@ -97,6 +97,15 @@ class AuraEditorView {
               <button onclick="AURA.execCommand('underline')" title="Sublinhado (Ctrl+U)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="underline" class="w-4 h-4"></i></button>
               <div class="h-4 w-px bg-slate-700 mx-1"></div>
 
+              <!-- Listas em Tópicos e Numeradas -->
+              <button onclick="AURA.execCommand('insertUnorderedList')" title="Lista com Marcadores / Tópicos (Bullets)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
+                <i data-lucide="list" class="w-4 h-4 text-slate-300"></i>
+              </button>
+              <button onclick="AURA.execCommand('insertOrderedList')" title="Lista Numerada (1, 2, 3...)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
+                <i data-lucide="list-ordered" class="w-4 h-4 text-slate-300"></i>
+              </button>
+              <div class="h-4 w-px bg-slate-700 mx-1"></div>
+
               <!-- Intuitive Citation Selector Dropdown (Fixed z-index) -->
               <div class="relative inline-block text-left z-50">
                 <button onclick="AURA.toggleCitationMenu()" id="btn-citation-dropdown" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1.5 font-medium border border-slate-700 shadow-sm">
