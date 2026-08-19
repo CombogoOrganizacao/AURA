@@ -619,6 +619,18 @@ class AuraModals {
             "${docTitle || 'Documento sem título'}"
           </p>
 
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+            <button onclick="AURA.closeModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">${isEn ? 'Cancel' : 'Cancelar'}</button>
+            <button onclick="AURA.confirmDeleteDocument('${docId}')" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1 shadow-md shadow-rose-600/30">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> ${isEn ? 'Yes, Delete' : 'Sim, Excluir'}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    lucide.createIcons();
+  }
+
   showAdvancedFindReplaceModal(currentFindTerm = '') {
     const container = document.getElementById('modal-container');
     const isEn = window.AURA && window.AURA.currentLang === 'en';
