@@ -303,19 +303,20 @@ body {
   min-height: 240mm;
 }
 
-/* Sticky / Fixed Sidebars & Sticky Toolbar in Editor View */
+/* Fixed Sidebars & Toolbar in Editor View */
 .editor-sticky-toolbar {
-  position: sticky;
-  top: 57px;
-  z-index: 40;
+  position: relative;
+  flex-shrink: 0;
+  z-index: 30;
 }
 
 @media (min-width: 768px) {
   .editor-sticky-sidebar {
     height: 100%;
     max-height: 100%;
-    overflow-y: auto;
-    z-index: 30;
+    min-height: 0;
+    overflow: hidden;
+    z-index: 20;
   }
 }
 
