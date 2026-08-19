@@ -386,12 +386,18 @@ class AuraApp {
           this.openFindReplace();
         }
       }
-      // Ctrl+H para abrir o modal avançado de Localizar e Substituir
+      // Ctrl+H para abrir o painel flutuante de Localizar e Substituir
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'h') {
         if (this.currentView === 'editor') {
           e.preventDefault();
-          this.openAdvancedFindReplaceModal();
+          this.toggleAdvancedFindReplacePopover();
         }
+      }
+      // Escape para fechar popovers
+      if (e.key === 'Escape') {
+        this.closeAdvancedFindReplacePopover();
+        const citationMenu = document.getElementById('citation-dropdown-menu');
+        if (citationMenu) citationMenu.classList.add('hidden');
       }
       // F3 para proxima busca
       if (e.key === 'F3') {
@@ -401,13 +407,34 @@ class AuraApp {
       }
     });
 
-    // Fechar dropdown de citação ao clicar fora
+    // Rastrear e salvar seleção ativa em contenteditable
+    document.addEventListener('selectionchange', () => {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const anchorNode = sel.anchorNode;
+        if (anchorNode && anchorNode.parentElement && anchorNode.parentElement.closest && anchorNode.parentElement.closest('.academic-page-sheet')) {
+          this.savedSelectionRange = sel.getRangeAt(0).cloneRange();
+        }
+      }
+    });
+
+    // Fechar menus flutuantes ao clicar fora
     document.addEventListener('click', (e) => {
+      // Fechar dropdown de citação ao clicar fora
       const citationMenu = document.getElementById('citation-dropdown-menu');
       const citationBtn = document.getElementById('btn-citation-dropdown');
       if (citationMenu && !citationMenu.classList.contains('hidden')) {
         if (!citationMenu.contains(e.target) && (!citationBtn || !citationBtn.contains(e.target))) {
           citationMenu.classList.add('hidden');
+        }
+      }
+
+      // Fechar popover de localizar e substituir ao clicar fora
+      const findPopover = document.getElementById('advanced-find-popover');
+      const findBtn = document.getElementById('btn-open-advanced-find');
+      if (findPopover && !findPopover.classList.contains('hidden')) {
+        if (!findPopover.contains(e.target) && (!findBtn || !findBtn.contains(e.target))) {
+          findPopover.classList.add('hidden');
         }
       }
     });
@@ -1107,11 +1134,86 @@ class AuraApp {
     }
   }
 
-  // --- LOCALIZAR E SUBSTITUIR AVANÇADO (TOOLBAR + MODAL) ---
-  openAdvancedFindReplaceModal() {
+  // --- LOCALIZAR E SUBSTITUIR AVANÇADO (TOOLBAR + POPOVER FLUTUANTE) ---
+  toggleAdvancedFindReplacePopover(e) {
+    if (e) e.stopPropagation();
+    const popover = document.getElementById('advanced-find-popover');
+    const btn = document.getElementById('btn-open-advanced-find');
     const toolbarInput = document.getElementById('toolbar-find-input');
-    const currentTerm = toolbarInput ? toolbarInput.value : '';
-    window.auraModals.showAdvancedFindReplaceModal(currentTerm);
+    const popoverFindInput = document.getElementById('popover-find-input');
+    if (!popover) return;
+
+    const isHidden = popover.classList.contains('hidden');
+    if (isHidden) {
+      if (toolbarInput && popoverFindInput) {
+        popoverFindInput.value = toolbarInput.value || '';
+      }
+      if (btn) {
+        const rect = btn.getBoundingClientRect();
+        popover.style.position = 'fixed';
+        popover.style.top = `${rect.bottom + 8}px`;
+        popover.style.right = `${Math.max(12, window.innerWidth - rect.right - 10)}px`;
+        popover.style.zIndex = '99999';
+      }
+      popover.classList.remove('hidden');
+      if (popoverFindInput) {
+        popoverFindInput.focus();
+        popoverFindInput.select();
+      }
+      if (popoverFindInput && popoverFindInput.value) {
+        this.onFindInputChange(popoverFindInput.value);
+      }
+    } else {
+      popover.classList.add('hidden');
+    }
+  }
+
+  closeAdvancedFindReplacePopover() {
+    const popover = document.getElementById('advanced-find-popover');
+    if (popover) {
+      popover.classList.add('hidden');
+    }
+  }
+
+  openAdvancedFindReplaceModal() {
+    this.toggleAdvancedFindReplacePopover();
+  }
+
+  execPopoverFindAndReplace(replaceAll = false) {
+    const findTerm = (document.getElementById('popover-find-input') || document.getElementById('toolbar-find-input') || {}).value || '';
+    const replaceTerm = (document.getElementById('popover-replace-input') || {}).value || '';
+    const matchCase = document.getElementById('popover-find-opt-case') ? document.getElementById('popover-find-opt-case').checked : false;
+    const wholeWord = document.getElementById('popover-find-opt-word') ? document.getElementById('popover-find-opt-word').checked : false;
+    const resultBox = document.getElementById('popover-find-results');
+
+    if (!findTerm) {
+      this.showToast('Digite o termo a ser localizado.', 'warning');
+      return;
+    }
+
+    this.saveStateToHistory(replaceAll ? `Substituir tudo "${findTerm}"` : `Substituir 1 "${findTerm}"`);
+
+    if (replaceAll) {
+      const count = this.searchMatches ? this.searchMatches.length : 0;
+      this.executeGlobalReplace(findTerm, replaceTerm, true, { matchCase, wholeWord });
+      this.onFindInputChange('');
+      if (resultBox) resultBox.innerText = `✓ ${count} ocorrência(s) substituída(s).`;
+      this.showToast(`${count} ocorrência(s) de "${findTerm}" substituída(s) por "${replaceTerm}"!`, 'success');
+    } else {
+      const currentHighlight = document.querySelector('.search-highlight-current') || (this.searchMatches && this.searchMatches[0]);
+      if (currentHighlight) {
+        currentHighlight.innerText = replaceTerm;
+        currentHighlight.classList.remove('search-highlight-current', 'search-highlight');
+        this.syncActiveDocumentFromDOM();
+        if (resultBox) resultBox.innerText = `✓ Ocorrência substituída por "${replaceTerm}".`;
+        this.showToast(`Ocorrência substituída!`, 'success');
+        this.onFindInputChange(findTerm);
+      } else {
+        this.executeGlobalReplace(findTerm, replaceTerm, false, { matchCase, wholeWord });
+        this.showToast(`Ocorrência substituída por "${replaceTerm}"!`, 'success');
+      }
+    }
+    this.refreshLiveState();
   }
 
   execModalFindAndReplace(replaceAll = true) {
@@ -1329,14 +1431,15 @@ class AuraApp {
   onFindInputChange(term) {
     const sheetsContainer = document.getElementById('academic-sheets-wrapper') || document.getElementById('editor-sheet-container') || document.body;
     const counterBadge = document.getElementById('find-counter-badge');
+    const popoverBadge = document.getElementById('popover-find-counter-badge');
     const toolbarInput = document.getElementById('toolbar-find-input');
-    const modalInput = document.getElementById('modal-find-input');
+    const popoverInput = document.getElementById('popover-find-input');
 
     if (toolbarInput && toolbarInput.value !== term && document.activeElement !== toolbarInput) {
       toolbarInput.value = term;
     }
-    if (modalInput && modalInput.value !== term && document.activeElement !== modalInput) {
-      modalInput.value = term;
+    if (popoverInput && popoverInput.value !== term && document.activeElement !== popoverInput) {
+      popoverInput.value = term;
     }
 
     // Limpa destaques anteriores
@@ -1344,13 +1447,14 @@ class AuraApp {
 
     if (!term || term.trim().length === 0) {
       if (counterBadge) counterBadge.classList.add('hidden');
+      if (popoverBadge) popoverBadge.innerText = '0/0';
       this.searchMatches = [];
       this.currentSearchIndex = -1;
       return;
     }
 
-    const matchCase = document.getElementById('modal-find-opt-case') ? document.getElementById('modal-find-opt-case').checked : false;
-    const wholeWord = document.getElementById('modal-find-opt-word') ? document.getElementById('modal-find-opt-word').checked : false;
+    const matchCase = document.getElementById('popover-find-opt-case') ? document.getElementById('popover-find-opt-case').checked : (document.getElementById('modal-find-opt-case') ? document.getElementById('modal-find-opt-case').checked : false);
+    const wholeWord = document.getElementById('popover-find-opt-word') ? document.getElementById('popover-find-opt-word').checked : (document.getElementById('modal-find-opt-word') ? document.getElementById('modal-find-opt-word').checked : false);
 
     let pattern = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     if (wholeWord) pattern = `\\b${pattern}\\b`;
@@ -1389,15 +1493,18 @@ class AuraApp {
     if (this.searchMatches.length > 0) {
       this.currentSearchIndex = 0;
       this.highlightCurrentMatch();
+      const countStr = `1/${this.searchMatches.length}`;
       if (counterBadge) {
         counterBadge.classList.remove('hidden');
-        counterBadge.innerText = `1/${this.searchMatches.length}`;
+        counterBadge.innerText = countStr;
       }
+      if (popoverBadge) popoverBadge.innerText = countStr;
     } else {
       if (counterBadge) {
         counterBadge.classList.remove('hidden');
         counterBadge.innerText = '0/0';
       }
+      if (popoverBadge) popoverBadge.innerText = '0/0';
     }
   }
 
@@ -1804,8 +1911,25 @@ class AuraApp {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  execCommand(cmd) {
+  execCommand(cmd, val = null) {
+    this.saveStateToHistory(`Formatação: ${cmd}`);
+    if (this.savedSelectionRange) {
+      this.restoreSelection();
+    }
+    document.execCommand(cmd, false, val);
+    this.syncActiveDocumentFromDOM();
+    this.triggerAutoSave();
+  }
+
+  applyListFormat(type = 'ul') {
+    this.saveStateToHistory(type === 'ol' ? 'Lista Numerada' : 'Lista com Marcadores');
+    if (this.savedSelectionRange) {
+      this.restoreSelection();
+    }
+    const cmd = type === 'ol' ? 'insertOrderedList' : 'insertUnorderedList';
     document.execCommand(cmd, false, null);
+    this.syncActiveDocumentFromDOM();
+    this.showToast(type === 'ol' ? 'Lista numerada aplicada!' : 'Lista com marcadores aplicada!', 'info');
   }
 
   toggleCitationMenu(e) {

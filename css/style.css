@@ -221,6 +221,33 @@ body {
 .spell-warning {
   text-decoration: underline wavy #f59e0b;
   text-underline-offset: 3px;
+}
+
+/* Listas Acadêmicas Formatadas (Bullets & Numeradas) */
+.academic-page-sheet ul,
+.academic-page-sheet .document-body-content ul {
+  list-style-type: disc !important;
+  margin-left: 2rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  padding-left: 1rem !important;
+}
+
+.academic-page-sheet ol,
+.academic-page-sheet .document-body-content ol {
+  list-style-type: decimal !important;
+  margin-left: 2rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  padding-left: 1rem !important;
+}
+
+.academic-page-sheet li {
+  display: list-item !important;
+  margin-bottom: 0.25rem !important;
+  text-indent: 0 !important;
+}
+
 /* Visual Page Break / Divisórias de Página A4 Realista */
 .page-break-divider {
   display: flex;

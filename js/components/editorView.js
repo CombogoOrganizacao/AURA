@@ -32,20 +32,20 @@ class AuraEditorView {
     const t = (key) => window.AURA ? window.AURA.t(key) : key;
 
     container.innerHTML = `
-      <div class="flex-1 flex flex-col min-h-[calc(100vh-61px)] md:h-[calc(100vh-61px)] bg-slate-950 md:overflow-hidden">
+      <div class="flex-1 h-full flex flex-col min-h-0 overflow-hidden bg-slate-950">
         
         <!-- EDITOR TOP TOOLBAR (Header, Ferramentas & Abas de Documentos - FIXO) -->
-        <div class="editor-sticky-toolbar bg-slate-900 border-b border-slate-800 shadow-md flex-shrink-0">
+        <div class="editor-sticky-toolbar bg-slate-900 border-b border-slate-800 shadow-md flex-shrink-0 z-30">
           
           <!-- Toolbar Principal de Formatação -->
           <div class="px-3 sm:px-4 py-2 flex items-center justify-between gap-2 text-xs z-40 whitespace-nowrap overflow-x-auto relative border-b border-slate-800/80">
             <!-- History & Basic Formatting -->
             <div class="flex items-center gap-1 flex-shrink-0">
               <!-- Undo / Redo (Apenas Ícones) -->
-              <button onclick="AURA.undo()" title="Desfazer (Ctrl+Z)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
+              <button onmousedown="event.preventDefault()" onclick="AURA.undo()" title="Desfazer (Ctrl+Z)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
                 <i data-lucide="undo-2" class="w-4 h-4 text-aura-400"></i>
               </button>
-              <button onclick="AURA.redo()" title="Refazer (Ctrl+Y)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
+              <button onmousedown="event.preventDefault()" onclick="AURA.redo()" title="Refazer (Ctrl+Y)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
                 <i data-lucide="redo-2" class="w-4 h-4 text-aura-400"></i>
               </button>
               <div class="h-4 w-px bg-slate-700 mx-1"></div>
@@ -76,6 +76,7 @@ class AuraEditorView {
                 <!-- Botão Ciclo de Alinhamento (Justificado, Esquerda, Centralizado, Direita) -->
                 <button 
                   id="btn-alignment-cycle"
+                  onmousedown="event.preventDefault()"
                   onclick="AURA.cycleTextAlignment()" 
                   title="Alinhamento: Justificado / Esquerda / Centralizado / Direita" 
                   class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-all"
@@ -85,23 +86,23 @@ class AuraEditorView {
               </div>
               <div class="h-4 w-px bg-slate-700 mx-1"></div>
 
-              <button onclick="AURA.execCommand('bold')" title="Negrito (Ctrl+B)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="bold" class="w-4 h-4"></i></button>
-              <button onclick="AURA.execCommand('italic')" title="Itálico (Ctrl+I)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="italic" class="w-4 h-4"></i></button>
-              <button onclick="AURA.execCommand('underline')" title="Sublinhado (Ctrl+U)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="underline" class="w-4 h-4"></i></button>
+              <button onmousedown="event.preventDefault()" onclick="AURA.execCommand('bold')" title="Negrito (Ctrl+B)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="bold" class="w-4 h-4"></i></button>
+              <button onmousedown="event.preventDefault()" onclick="AURA.execCommand('italic')" title="Itálico (Ctrl+I)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="italic" class="w-4 h-4"></i></button>
+              <button onmousedown="event.preventDefault()" onclick="AURA.execCommand('underline')" title="Sublinhado (Ctrl+U)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="underline" class="w-4 h-4"></i></button>
               <div class="h-4 w-px bg-slate-700 mx-1"></div>
 
-              <!-- Listas em Tópicos e Numeradas -->
-              <button onclick="AURA.execCommand('insertUnorderedList')" title="Lista com Marcadores / Tópicos (Bullets)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
+              <!-- Listas em Tópicos (Bullets) e Numeradas -->
+              <button onmousedown="event.preventDefault()" onclick="AURA.applyListFormat('ul')" title="Lista com Marcadores / Tópicos (Bullets)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
                 <i data-lucide="list" class="w-4 h-4 text-slate-300"></i>
               </button>
-              <button onclick="AURA.execCommand('insertOrderedList')" title="Lista Numerada (1, 2, 3...)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
+              <button onmousedown="event.preventDefault()" onclick="AURA.applyListFormat('ol')" title="Lista Numerada (1, 2, 3...)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
                 <i data-lucide="list-ordered" class="w-4 h-4 text-slate-300"></i>
               </button>
               <div class="h-4 w-px bg-slate-700 mx-1"></div>
 
               <!-- Intuitive Citation Selector Dropdown (Fixed z-index) -->
               <div class="relative inline-block text-left">
-                <button onclick="AURA.toggleCitationMenu(event)" id="btn-citation-dropdown" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1.5 font-medium border border-slate-700 shadow-sm">
+                <button onmousedown="event.preventDefault()" onclick="AURA.toggleCitationMenu(event)" id="btn-citation-dropdown" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1.5 font-medium border border-slate-700 shadow-sm">
                   <i data-lucide="bookmark" class="w-3.5 h-3.5 text-indigo-400"></i>
                   <span>Citação</span>
                   <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
@@ -127,38 +128,115 @@ class AuraEditorView {
               </div>
 
               <!-- Inserir Figura, Tabela, Cabeçalho/Rodapé (Apenas Ícones) -->
-              <button onclick="AURA.insertImageModal()" title="Inserir Imagem / Figura com Legenda ABNT" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
+              <button onmousedown="event.preventDefault()" onclick="AURA.insertImageModal()" title="Inserir Imagem / Figura com Legenda ABNT" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
                 <i data-lucide="image" class="w-4 h-4 text-emerald-400"></i>
               </button>
-              <button onclick="AURA.insertTable()" title="Inserir Tabela Acadêmica Editável com Linhas/Colunas" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
+              <button onmousedown="event.preventDefault()" onclick="AURA.insertTable()" title="Inserir Tabela Acadêmica Editável com Linhas/Colunas" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
                 <i data-lucide="table" class="w-4 h-4 text-blue-400"></i>
               </button>
-              <button onclick="AURA.openHeaderFooterModal()" title="Configurar Numeração, Cabeçalho e Rodapé" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
+              <button onmousedown="event.preventDefault()" onclick="AURA.openHeaderFooterModal()" title="Configurar Numeração, Cabeçalho e Rodapé" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
                 <i data-lucide="layout-template" class="w-4 h-4 text-purple-400"></i>
               </button>
               <div class="h-4 w-px bg-slate-700 mx-1"></div>
 
-              <!-- BARRA DE LOCALIZAR NA TOOLBAR + BOTÃO MODO AVANÇADO -->
-              <div class="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800 shadow-inner">
-                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400"></i>
-                <input 
-                  type="text" 
-                  id="toolbar-find-input" 
-                  placeholder="Localizar no texto..." 
-                  oninput="AURA.onFindInputChange(this.value)"
-                  onkeydown="if(event.key==='Enter'){ if(event.shiftKey) AURA.findPrevMatch(); else AURA.findNextMatch(); }"
-                  class="bg-transparent border-none text-xs text-white placeholder-slate-500 focus:outline-none w-28 sm:w-36 font-sans"
-                />
-                <span id="find-counter-badge" class="text-[9px] px-1.5 py-0.2 rounded-full bg-slate-800 text-amber-300 font-mono hidden">0/0</span>
-                <button onclick="AURA.findPrevMatch()" title="Anterior (Shift+F3)" class="p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white">
-                  <i data-lucide="chevron-up" class="w-3 h-3"></i>
-                </button>
-                <button onclick="AURA.findNextMatch()" title="Próximo (F3)" class="p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white">
-                  <i data-lucide="chevron-down" class="w-3 h-3"></i>
-                </button>
-                <button onclick="AURA.openAdvancedFindReplaceModal()" title="Localizar e Substituir Avançado (Ctrl+H)" class="p-1 rounded bg-slate-800 hover:bg-aura-600 text-amber-300 hover:text-white transition-all ml-0.5" id="btn-open-advanced-find">
-                  <i data-lucide="replace" class="w-3.5 h-3.5"></i>
-                </button>
+              <!-- BARRA DE LOCALIZAR NA TOOLBAR + POPOVER FLUTUANTE GRUDADO (SEM BLUR / SEM BLOQUEAR A TELA) -->
+              <div class="relative inline-flex items-center">
+                <div class="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800 shadow-inner" id="toolbar-find-container">
+                  <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <input 
+                    type="text" 
+                    id="toolbar-find-input" 
+                    placeholder="Localizar no texto..." 
+                    oninput="AURA.onFindInputChange(this.value)"
+                    onkeydown="if(event.key==='Enter'){ if(event.shiftKey) AURA.findPrevMatch(); else AURA.findNextMatch(); } if(event.key==='Escape'){ AURA.closeAdvancedFindReplacePopover(); }"
+                    class="bg-transparent border-none text-xs text-white placeholder-slate-500 focus:outline-none w-28 sm:w-36 font-sans"
+                  />
+                  <span id="find-counter-badge" class="text-[9px] px-1.5 py-0.2 rounded-full bg-slate-800 text-amber-300 font-mono hidden">0/0</span>
+                  <button onmousedown="event.preventDefault()" onclick="AURA.findPrevMatch()" title="Anterior (Shift+F3)" class="p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white">
+                    <i data-lucide="chevron-up" class="w-3 h-3"></i>
+                  </button>
+                  <button onmousedown="event.preventDefault()" onclick="AURA.findNextMatch()" title="Próximo (F3)" class="p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white">
+                    <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                  </button>
+                  <button onmousedown="event.preventDefault()" onclick="AURA.toggleAdvancedFindReplacePopover(event)" title="Localizar e Substituir Avançado (Ctrl+H)" class="p-1 rounded bg-slate-800 hover:bg-aura-600 text-amber-300 hover:text-white transition-all ml-0.5" id="btn-open-advanced-find">
+                    <i data-lucide="replace" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+
+                <!-- POPOVER AVANÇADO DE LOCALIZAR E SUBSTITUIR (GRUDADO À BARRA, SEM BLUR / SEM BLOQUEAR A TELA) -->
+                <div id="advanced-find-popover" class="hidden fixed w-80 sm:w-96 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-4 z-[99999] flex flex-col gap-3 text-xs backdrop-blur-xl" onclick="event.stopPropagation()">
+                  <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div class="flex items-center gap-2">
+                      <i data-lucide="replace" class="w-4 h-4 text-amber-400"></i>
+                      <span class="font-bold text-white text-xs">Localizar e Substituir</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span id="popover-find-counter-badge" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-amber-300 font-mono">0/0</span>
+                      <button onclick="AURA.closeAdvancedFindReplacePopover()" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-2.5">
+                    <div>
+                      <label class="text-slate-300 font-semibold block mb-1 text-[11px]">Localizar termo:</label>
+                      <input 
+                        type="text" 
+                        id="popover-find-input" 
+                        placeholder="Termo a ser localizado..." 
+                        oninput="AURA.onFindInputChange(this.value)" 
+                        onkeydown="if(event.key==='Enter'){ if(event.shiftKey) AURA.findPrevMatch(); else AURA.findNextMatch(); }"
+                        class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:border-amber-400 text-xs shadow-inner"
+                      />
+                    </div>
+
+                    <div>
+                      <label class="text-slate-300 font-semibold block mb-1 text-[11px]">Substituir por:</label>
+                      <input 
+                        type="text" 
+                        id="popover-replace-input" 
+                        placeholder="Novo termo substituto..." 
+                        onkeydown="if(event.key==='Enter'){ AURA.execPopoverFindAndReplace(false); }"
+                        class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:border-amber-400 text-xs shadow-inner"
+                      />
+                    </div>
+
+                    <div class="flex items-center justify-between text-slate-400 text-[11px]">
+                      <label class="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input type="checkbox" id="popover-find-opt-case" onchange="AURA.onFindInputChange(document.getElementById('popover-find-input').value)" class="rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0">
+                        <span>Maiúsc./Minúsc.</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input type="checkbox" id="popover-find-opt-word" onchange="AURA.onFindInputChange(document.getElementById('popover-find-input').value)" class="rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0">
+                        <span>Palavra Inteira</span>
+                      </label>
+                    </div>
+
+                    <div id="popover-find-results" class="text-[10px] font-mono text-slate-400 p-1.5 rounded bg-slate-950/60 border border-slate-800 min-h-[24px] flex items-center">
+                      Dica: Substitua 1 a 1 ou em lote na página.
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                    <div class="flex items-center gap-1">
+                      <button onclick="AURA.findPrevMatch()" title="Anterior (Shift+F3)" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] flex items-center gap-1">
+                        <i data-lucide="chevron-up" class="w-3 h-3"></i> Anterior
+                      </button>
+                      <button onclick="AURA.findNextMatch()" title="Próximo (F3)" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] flex items-center gap-1">
+                        <i data-lucide="chevron-down" class="w-3 h-3"></i> Próximo
+                      </button>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <button onclick="AURA.execPopoverFindAndReplace(false)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold border border-slate-700">
+                        Substituir 1
+                      </button>
+                      <button onclick="AURA.execPopoverFindAndReplace(true)" class="px-3 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold shadow-md shadow-amber-600/30">
+                        Substituir Tudo
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
