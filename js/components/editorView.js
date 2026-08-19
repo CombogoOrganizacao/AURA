@@ -62,22 +62,32 @@ class AuraEditorView {
                   <option value="Helvetica">Helvetica (Vancouver)</option>
                 </select>
 
-                <!-- Botão Circular de Cores & Color Picker -->
-                <div class="relative flex items-center justify-center ml-0.5" title="Cor do Texto">
-                  <label for="editor-text-color" class="w-6 h-6 rounded-full border-2 border-slate-600 hover:border-aura-400 cursor-pointer flex items-center justify-center overflow-hidden bg-gradient-to-tr from-rose-500 via-amber-400 to-sky-400 shadow-sm transition-all hover:scale-105">
-                    <input 
-                      type="color" 
-                      id="editor-text-color" 
-                      value="#000000" 
-                      onchange="AURA.applyTextColor(this.value)" 
-                      class="opacity-0 w-0 h-0 absolute cursor-pointer"
-                    />
-                  </label>
+                <!-- Botão Circular de Cores & Color Picker com Preservação de Seleção -->
+                <div class="relative flex items-center justify-center ml-0.5" title="Cor do Texto Selecionado">
+                  <button 
+                    type="button" 
+                    onclick="AURA.triggerColorPicker()" 
+                    onmousedown="AURA.saveCurrentSelection()"
+                    class="w-6 h-6 rounded-full border-2 border-slate-600 hover:border-aura-400 cursor-pointer flex items-center justify-center overflow-hidden bg-gradient-to-tr from-rose-500 via-amber-400 to-sky-400 shadow-sm transition-all hover:scale-105"
+                  >
+                  </button>
+                  <input 
+                    type="color" 
+                    id="editor-text-color" 
+                    value="#000000" 
+                    onchange="AURA.applyTextColor(this.value)" 
+                    class="opacity-0 w-0 h-0 absolute pointer-events-none"
+                  />
                 </div>
 
-                <!-- Botão de Justificar Texto -->
-                <button onclick="AURA.execCommand('justifyFull')" title="Justificar Texto (Ctrl+J)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
-                  <i data-lucide="align-justify" class="w-4 h-4 text-slate-300"></i>
+                <!-- Botão Ciclo de Alinhamento (Justificado, Esquerda, Centralizado, Direita) -->
+                <button 
+                  id="btn-alignment-cycle"
+                  onclick="AURA.cycleTextAlignment()" 
+                  title="Alinhamento: Justificado / Esquerda / Centralizado / Direita" 
+                  class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-all"
+                >
+                  <i data-lucide="align-justify" class="w-4 h-4 text-slate-300" id="alignment-icon"></i>
                 </button>
               </div>
               <div class="h-4 w-px bg-slate-700 mx-1"></div>

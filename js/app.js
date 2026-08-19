@@ -560,10 +560,73 @@ class AuraApp {
     this.showToast(`Tipografia alterada para ${fontFamily}!`, 'info');
   }
 
+  // --- SELECTION, COLOR & ALIGNMENT CONTROLS ---
+  saveCurrentSelection() {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      this.savedSelectionRange = sel.getRangeAt(0).cloneRange();
+    }
+  }
+
+  restoreSelection() {
+    if (this.savedSelectionRange) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(this.savedSelectionRange);
+    }
+  }
+
+  triggerColorPicker() {
+    this.saveCurrentSelection();
+    const picker = document.getElementById('editor-text-color');
+    if (picker) {
+      picker.click();
+    }
+  }
+
   applyTextColor(color) {
+    this.restoreSelection();
     this.saveStateToHistory();
     document.execCommand('foreColor', false, color);
     this.triggerAutoSave();
+    this.showToast(`Cor do texto atualizada!`, 'info');
+  }
+
+  cycleTextAlignment() {
+    this.saveCurrentSelection();
+    this.saveStateToHistory();
+
+    const alignments = [
+      { cmd: 'justifyFull', icon: 'align-justify', name: 'Justificado' },
+      { cmd: 'justifyLeft', icon: 'align-left', name: 'Alinhado à Esquerda' },
+      { cmd: 'justifyCenter', icon: 'align-center', name: 'Centralizado' },
+      { cmd: 'justifyRight', icon: 'align-right', name: 'Alinhado à Direita' }
+    ];
+
+    if (this.currentAlignmentIndex === undefined) {
+      this.currentAlignmentIndex = 0;
+    }
+
+    // Avança para o próximo alinhamento
+    this.currentAlignmentIndex = (this.currentAlignmentIndex + 1) % alignments.length;
+    const current = alignments[this.currentAlignmentIndex];
+
+    this.restoreSelection();
+    document.execCommand(current.cmd, false, null);
+
+    // Atualiza ícone do botão
+    const iconEl = document.getElementById('alignment-icon');
+    const btnEl = document.getElementById('btn-alignment-cycle');
+    if (iconEl) {
+      iconEl.setAttribute('data-lucide', current.icon);
+      lucide.createIcons();
+    }
+    if (btnEl) {
+      btnEl.title = `Alinhamento Atual: ${current.name} (Clique para alternar)`;
+    }
+
+    this.triggerAutoSave();
+    this.showToast(`Texto formatado: ${current.name}`, 'info');
   }
 
   // --- BOT CRAWLER DE EDITAIS & RSS LIVE FEED ---
