@@ -31,10 +31,10 @@ class AuraEditorView {
     const t = (key) => window.AURA ? window.AURA.t(key) : key;
 
     container.innerHTML = `
-      <div class="flex-1 flex flex-col h-[calc(100vh-61px)] overflow-hidden bg-slate-950">
+      <div class="flex-1 flex flex-col min-h-[calc(100vh-61px)] bg-slate-950">
         
-        <!-- EDITOR TOP TOOLBAR (Fixed non-scrollable bar with comprehensive editing controls) -->
-        <div class="bg-slate-900 border-b border-slate-800 px-3 sm:px-4 py-2 flex items-center justify-between gap-2 overflow-x-auto text-xs z-20 whitespace-nowrap scrollbar-none">
+        <!-- EDITOR TOP TOOLBAR (Header e Ferramentas) -->
+        <div class="bg-slate-900 border-b border-slate-800 px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2 text-xs z-40 whitespace-nowrap overflow-visible relative">
           
           <!-- History & Basic Formatting -->
           <div class="flex items-center gap-1 flex-shrink-0">
@@ -49,19 +49,31 @@ class AuraEditorView {
             </button>
             <div class="h-4 w-px bg-slate-700 mx-1"></div>
 
+            <!-- Seleção de Fontes Oficiais Acadêmicas -->
+            <div class="flex items-center gap-1">
+              <select onchange="AURA.changeDocFont(this.value)" id="editor-font-select" class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white font-medium focus:outline-none focus:border-aura-500">
+                <option value="Times New Roman" selected>Times New Roman (ABNT / APA / IEEE)</option>
+                <option value="Arial">Arial (ABNT / Vancouver)</option>
+                <option value="Calibri">Calibri (APA 7th)</option>
+                <option value="Georgia">Georgia (Chicago 17th)</option>
+                <option value="Helvetica">Helvetica (Vancouver)</option>
+              </select>
+            </div>
+            <div class="h-4 w-px bg-slate-700 mx-1"></div>
+
             <button onclick="AURA.execCommand('bold')" title="Negrito (Ctrl+B)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="bold" class="w-4 h-4"></i></button>
             <button onclick="AURA.execCommand('italic')" title="Itálico (Ctrl+I)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="italic" class="w-4 h-4"></i></button>
             <button onclick="AURA.execCommand('underline')" title="Sublinhado (Ctrl+U)" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="underline" class="w-4 h-4"></i></button>
             <div class="h-4 w-px bg-slate-700 mx-1"></div>
 
-            <!-- Intuitive Citation Selector Dropdown -->
-            <div class="relative inline-block text-left">
-              <button onclick="AURA.toggleCitationMenu()" id="btn-citation-dropdown" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1.5 font-medium border border-slate-700">
+            <!-- Intuitive Citation Selector Dropdown (Fixed z-index) -->
+            <div class="relative inline-block text-left z-50">
+              <button onclick="AURA.toggleCitationMenu()" id="btn-citation-dropdown" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1.5 font-medium border border-slate-700 shadow-sm">
                 <i data-lucide="bookmark" class="w-3.5 h-3.5 text-indigo-400"></i>
                 <span>Citação</span>
                 <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
               </button>
-              <div id="citation-dropdown-menu" class="hidden absolute left-0 mt-1 w-56 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl z-50 py-1.5 flex flex-col gap-1 text-xs animate-fade-in">
+              <div id="citation-dropdown-menu" class="hidden absolute left-0 top-full mt-1.5 w-60 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl z-[100] py-1.5 flex flex-col gap-1 text-xs backdrop-blur-xl">
                 <button onclick="AURA.insertDirectCitation()" class="px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-white flex flex-col">
                   <span class="font-bold text-indigo-300">Citação Direta Curta</span>
                   <span class="text-[10px] text-slate-400">Até 3 linhas entre aspas ("...")</span>
@@ -82,12 +94,14 @@ class AuraEditorView {
             </div>
 
             <button onclick="AURA.insertImageModal()" title="Inserir Imagem / Figura com Legenda ABNT" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
-              <i data-lucide="image" class="w-3.5 h-3.5 text-emerald-400"></i> <span class="hidden sm:inline">Figura/Imagem</span>
+              <i data-lucide="image" class="w-3.5 h-3.5 text-emerald-400"></i> <span class="hidden sm:inline">Figura</span>
             </button>
             <button onclick="AURA.insertTable()" title="Inserir Tabela Acadêmica com Fonte" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
               <i data-lucide="table" class="w-3.5 h-3.5 text-blue-400"></i> <span class="hidden sm:inline">Tabela</span>
             </button>
-            <button onclick="AURA.insertEquation()" title="Inserir Equação Matemática" class="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"><i data-lucide="sigma" class="w-4 h-4"></i></button>
+            <button onclick="AURA.openHeaderFooterModal()" title="Configurar Numeração, Cabeçalho e Rodapé" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1">
+              <i data-lucide="layout-template" class="w-3.5 h-3.5 text-purple-400"></i> <span class="hidden sm:inline">Cabeçalho/Rodapé</span>
+            </button>
           </div>
 
           <!-- Document Limits & Live Stats Indicators -->
@@ -101,16 +115,16 @@ class AuraEditorView {
               <span id="stat-pages" class="text-slate-200 font-bold">~${stats.estimatedPages}</span> ${t('pages')}
             </div>
 
-            <!-- Standard Selector Quick Switch -->
+            <!-- Standard Selector Quick Switch (ABNT / APA / IEEE / Vancouver / Chicago / MLA) -->
             <div class="flex items-center gap-1.5">
               <span class="text-slate-400 hidden sm:inline">${t('standard')}:</span>
               <select onchange="AURA.changeDocumentStandard(this.value)" class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white font-medium focus:outline-none focus:border-aura-500">
-                <option value="abnt" ${stdId === 'abnt' ? 'selected' : ''}>ABNT</option>
-                <option value="apa" ${stdId === 'apa' ? 'selected' : ''}>APA 7th</option>
-                <option value="ieee" ${stdId === 'ieee' ? 'selected' : ''}>IEEE</option>
-                <option value="vancouver" ${stdId === 'vancouver' ? 'selected' : ''}>Vancouver</option>
-                <option value="chicago" ${stdId === 'chicago' ? 'selected' : ''}>Chicago</option>
-                <option value="mla" ${stdId === 'mla' ? 'selected' : ''}>MLA</option>
+                <option value="abnt" ${stdId === 'abnt' ? 'selected' : ''}>ABNT (Brasil)</option>
+                <option value="apa" ${stdId === 'apa' ? 'selected' : ''}>APA 7th (Internacional)</option>
+                <option value="ieee" ${stdId === 'ieee' ? 'selected' : ''}>IEEE (2 Colunas)</option>
+                <option value="vancouver" ${stdId === 'vancouver' ? 'selected' : ''}>Vancouver (Medicina)</option>
+                <option value="chicago" ${stdId === 'chicago' ? 'selected' : ''}>Chicago 17th (Humanas)</option>
+                <option value="mla" ${stdId === 'mla' ? 'selected' : ''}>MLA 9th (Letras)</option>
               </select>
             </div>
 
@@ -123,10 +137,10 @@ class AuraEditorView {
         </div>
 
         <!-- WORKSPACE (SIDEBAR + MAIN CANVAS + CONTEXT PANEL) -->
-        <div class="flex-1 flex overflow-hidden">
+        <div class="flex-1 flex flex-col md:flex-row">
           
           <!-- LEFT SIDEBAR: STRUCTURE TREE (ESTRUTURA DO TRABALHO) -->
-          <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between hidden md:flex flex-shrink-0">
+          <aside class="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col flex-shrink-0">
             <div>
               <div class="p-3 border-b border-slate-800 flex items-center justify-between">
                 <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -146,7 +160,7 @@ class AuraEditorView {
             </div>
 
             <!-- Sections List -->
-            <div class="flex-1 overflow-y-auto p-2 flex flex-col gap-1 text-xs scrollbar-thin" id="editor-section-tree">
+            <div class="p-2 flex flex-col gap-1 text-xs" id="editor-section-tree">
               <!-- Elementos Pré-Textuais -->
               <div class="px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">${t('pre_textual')}</div>
               <div onclick="AURA.scrollToElement('doc-pretextual')" class="tree-item px-2.5 py-1.5 rounded bg-slate-800/40 text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer flex items-center gap-2">
@@ -179,11 +193,16 @@ class AuraEditorView {
           <div class="flex-1 academic-page-container overflow-y-auto p-4 lg:p-8 flex justify-center" id="editor-sheet-container">
             
             <!-- Folha A4 Formatada Conforme Norma -->
-            <div class="academic-sheet sheet-standard-${stdId} relative rounded shadow-2xl" id="academic-active-sheet">
+            <div class="academic-sheet sheet-standard-${stdId} relative rounded shadow-2xl transition-all" id="academic-active-sheet">
               
-              <!-- Cabeçalho de Página Simulado -->
-              <div class="absolute top-4 right-8 text-[10pt] font-mono text-slate-400 no-print select-none">
-                Pág. 1
+              <!-- Cabeçalho de Página e Numeração Dinâmica Conforme Configuração -->
+              <div class="flex items-center justify-between text-[10pt] font-mono text-slate-500 mb-6 pb-2 border-b border-slate-200 select-none">
+                <div class="text-left font-sans text-xs text-slate-400 uppercase tracking-wider" id="sheet-header-text">
+                  ${(currentDoc.pageConfig && currentDoc.pageConfig.headerText) || ''}
+                </div>
+                <div class="text-right font-mono font-bold text-slate-500" id="sheet-page-num">
+                  ${this.formatPageNumber(currentDoc.pageConfig, 1)}
+                </div>
               </div>
 
               <!-- BLOCO PRÉ-TEXTUAL -->
@@ -207,7 +226,7 @@ class AuraEditorView {
 
                 <!-- Resumo -->
                 <div id="doc-abstract" class="bg-slate-50 p-4 rounded border border-slate-200 text-justify text-sm leading-relaxed mb-6">
-                  <div class="font-bold text-xs uppercase mb-1">RESUMO</div>
+                  <div class="font-bold text-xs uppercase mb-1">${stdId === 'apa' || stdId === 'ieee' || stdId === 'mla' ? 'ABSTRACT' : 'RESUMO'}</div>
                   <div 
                     contenteditable="true" 
                     id="doc-abstract-input"
@@ -216,7 +235,7 @@ class AuraEditorView {
                   >${currentDoc.abstract || 'Insira aqui o resumo do seu trabalho de acordo com a norma selecionada...'}</div>
                   
                   <div class="mt-3 text-xs font-bold">
-                    Palavras-chave: 
+                    ${stdId === 'apa' || stdId === 'ieee' || stdId === 'mla' ? 'Keywords:' : 'Palavras-chave:'} 
                     <span 
                       contenteditable="true" 
                       id="doc-keywords-input"
@@ -248,7 +267,9 @@ class AuraEditorView {
 
               <!-- BLOCO PÓS-TEXTUAL (REFERÊNCIAS) -->
               <div id="doc-references" class="mt-12 pt-6 border-t border-slate-300">
-                <h2 class="academic-heading-1 text-center font-bold uppercase mb-4">${t('references')}</h2>
+                <h2 class="academic-heading-1 text-center font-bold uppercase mb-4">
+                  ${stdId === 'mla' ? 'WORKS CITED' : (stdId === 'chicago' ? 'BIBLIOGRAPHY' : (stdId === 'apa' || stdId === 'ieee' ? 'REFERENCES' : 'REFERÊNCIAS'))}
+                </h2>
                 <div id="doc-references-list" class="flex flex-col gap-3 text-xs">
                   ${(currentDoc.references || []).map((ref, idx) => `
                     <div class="flex items-start justify-between gap-2 p-1 hover:bg-slate-50 rounded group">
@@ -262,12 +283,18 @@ class AuraEditorView {
                 </button>
               </div>
 
+              <!-- Rodapé da Página Conforme Configuração -->
+              <div class="mt-10 pt-3 border-t border-slate-200 flex items-center justify-between text-[9pt] text-slate-400 select-none" id="sheet-footer-bar">
+                <div>${(currentDoc.pageConfig && currentDoc.pageConfig.footerText) || ''}</div>
+                <div class="text-[8pt] text-slate-300 uppercase">${stdId.toUpperCase()} Compliance</div>
+              </div>
+
             </div>
 
           </div>
 
           <!-- RIGHT CONTEXT PANEL (ASSISTENTE IA, ANÁLISE, LOCALIZAR/SUBSTITUIR) -->
-          <aside class="w-80 lg:w-96 bg-slate-900 border-l border-slate-800 flex flex-col" id="editor-right-panel">
+          <aside class="w-full md:w-80 lg:w-96 bg-slate-900 border-l border-slate-800 flex flex-col flex-shrink-0" id="editor-right-panel">
             
             <!-- Panel Tabs -->
             <div class="flex items-center border-b border-slate-800 text-xs font-semibold bg-slate-950/60 p-1 gap-1">
@@ -450,15 +477,35 @@ class AuraEditorView {
     `;
   }
 
+  formatPageNumber(cfg = {}, pageNum = 1) {
+    if (!cfg) return `Pág. ${pageNum}`;
+    const startFrom = cfg.startPageNumber || 1;
+    if (pageNum < startFrom) return '';
+    if (cfg.applyOnlyOdd && pageNum % 2 === 0) return '';
+
+    const format = cfg.numFormat || 'arabic';
+    if (format === 'roman') {
+      const romanNums = ['', 'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'];
+      return romanNums[pageNum] || `${pageNum}`;
+    }
+    if (format === 'roman_upper') {
+      const romanNums = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+      return romanNums[pageNum] || `${pageNum}`;
+    }
+    return `Pág. ${pageNum}`;
+  }
+
   getFullDocumentText(doc) {
     if (!doc) return '';
     const parts = [
       doc.title || '',
+      doc.authors || '',
       doc.abstract || '',
-      (doc.sections || []).map(s => (s.title + ' ' + s.content)).join(' '),
-      (doc.references || []).join(' ')
+      (doc.keywords || []).join(' '),
+      ...(doc.sections || []).map(s => (s.title || '') + ' ' + (s.content || '')),
+      ...(doc.references || [])
     ];
-    return parts.join(' ');
+    return parts.join('\n\n');
   }
 }
 

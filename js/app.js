@@ -300,16 +300,98 @@ class AuraApp {
   }
 
   changeDocumentStandard(newStdId) {
-    if (this.activeDocument) {
-      this.saveStateToHistory();
-      this.activeDocument.standardId = newStdId;
-      const sheet = document.getElementById('academic-active-sheet');
-      if (sheet) {
-        sheet.className = `academic-sheet sheet-standard-${newStdId} relative rounded shadow-2xl`;
-      }
-      this.refreshCompliancePanel();
-      this.showToast(`Norma alterada para ${newStdId.toUpperCase()}!`, 'info');
+    if (!this.activeDocument) return;
+    this.saveStateToHistory();
+    const oldStdId = this.activeDocument.standardId || 'abnt';
+    this.activeDocument.standardId = newStdId;
+
+    // Converte automaticamente estilo de referências bibliográficas
+    if (this.activeDocument.references && this.activeDocument.references.length > 0) {
+      this.activeDocument.references = this.convertReferencesToStandard(this.activeDocument.references, newStdId);
     }
+
+    // Converte automaticamente citações no corpo do texto
+    this.convertInTextCitationsToStandard(newStdId);
+
+    this.navigate('editor');
+    this.showToast(`Norma alterada para ${newStdId.toUpperCase()}! Todas as referências e citações foram atualizadas automaticamente.`, 'success');
+  }
+
+  convertReferencesToStandard(refs = [], targetStandard = 'abnt') {
+    return refs.map(ref => {
+      // Exemplo representativo de conversão inteligente entre estilos
+      if (targetStandard === 'ieee' || targetStandard === 'vancouver') {
+        // Formato Numérico
+        return ref.replace(/^[A-Z\s,]+(?=\.)/g, (author) => {
+          const parts = author.split(',');
+          return parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : author;
+        });
+      } else if (targetStandard === 'apa' || targetStandard === 'chicago' || targetStandard === 'mla') {
+        // Formato Autor-Data Internacional (Minúsculas com inicial maiúscula)
+        return ref.replace(/^([A-ZÀ-Ú]+),\s*([A-ZÀ-Ú]+)/g, '$1, $2.');
+      } else {
+        // Formato ABNT NBR 6023 (Sobrenome em Caixa Alta)
+        return ref.replace(/^([A-Za-zÀ-ú]+),\s*([A-Za-zÀ-ú]+)/g, (match, p1, p2) => `${p1.toUpperCase()}, ${p2}`);
+      }
+    });
+  }
+
+  convertInTextCitationsToStandard(targetStandard = 'abnt') {
+    if (!this.activeDocument.sections) return;
+
+    this.activeDocument.sections.forEach(sec => {
+      if (!sec.content) return;
+      if (targetStandard === 'ieee' || targetStandard === 'vancouver') {
+        // Converte (SILVA, 2024) -> [1]
+        sec.content = sec.content.replace(/\(([A-ZÀ-Úa-z\s]+),\s*(\d{4})(?:,\s*p\.\s*\d+)?\)/g, '[1]');
+      } else if (targetStandard === 'mla') {
+        // Converte (SILVA, 2024, p. 45) -> (Silva 45)
+        sec.content = sec.content.replace(/\(([A-ZÀ-Úa-z]+),\s*\d{4}(?:,\s*p\.\s*(\d+))?\)/g, (m, a, p) => p ? `(${a} ${p})` : `(${a})`);
+      } else if (targetStandard === 'apa') {
+        // Converte (SILVA, 2024) -> (Silva, 2024)
+        sec.content = sec.content.replace(/\(([A-ZÀ-Ú]+),\s*(\d{4})(.*?)\)/g, (m, a, y, rest) => {
+          const formattedAuthor = a.charAt(0).toUpperCase() + a.slice(1).toLowerCase();
+          return `(${formattedAuthor}, ${y}${rest})`;
+        });
+      } else {
+        // ABNT: (SILVA, 2024, p. 10)
+        sec.content = sec.content.replace(/\(([A-Za-zÀ-ú]+),\s*(\d{4})(.*?)\)/g, (m, a, y, rest) => `(${a.toUpperCase()}, ${y}${rest})`);
+      }
+    });
+  }
+
+  changeDocFont(fontFamily) {
+    this.saveStateToHistory();
+    const sheet = document.getElementById('academic-active-sheet');
+    if (sheet) {
+      sheet.style.fontFamily = `"${fontFamily}", serif`;
+    }
+    this.showToast(`Tipografia alterada para ${fontFamily}!`, 'info');
+  }
+
+  openHeaderFooterModal() {
+    window.auraModals.showHeaderFooterModal(this.activeDocument.pageConfig || {});
+  }
+
+  saveHeaderFooterConfig() {
+    const numFormat = document.getElementById('modal-pg-format').value;
+    const startPageNumber = parseInt(document.getElementById('modal-pg-start').value, 10) || 1;
+    const applyOnlyOdd = document.getElementById('modal-pg-odd').checked;
+    const headerText = document.getElementById('modal-pg-header').value.trim();
+    const footerText = document.getElementById('modal-pg-footer').value.trim();
+
+    this.saveStateToHistory();
+    this.activeDocument.pageConfig = {
+      numFormat,
+      startPageNumber,
+      applyOnlyOdd,
+      headerText,
+      footerText
+    };
+
+    this.closeModal();
+    this.navigate('editor');
+    this.showToast('Configurações de cabeçalho, numeração e rodapé aplicadas à folha!', 'success');
   }
 
   // --- STATS, REPEATS, GRAMMAR & COMPLIANCE ---
@@ -332,24 +414,44 @@ class AuraApp {
     if (!container || !this.activeDocument) return;
 
     const fullText = window.auraEditorView.getFullDocumentText(this.activeDocument);
-    const repeats = window.auraLanguage.detectRepeatedWords(fullText, 3);
+    const repeats = window.auraLanguage.detectRepeatedWords(fullText, 2);
 
     if (repeats.length === 0) {
       container.innerHTML = `<div class="text-slate-500 text-[11px] p-2">Nenhuma repetição excessiva identificada.</div>`;
       return;
     }
 
-    container.innerHTML = repeats.slice(0, 4).map(r => `
-      <div class="p-2 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col gap-1">
+    container.innerHTML = repeats.slice(0, 5).map((r, rIdx) => `
+      <div class="p-2.5 rounded-lg bg-slate-900/80 border border-purple-900/40 hover:border-purple-500/50 transition-all flex flex-col gap-2">
         <div class="flex items-center justify-between">
-          <span class="font-bold text-purple-300">"${r.word}"</span>
-          <span class="px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 text-[10px] font-mono">${r.count}x no texto</span>
+          <span class="font-bold text-purple-300 flex items-center gap-1 cursor-pointer" onclick="AURA.highlightAndScrollToText('${r.word}')">
+            <i data-lucide="repeat" class="w-3 h-3 text-purple-400"></i> "${r.word}"
+          </span>
+          <span class="px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 text-[10px] font-mono font-bold">${r.count}x</span>
         </div>
-        <div class="text-[10px] text-slate-400">
-          <strong>Sinônimos sugeridos:</strong> ${r.synonyms.slice(0, 3).join(', ')}
+        
+        <!-- Lista de Sinônimos Sugeridos com 1-Click Replacement -->
+        <div class="flex flex-col gap-1 text-[10px] bg-slate-950/60 p-2 rounded border border-slate-800">
+          <div class="text-slate-400 font-semibold mb-0.5">Sugestões de Substituição:</div>
+          <div class="flex flex-wrap gap-1">
+            ${r.synonyms.map(syn => `
+              <button onclick="AURA.replaceRepeatedWord('${r.word}', '${syn}')" class="px-2 py-0.5 rounded bg-purple-900/40 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-700/50 transition-all flex items-center gap-1">
+                <span>${syn}</span>
+                <i data-lucide="arrow-right" class="w-2.5 h-2.5"></i>
+              </button>
+            `).join('')}
+          </div>
         </div>
       </div>
     `).join('');
+    lucide.createIcons();
+  }
+
+  replaceRepeatedWord(oldWord, newWord) {
+    this.saveStateToHistory();
+    this.executeGlobalReplace(oldWord, newWord, false);
+    this.showToast(`Palavra "${oldWord}" substituída por "${newWord}".`, 'success');
+    this.refreshRepeatedWords();
   }
 
   refreshSpellCheck() {

@@ -74,9 +74,12 @@ class AuraLanguageAndStats {
   }
 
   /**
-   * Detecta palavras repetidas excessivamente em uma seção
+   * Detecta palavras repetidas excessivamente em todo o texto do documento
    */
-  detectRepeatedWords(text, threshold = 3) {
+  detectRepeatedWords(text, threshold = 2) {
+    if (!text || typeof text !== 'string') return [];
+    
+    // Normaliza e limpa pontuação, mantendo acentuação e caracteres latinos
     const words = (text.toLowerCase().match(/[\p{L}\p{N}_\-]+/gu) || [])
       .filter(w => w.length > 3 && !this.stopWords.has(w));
     
@@ -97,21 +100,40 @@ class AuraLanguageAndStats {
   }
 
   getSynonymsForWord(word) {
+    const w = word.toLowerCase();
     const synonymMap = {
-      'pesquisa': ['investigação', 'estudo', 'exame', 'inquérito científico', 'levantamento'],
-      'importante': ['relevante', 'preponderante', 'significativo', 'fundamental', 'essencial'],
-      'metodologia': ['método', 'procedimento', 'delineamento', 'sistemática', 'abordagem'],
-      'resultado': ['desfecho', 'achado', 'constatação', 'conclusão empírica', 'dado'],
+      'pesquisa': ['investigação', 'estudo', 'inquérito científico', 'levantamento', 'trabalho investigativo'],
+      'importante': ['relevante', 'preponderante', 'significativo', 'fundamental', 'essencial', 'basilar'],
+      'metodologia': ['método', 'procedimento', 'delineamento', 'sistemática', 'abordagem metodológica'],
+      'resultado': ['desfecho', 'achado', 'constatação', 'conclusão empírica', 'dado obtido'],
+      'resultados': ['achados', 'desfechos', 'dados empíricos', 'evidências obtidas'],
+      'analise': ['exame crítico', 'apreciação', 'investigação', 'decomposição analítica'],
       'análise': ['exame crítico', 'apreciação', 'investigação', 'decomposição analítica'],
       'demonstra': ['evidencia', 'comprova', 'revela', 'indica', 'atesta', 'elucida'],
       'problema': ['questão de pesquisa', 'objeto de estudo', 'desafio', 'problemática'],
       'objetivo': ['finalidade', 'escopo', 'propósito', 'meta', 'intento'],
+      'documento': ['manuscrito', 'texto acadêmico', 'trabalho', 'produção textual'],
+      'processo': ['fluxo', 'tramitação', 'dinâmica', 'encadeamento'],
+      'dados': ['informações empíricas', 'evidências', 'amostras', 'registros'],
+      'sistema': ['plataforma', 'mecanismo', 'estrutura', 'aparato'],
+      'modelo': ['paradigma', 'arquitetura', 'formulação teórica', 'esquema'],
       'development': ['advancement', 'evolution', 'progression', 'enhancement'],
       'method': ['approach', 'procedure', 'framework', 'technique'],
       'results': ['findings', 'outcomes', 'empirical evidence', 'observations'],
       'significant': ['notable', 'substantial', 'considerable', 'paramount']
     };
-    return synonymMap[word.toLowerCase()] || ['termo equivalente', 'variante conceitual'];
+
+    if (synonymMap[w]) return synonymMap[w];
+
+    // Fallbacks inteligentes baseados em radicais comuns
+    if (w.endsWith('ar') || w.endsWith('er') || w.endsWith('ir')) {
+      return ['executar', 'proceder à análise de', 'conduzir', 'efetuar'];
+    }
+    if (w.endsWith('cao') || w.endsWith('ção')) {
+      return ['procedimento', 'sistemática', 'abordagem', 'iniciativa'];
+    }
+
+    return ['termo análogo', 'variante conceitual', 'expressão equivalente'];
   }
 
   /**

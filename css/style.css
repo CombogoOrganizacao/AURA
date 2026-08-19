@@ -74,7 +74,7 @@ body {
 /* ABNT Sheet Margins (Superior 3cm, Esquerda 3cm, Inferior 2cm, Direita 2cm) */
 .sheet-standard-abnt {
   padding: 18px 16px;
-  font-family: 'Lora', 'Times New Roman', serif;
+  font-family: 'Lora', 'Times New Roman', 'Arial', serif;
   font-size: 11pt;
   line-height: 1.5;
   text-align: justify;
@@ -87,13 +87,15 @@ body {
     padding-bottom: 20mm;
     padding-right: 20mm;
     font-size: 12pt;
+    line-height: 1.5;
+    text-align: justify;
   }
 }
 
-/* APA Sheet Margins (1 inch / 2.54cm em todos os lados) */
+/* APA Sheet Margins (1 inch / 2.54cm em todos os lados, entrelinhas 2.0, alinhado à esquerda) */
 .sheet-standard-apa {
   padding: 18px 16px;
-  font-family: 'Lora', 'Times New Roman', serif;
+  font-family: 'Times New Roman', 'Calibri', 'Arial', serif;
   font-size: 11pt;
   line-height: 1.8;
   text-align: left;
@@ -101,16 +103,20 @@ body {
 
 @media (min-width: 768px) {
   .sheet-standard-apa {
-    padding: 25.4mm;
+    padding-top: 25.4mm;
+    padding-left: 25.4mm;
+    padding-bottom: 25.4mm;
+    padding-right: 25.4mm;
     font-size: 12pt;
     line-height: 2.0;
+    text-align: left;
   }
 }
 
-/* IEEE Sheet (2 colunas, margens específicas) */
+/* IEEE Sheet (2 colunas, margens superiores 1.9cm, inf 2.54cm, lat 1.43cm) */
 .sheet-standard-ieee {
   padding: 16px 14px;
-  font-family: 'Lora', 'Times New Roman', serif;
+  font-family: 'Times New Roman', serif;
   font-size: 10pt;
   line-height: 1.15;
   text-align: justify;
@@ -122,10 +128,75 @@ body {
     padding-bottom: 25.4mm;
     padding-left: 14.3mm;
     padding-right: 14.3mm;
+    font-size: 10pt;
+    line-height: 1.15;
   }
   .sheet-standard-ieee .document-body-content {
     column-count: 2;
     column-gap: 6.3mm;
+  }
+}
+
+/* Vancouver (ICMJE - Medicina/Saúde: Margens 2.5cm, Entrelinhas 1.5, Justificado) */
+.sheet-standard-vancouver {
+  padding: 18px 16px;
+  font-family: 'Arial', 'Helvetica', 'Times New Roman', sans-serif;
+  font-size: 11pt;
+  line-height: 1.5;
+  text-align: justify;
+}
+
+@media (min-width: 768px) {
+  .sheet-standard-vancouver {
+    padding-top: 25mm;
+    padding-left: 25mm;
+    padding-bottom: 25mm;
+    padding-right: 25mm;
+    font-size: 12pt;
+    line-height: 1.5;
+    text-align: justify;
+  }
+}
+
+/* Chicago 17th (Humanas/Sociais: Margens 2.54cm / 1 inch, Entrelinhas 2.0, Alinhado à esquerda) */
+.sheet-standard-chicago {
+  padding: 18px 16px;
+  font-family: 'Times New Roman', 'Georgia', serif;
+  font-size: 11pt;
+  line-height: 1.8;
+  text-align: left;
+}
+
+@media (min-width: 768px) {
+  .sheet-standard-chicago {
+    padding-top: 25.4mm;
+    padding-left: 25.4mm;
+    padding-bottom: 25.4mm;
+    padding-right: 25.4mm;
+    font-size: 12pt;
+    line-height: 2.0;
+    text-align: left;
+  }
+}
+
+/* MLA 9th (Letras/Linguística: Margens 2.54cm / 1 inch, Entrelinhas 2.0, Alinhado à esquerda) */
+.sheet-standard-mla {
+  padding: 18px 16px;
+  font-family: 'Times New Roman', serif;
+  font-size: 11pt;
+  line-height: 1.8;
+  text-align: left;
+}
+
+@media (min-width: 768px) {
+  .sheet-standard-mla {
+    padding-top: 25.4mm;
+    padding-left: 25.4mm;
+    padding-bottom: 25.4mm;
+    padding-right: 25.4mm;
+    font-size: 12pt;
+    line-height: 2.0;
+    text-align: left;
   }
 }
 
