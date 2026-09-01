@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Site estático legado — congelado, não é padrão a seguir (ver CLAUDE.md).
+    "legacy/**",
+    // PoC do exportador .docx — congelada a partir do commit que a introduziu.
+    "poc/**",
   ]),
 ]);
 
