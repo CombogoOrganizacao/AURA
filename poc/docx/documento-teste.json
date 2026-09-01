@@ -1,0 +1,229 @@
+{
+  "metadados": {
+    "instituicao": "UNIVERSIDADE CATÓLICA DE PERNAMBUCO",
+    "curso": "CIÊNCIA DA COMPUTAÇÃO",
+    "titulo": "Documento de teste para validação de conformidade ABNT",
+    "subtitulo": "prova de conceito do exportador OOXML",
+    "autores": ["Júlia Vilela Cintra Galvão"],
+    "local": "Recife",
+    "ano": 2026,
+    "naturezaTrabalho": "Trabalho de Conclusão de Curso apresentado ao curso de Ciência da Computação da Universidade Católica de Pernambuco como requisito parcial para obtenção do grau de Bacharel.",
+    "orientador": "Prof. Dr. Assis",
+    "resumo": "Este documento não possui conteúdo científico. Ele existe para exercitar, em um único arquivo, todos os elementos estruturais que a norma ABNT exige de um trabalho acadêmico, de modo a verificar se o exportador OOXML preserva margens, quebras de seção, numeração de página, estilos nomeados e sumário automático. Cada elemento aparece ao menos uma vez, e o volume total é suficiente para que problemas de paginação se manifestem.",
+    "palavrasChave": ["ABNT", "OOXML", "conformidade", "exportação"],
+    "abstract": "This document has no scientific content. It exists to exercise, in a single file, every structural element required by the ABNT standard, in order to verify whether the OOXML exporter preserves margins, section breaks, page numbering, named styles and the automatic table of contents.",
+    "keywords": ["ABNT", "OOXML", "compliance", "export"]
+  },
+
+  "listaFiguras": [
+    { "numero": 1, "titulo": "Diagrama de exemplo", "pagina": null }
+  ],
+
+  "listaTabelas": [
+    { "numero": 1, "titulo": "Resultados de exemplo", "pagina": null }
+  ],
+
+  "sections": [
+    {
+      "id": "s_intro",
+      "ordem": 1,
+      "nivel": 1,
+      "titulo": "INTRODUÇÃO",
+      "content": [
+        {
+          "type": "paragrafo",
+          "content": [
+            { "type": "text", "text": "Este é o primeiro parágrafo após um título de seção primária. A norma prevê tratamento próprio para ele, e o exportador precisa aplicá-lo corretamente. O texto que segue existe apenas para ocupar espaço e permitir que a paginação se manifeste ao longo do documento." }
+          ]
+        },
+        {
+          "type": "paragrafo",
+          "content": [
+            { "type": "text", "text": "Este parágrafo contém trecho em " },
+            { "type": "text", "text": "negrito", "marks": ["strong"] },
+            { "type": "text", "text": " e trecho em " },
+            { "type": "text", "text": "itálico", "marks": ["em"] },
+            { "type": "text", "text": ", além de uma citação indireta no corpo do texto " },
+            { "type": "citacao", "refId": "ref_silva", "texto": "(SILVA, 2023)" },
+            { "type": "text", "text": "." }
+          ]
+        },
+        {
+          "type": "paragrafo",
+          "content": [
+            { "type": "text", "text": "Este parágrafo possui uma nota de rodapé ao final da frase." },
+            { "type": "nota_rodape", "texto": "Esta é a nota de rodapé. Deve aparecer no pé desta mesma página, em fonte 10 e espaçamento simples." }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "s_fundamentacao",
+      "ordem": 2,
+      "nivel": 1,
+      "titulo": "FUNDAMENTAÇÃO TEÓRICA",
+      "content": [
+        {
+          "type": "paragrafo",
+          "content": [
+            { "type": "text", "text": "Seção primária que abre em nova página. O parágrafo a seguir apresenta uma citação direta longa, que na ABNT recebe recuo de quatro centímetros, fonte dez, espaçamento simples e ausência de aspas." }
+          ]
+        },
+        {
+          "type": "citacao_longa",
+          "refId": "ref_mendes",
+          "content": [
+            { "type": "text", "text": "A citação direta com mais de três linhas deve ser destacada do corpo do texto com recuo de quatro centímetros da margem esquerda, escrita em fonte menor que a do texto corrido e com espaçamento simples entre as linhas. Este bloco existe para verificar se essas três características são aplicadas simultaneamente pelo exportador, e se o recuo é medido a partir da margem e não a partir da borda do papel." }
+          ]
+        },
+        {
+          "type": "paragrafo",
+          "content": [
+            { "type": "text", "text": "O parágrafo que sucede a citação longa deve retornar à formatação normal do corpo do texto, com recuo de primeira linha de 1,25 cm e espaçamento 1,5." }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "s_trabalhos",
+      "ordem": 3,
+      "nivel": 2,
+      "titulo": "Trabalhos relacionados",
+      "content": [
+        {
+          "type": "paragrafo",
+          "content": [
+            { "type": "text", "text": "Seção secundária. Deve aparecer no painel de navegação do Word como filha da seção anterior, o que só ocorre se o exportador usar estilos nomeados em vez de formatação manual." }
+          ]
+        },
+        {
+          "type": "lista",
+          "ordenada": false,
+          "itens": [
+            "Primeiro item de lista com marcador.",
+            "Segundo item de lista com marcador.",
+            "Terceiro item de lista com marcador."
+          ]
+        },
+        {
+          "type": "lista",
+          "ordenada": true,
+          "itens": [
+            "Primeiro item de lista numerada.",
+            "Segundo item de lista numerada.",
+            "Terceiro item de lista numerada."
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "s_redes",
+      "ordem": 4,
+      "nivel": 3,
+      "titulo": "Elementos técnicos",
+      "content": [
+        {
+          "type": "paragrafo",
+          "content": [
+            { "type": "text", "text": "Seção terciária, terceiro nível de título. Abaixo seguem figura, tabela e equação numerada." }
+          ]
+        },
+        {
+          "type": "figura",
+          "numero": 1,
+          "legenda": "Diagrama de exemplo",
+          "fonte": "Elaborado pela autora (2026).",
+          "placeholder": true
+        },
+        {
+          "type": "tabela",
+          "numero": 1,
+          "legenda": "Resultados de exemplo",
+          "fonte": "Elaborado pela autora (2026).",
+          "cabecalho": ["Configuração", "Latência (ms)", "Entrega (%)"],
+          "linhas": [
+            ["Base", "42,1", "91,4"],
+            ["Proposta", "27,8", "96,2"],
+            ["Diferença", "-14,3", "+4,8"]
+          ]
+        },
+        {
+          "type": "equacao",
+          "numero": 1,
+          "texto": "L = (1/n) * SUM(t_i - t_0)"
+        }
+      ]
+    },
+
+    {
+      "id": "s_conclusao",
+      "ordem": 5,
+      "nivel": 1,
+      "titulo": "CONCLUSÃO",
+      "content": [
+        {
+          "type": "paragrafo",
+          "content": [
+            { "type": "text", "text": "Última seção primária do corpo do trabalho. Deve começar em nova página, e a numeração de página precisa continuar corretamente até aqui e seguir pelos elementos pós-textuais." }
+          ]
+        }
+      ]
+    }
+  ],
+
+  "referencias": [
+    {
+      "id": "ref_abnt",
+      "tipo": "norma",
+      "autor": "ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS",
+      "titulo": "NBR 14724: Informação e documentação – Trabalhos acadêmicos – Apresentação",
+      "local": "Rio de Janeiro",
+      "editora": "ABNT",
+      "ano": 2011
+    },
+    {
+      "id": "ref_mendes",
+      "tipo": "artigo",
+      "autor": "MENDES, Carlos; SOUZA, Rafaela",
+      "titulo": "Inteligência artificial aplicada à gestão da produção científica",
+      "periodico": "Revista Brasileira de Informática na Educação",
+      "volume": "32",
+      "paginas": "112-130",
+      "ano": 2024
+    },
+    {
+      "id": "ref_silva",
+      "tipo": "livro",
+      "autor": "SILVA, Marcos Vinicius",
+      "titulo": "Mineração de texto e descoberta de conhecimento em bases bibliográficas",
+      "local": "São Paulo",
+      "editora": "Editora Acadêmica",
+      "ano": 2023
+    }
+  ],
+
+  "apendices": [
+    {
+      "id": "ap_a",
+      "letra": "A",
+      "titulo": "Instrumento de coleta utilizado",
+      "content": [
+        { "type": "paragrafo", "content": [{ "type": "text", "text": "Conteúdo do apêndice, elaborado pela autora." }] }
+      ]
+    }
+  ],
+
+  "anexos": [
+    {
+      "id": "an_a",
+      "letra": "A",
+      "titulo": "Documento de terceiros",
+      "content": [
+        { "type": "paragrafo", "content": [{ "type": "text", "text": "Conteúdo do anexo, não elaborado pela autora." }] }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "aura-poc-docx",
+  "version": "1.0.0",
+  "description": "Prova de conceito do exportador .docx do AURA",
+  "main": "gerar.js",
+  "scripts": {
+    "gerar": "node gerar.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "docx": "^9.7.1"
+  }
+}
