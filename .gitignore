@@ -12,6 +12,8 @@ out/
 dist/
 build/
 *.tsbuildinfo
+next-env.d.ts
+*.pem
 
 # Variáveis de ambiente e segredos
 .env
