@@ -1,22 +1,71 @@
 @import "tailwindcss";
 
+/*
+ * Paleta AURA: bordô e creme (UNICAP). Sem tema escuro — ver
+ * docs/aura-decisoes-e-pendencias.md §1.12.
+ *
+ * `--bordo-900` e `--creme-300` são os valores de marca exatos. O resto da
+ * escala é derivado deles por `color-mix`, não por hex escolhido à mão, para
+ * que a escala inteira siga de uma única fonte de verdade.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bordo-900: rgb(112 0 27);
+  --bordo-50: color-mix(in srgb, var(--bordo-900) 3%, white);
+  --bordo-100: color-mix(in srgb, var(--bordo-900) 8%, white);
+  --bordo-200: color-mix(in srgb, var(--bordo-900) 18%, white);
+  --bordo-300: color-mix(in srgb, var(--bordo-900) 32%, white);
+  --bordo-400: color-mix(in srgb, var(--bordo-900) 48%, white);
+  --bordo-500: color-mix(in srgb, var(--bordo-900) 65%, white);
+  --bordo-600: color-mix(in srgb, var(--bordo-900) 78%, white);
+  --bordo-700: color-mix(in srgb, var(--bordo-900) 88%, white);
+  --bordo-800: color-mix(in srgb, var(--bordo-900) 95%, white);
+  --bordo-950: color-mix(in srgb, var(--bordo-900) 85%, black);
+
+  --creme-300: rgb(254 212 136);
+  --creme-50: color-mix(in srgb, var(--creme-300) 25%, white);
+  --creme-100: color-mix(in srgb, var(--creme-300) 45%, white);
+  --creme-200: color-mix(in srgb, var(--creme-300) 70%, white);
+  --creme-400: color-mix(in srgb, var(--creme-300) 88%, black);
+  --creme-500: color-mix(in srgb, var(--creme-300) 75%, black);
+  --creme-600: color-mix(in srgb, var(--creme-300) 62%, black);
+  --creme-700: color-mix(in srgb, var(--creme-300) 50%, black);
+  --creme-800: color-mix(in srgb, var(--creme-300) 35%, black);
+  --creme-900: color-mix(in srgb, var(--creme-300) 22%, black);
+  --creme-950: color-mix(in srgb, var(--creme-300) 12%, black);
+
+  --background: var(--creme-50);
+  --foreground: var(--bordo-900);
 }
 
 @theme inline {
+  --color-bordo-50: var(--bordo-50);
+  --color-bordo-100: var(--bordo-100);
+  --color-bordo-200: var(--bordo-200);
+  --color-bordo-300: var(--bordo-300);
+  --color-bordo-400: var(--bordo-400);
+  --color-bordo-500: var(--bordo-500);
+  --color-bordo-600: var(--bordo-600);
+  --color-bordo-700: var(--bordo-700);
+  --color-bordo-800: var(--bordo-800);
+  --color-bordo-900: var(--bordo-900);
+  --color-bordo-950: var(--bordo-950);
+
+  --color-creme-50: var(--creme-50);
+  --color-creme-100: var(--creme-100);
+  --color-creme-200: var(--creme-200);
+  --color-creme-300: var(--creme-300);
+  --color-creme-400: var(--creme-400);
+  --color-creme-500: var(--creme-500);
+  --color-creme-600: var(--creme-600);
+  --color-creme-700: var(--creme-700);
+  --color-creme-800: var(--creme-800);
+  --color-creme-900: var(--creme-900);
+  --color-creme-950: var(--creme-950);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
