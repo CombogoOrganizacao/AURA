@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { novoDocumento } from "./factory";
+import { novaSecao, novoDocumento } from "./factory";
 import { validarDocumento } from "./validate";
 
 describe("novoDocumento", () => {
@@ -20,5 +20,27 @@ describe("novoDocumento", () => {
     const a = novoDocumento();
     const b = novoDocumento();
     expect(a.id).not.toBe(b.id);
+  });
+});
+
+describe("novaSecao", () => {
+  it("produz uma seção estruturalmente válida como primeira e única seção", () => {
+    const documento = novoDocumento();
+    documento.sections = [novaSecao(0)];
+    expect(validarDocumento(documento)).toEqual([]);
+  });
+
+  it("tem um parágrafo vazio, não conteúdo nenhum — precisa de lugar pro cursor", () => {
+    const secao = novaSecao(0);
+    expect(secao.content).toEqual([{ type: "paragraph" }]);
+  });
+
+  it("nível 1 por padrão; aceita outro nível explícito", () => {
+    expect(novaSecao(0).nivel).toBe(1);
+    expect(novaSecao(1, 2).nivel).toBe(2);
+  });
+
+  it("gera um id novo a cada chamada", () => {
+    expect(novaSecao(0).id).not.toBe(novaSecao(0).id);
   });
 });

@@ -1,16 +1,15 @@
 import Link from "next/link";
 
 import { BotaoExportar } from "@/components/editor/BotaoExportar";
-import { Editor } from "@/components/editor/Editor";
-import { FormMetadados } from "@/components/documento/FormMetadados";
+import { DocumentoEditor } from "@/components/documento/DocumentoEditor";
 
 // Tela de edição (passo 1.3.5). Servidor só resolve o `id` da rota; quem faz
-// qualquer coisa com ele é client component (FormMetadados já é dono da
-// própria persistência — passo 1.3.4). O editor ainda não carrega nem salva
-// o corpo do documento: isso é o passo 1.3.6 (autosave), que também traz o
-// indicador de "salvo" para o corpo — hoje só os metadados têm um. Por isso
-// o botão de exportar (passo 1.4.4) baixa o que já está salvo, não o que
-// está sendo digitado agora.
+// qualquer coisa com ele é client component. `DocumentoEditor` (passo 1.3.7)
+// é o dono único do `Documento` aqui — carrega uma vez, salva com debounce
+// (1.3.6) e passa `metadados`/`sections` controlados pro formulário e pro
+// editor. Antes eram dois donos independentes (FormMetadados e Editor),
+// cada um com sua cópia do `Documento`; o autosave de um apagava em
+// silêncio a mudança mais recente do outro.
 export default async function DocumentoPage(props: PageProps<"/documento/[id]">) {
   const { id } = await props.params;
 
@@ -23,9 +22,7 @@ export default async function DocumentoPage(props: PageProps<"/documento/[id]">)
         <BotaoExportar documentoId={id} />
       </div>
 
-      <FormMetadados documentoId={id} />
-
-      <Editor />
+      <DocumentoEditor documentoId={id} />
     </div>
   );
 }
