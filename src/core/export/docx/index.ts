@@ -1,53 +1,25 @@
-import {
-  AlignmentType,
-  Document,
-  Header,
-  NumberFormat,
-  Packer,
-  PageNumber,
-  Paragraph,
-  TextRun,
-} from "docx";
+import { AlignmentType, Document, Packer, Paragraph } from "docx";
 
 import { ABNT } from "./constants";
+import { montarSecoes } from "./sections";
 
 // Porte de poc/docx/gerar.js (passo 1.4.1) — o que ficou de fora deste porte
 // está registrado em docs/porte-poc.md, pra ninguém supor que ele cobre mais
 // do que cobre.
 //
-// Prova a montagem das três seções OOXML (capa fora da contagem;
-// pré-textuais com contagem reiniciada e número oculto; corpo com contagem
-// contínua e número exibido) e os estilos nomeados — os mesmos que
-// `poc/docx/gerar.js` já tem verificados como OOXML válido.
+// A montagem das três seções OOXML (capa fora da contagem; pré-textuais com
+// contagem reiniciada e número oculto; corpo com contagem contínua e número
+// exibido) está em `sections.ts` (passo 1.4.3) — aqui fica só os estilos
+// nomeados e a montagem do `Document` como um todo. Os estilos são os
+// mesmos que `poc/docx/gerar.js` já tem verificados como OOXML válido.
 //
 // Corpo real desde o passo 1.4.2 (`fromDocumento.ts` converte `Documento`
 // canônico pra `ConteudoExportacao`). Capa e pré-textuais continuam
-// placeholder: dependem dos metadados ganharem layout de verdade no passo
-// 3.5.1. Os geradores de cada tipo de bloco (citação, lista, figura, tabela,
-// fórmula), referências, notas e sumário chegam um de cada vez, nos passos
-// da Fase 3/4 que os implementam de verdade no editor primeiro.
-
-const propriedadesPagina = {
-  size: ABNT.paginaA4,
-  margin: { ...ABNT.margem, header: ABNT.distanciaCabecalho },
-};
-
-// Mesma tipografia da seção primária, mas sem nível de estrutura — o que
-// mantém os pré-textuais fora do sumário (NBR 6027). Ver
-// poc/docx/gerar.js, `tituloPreTextual`.
-function paragrafoTituloPreTextual(texto: string) {
-  return new Paragraph({ text: texto, style: "TituloPreTextual", keepNext: true });
-}
-
-// Cabeçalho com o número da página no canto superior direito (NBR 14724).
-const cabecalhoComNumero = new Header({
-  children: [
-    new Paragraph({
-      alignment: AlignmentType.RIGHT,
-      children: [new TextRun({ children: [PageNumber.CURRENT] })],
-    }),
-  ],
-});
+// placeholder (ver `sections.ts`): dependem dos metadados ganharem layout de
+// verdade no passo 3.5.1. Os geradores de cada tipo de bloco (citação,
+// lista, figura, tabela, fórmula), referências, notas e sumário chegam um
+// de cada vez, nos passos da Fase 3/4 que os implementam de verdade no
+// editor primeiro.
 
 function estiloTitulo(extra: Record<string, boolean>) {
   return {
@@ -108,34 +80,7 @@ export async function gerarDocx({ corpo }: ConteudoExportacao): Promise<Buffer> 
         },
       ],
     },
-    sections: [
-      // 1 — Capa: sem cabeçalho, fora da contagem de página.
-      {
-        properties: { page: propriedadesPagina },
-        children: [
-          new Paragraph({
-            text: "Capa — metadados chegam no passo 3.5.1",
-            alignment: AlignmentType.CENTER,
-          }),
-        ],
-      },
-      // 2 — Pré-textuais: contagem REINICIA em 1, número NÃO exibido.
-      {
-        properties: {
-          page: {
-            ...propriedadesPagina,
-            pageNumbers: { start: 1, formatType: NumberFormat.DECIMAL },
-          },
-        },
-        children: [paragrafoTituloPreTextual("SUMÁRIO")],
-      },
-      // 3 — Corpo: contagem CONTINUA, número EXIBIDO.
-      {
-        properties: { page: propriedadesPagina },
-        headers: { default: cabecalhoComNumero },
-        children: corpo,
-      },
-    ],
+    sections: montarSecoes(corpo),
   });
 
   return Packer.toBuffer(documento);
