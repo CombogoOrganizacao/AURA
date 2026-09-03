@@ -2,7 +2,6 @@ import {
   AlignmentType,
   Document,
   Header,
-  HeadingLevel,
   NumberFormat,
   Packer,
   PageNumber,
@@ -16,15 +15,17 @@ import { ABNT } from "./constants";
 // está registrado em docs/porte-poc.md, pra ninguém supor que ele cobre mais
 // do que cobre.
 //
-// Este passo só prova a montagem das três seções OOXML (capa fora da
-// contagem; pré-textuais com contagem reiniciada e número oculto; corpo com
-// contagem contínua e número exibido) e os estilos nomeados — os mesmos que
-// `poc/docx/gerar.js` já tem verificados como OOXML válido. O conteúdo de
-// cada seção aqui é placeholder: `fromDocumento.ts` (passo 1.4.2) é quem liga
-// isto ao `Documento` canônico de verdade; os geradores de cada tipo de
-// bloco (parágrafo, citação, lista, figura, tabela, fórmula, referências,
-// notas, sumário) chegam um de cada vez, nos passos da Fase 3/4 que os
-// implementam de verdade no editor primeiro.
+// Prova a montagem das três seções OOXML (capa fora da contagem;
+// pré-textuais com contagem reiniciada e número oculto; corpo com contagem
+// contínua e número exibido) e os estilos nomeados — os mesmos que
+// `poc/docx/gerar.js` já tem verificados como OOXML válido.
+//
+// Corpo real desde o passo 1.4.2 (`fromDocumento.ts` converte `Documento`
+// canônico pra `ConteudoExportacao`). Capa e pré-textuais continuam
+// placeholder: dependem dos metadados ganharem layout de verdade no passo
+// 3.5.1. Os geradores de cada tipo de bloco (citação, lista, figura, tabela,
+// fórmula), referências, notas e sumário chegam um de cada vez, nos passos
+// da Fase 3/4 que os implementam de verdade no editor primeiro.
 
 const propriedadesPagina = {
   size: ABNT.paginaA4,
@@ -55,9 +56,15 @@ function estiloTitulo(extra: Record<string, boolean>) {
   };
 }
 
-// Skeleton — 1.4.2 substitui o conteúdo placeholder de cada seção pelo que
-// vem do `Documento` canônico; a assinatura desta função muda lá.
-export async function gerarDocx(): Promise<Buffer> {
+export interface ConteudoExportacao {
+  // Corpo já convertido para nós do `docx` — quem faz essa conversão a
+  // partir do `Documento` canônico é `fromDocumento.ts` (passo 1.4.2).
+  // Capa e pré-textuais continuam placeholder aqui: dependem dos metadados
+  // ganharem layout de verdade no passo 3.5.1.
+  corpo: Paragraph[];
+}
+
+export async function gerarDocx({ corpo }: ConteudoExportacao): Promise<Buffer> {
   const documento = new Document({
     styles: {
       default: {
@@ -126,12 +133,7 @@ export async function gerarDocx(): Promise<Buffer> {
       {
         properties: { page: propriedadesPagina },
         headers: { default: cabecalhoComNumero },
-        children: [
-          new Paragraph({
-            text: "Corpo — seções reais chegam no passo 1.4.2",
-            heading: HeadingLevel.HEADING_1,
-          }),
-        ],
+        children: corpo,
       },
     ],
   });

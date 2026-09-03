@@ -1,10 +1,15 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
+import { Paragraph } from "docx";
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 
 import { gerarDocx } from "./index";
+
+// Estas verificações são sobre a estrutura das três seções e os estilos —
+// não sobre o corpo, então um parágrafo qualquer basta.
+const conteudoDeTeste = { corpo: [new Paragraph("Corpo de teste")] };
 
 // Compara as PARTES ESTRUTURAIS do zip gerado com as de `poc/docx/saida.docx`
 // — não é comparação byte a byte nem julgamento de semelhança (o to-do é
@@ -45,7 +50,7 @@ describe("gerarDocx — esqueleto das três seções OOXML (passo 1.4.1)", () =>
     const xmlReferencia = await referencia.file("word/document.xml")!.async("string");
     const sectPrsReferencia = extrairSectPrs(xmlReferencia);
 
-    const zip = await abrirZip(await gerarDocx());
+    const zip = await abrirZip(await gerarDocx(conteudoDeTeste));
     const xmlGerado = await zip.file("word/document.xml")!.async("string");
     const sectPrsGerado = extrairSectPrs(xmlGerado);
 
@@ -63,14 +68,14 @@ describe("gerarDocx — esqueleto das três seções OOXML (passo 1.4.1)", () =>
     const referencia = await abrirZip(readFileSync(CAMINHO_REFERENCIA));
     const idsReferencia = idsDeEstilo(await referencia.file("word/styles.xml")!.async("string"));
 
-    const zip = await abrirZip(await gerarDocx());
+    const zip = await abrirZip(await gerarDocx(conteudoDeTeste));
     const idsGerado = idsDeEstilo(await zip.file("word/styles.xml")!.async("string"));
 
     expect(idsGerado).toEqual(idsReferencia);
   });
 
   it("gera um pacote OOXML válido com as partes essenciais", async () => {
-    const zip = await abrirZip(await gerarDocx());
+    const zip = await abrirZip(await gerarDocx(conteudoDeTeste));
 
     expect(zip.file("word/document.xml")).not.toBeNull();
     expect(zip.file("word/styles.xml")).not.toBeNull();
