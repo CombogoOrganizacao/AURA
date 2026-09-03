@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Lora } from "next/font/google";
 import { AvisoAmbienteInterno } from "@/components/AvisoAmbienteInterno";
+import { PersistenciaProvider } from "@/lib/persistence-provider";
 import "./globals.css";
 
 // Inter para interface, Lora para títulos — auto-hospedadas pelo next/font
@@ -25,7 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="pt-BR" className={`${inter.variable} ${lora.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <AvisoAmbienteInterno />
-        {children}
+        <PersistenciaProvider>{children}</PersistenciaProvider>
       </body>
     </html>
   );
