@@ -1,8 +1,8 @@
-import { AlignmentType, HeadingLevel, Paragraph, TextRun } from "docx";
+import { AlignmentType, HeadingLevel, type Document, Paragraph, TextRun } from "docx";
 
 import type { Documento, NoParagrafo, Secao } from "../../document/types";
 import { ABNT } from "./constants";
-import { gerarDocx } from "./index";
+import { montarDocumento } from "./index";
 
 // Liga o exportador ao `Documento` canônico de verdade (passo 1.4.2) — não
 // mais ao JSON de teste da PoC. Só o corpo: capa e pré-textuais ainda são
@@ -12,6 +12,10 @@ import { gerarDocx } from "./index";
 // `NoConteudo` só cobre `paragraph` por ora (fechado em 1.3.3); citação,
 // lista, figura, tabela e fórmula entram aqui na mesma hora em que ganham
 // nó no editor (docs/schema-tiptap.md §7) — não antes.
+//
+// Devolve o `Document` (docx), não empacotado — mesmo motivo de
+// `montarDocumento()` em `index.ts`: quem chama escolhe `Packer.toBuffer()`
+// (Node) ou `Packer.toBlob()` (navegador, passo 1.4.4).
 
 const NIVEL_PARA_HEADING = [
   HeadingLevel.HEADING_1,
@@ -36,7 +40,7 @@ function paragrafoCorpo(no: NoParagrafo): Paragraph {
   });
 }
 
-export async function fromDocumento(documento: Documento): Promise<Buffer> {
+export function fromDocumento(documento: Documento): Document {
   const secoesEmOrdem = [...documento.sections].sort((a, b) => a.ordem - b.ordem);
 
   const corpo: Paragraph[] = [];
@@ -47,5 +51,5 @@ export async function fromDocumento(documento: Documento): Promise<Buffer> {
     }
   }
 
-  return gerarDocx({ corpo });
+  return montarDocumento({ corpo });
 }

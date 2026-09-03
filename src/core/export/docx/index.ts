@@ -1,4 +1,4 @@
-import { AlignmentType, Document, Packer, Paragraph } from "docx";
+import { AlignmentType, Document, Paragraph } from "docx";
 
 import { ABNT } from "./constants";
 import { montarSecoes } from "./sections";
@@ -36,8 +36,14 @@ export interface ConteudoExportacao {
   corpo: Paragraph[];
 }
 
-export async function gerarDocx({ corpo }: ConteudoExportacao): Promise<Buffer> {
-  const documento = new Document({
+// Só monta o `Document` (docx) — não empacota. Quem chama escolhe o
+// `Packer` certo pro ambiente: `Packer.toBuffer()` no Node (testes, um
+// futuro servidor), `Packer.toBlob()` no navegador (download real —
+// `BotaoExportar.tsx`, passo 1.4.4). `toBuffer()` depende do `Buffer` do
+// Node, que não existe no navegador sem polyfill — mesmo cuidado que já
+// vale pra `fs.readFileSync` (docs/porte-poc.md).
+export function montarDocumento({ corpo }: ConteudoExportacao): Document {
+  return new Document({
     styles: {
       default: {
         document: {
@@ -82,6 +88,4 @@ export async function gerarDocx({ corpo }: ConteudoExportacao): Promise<Buffer> 
     },
     sections: montarSecoes(corpo),
   });
-
-  return Packer.toBuffer(documento);
 }
