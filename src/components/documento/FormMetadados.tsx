@@ -1,19 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 
 import { novoDocumento } from "@/core/document/factory";
 import type { Documento, Metadados } from "@/core/document/types";
+import type { AdaptadorPersistencia } from "@/core/persistence/types";
 import { usePersistencia } from "@/lib/persistence-provider";
+import { useAutosave, type StatusAutosave } from "@/lib/useAutosave";
 
 interface FormMetadadosProps {
   documentoId: string;
 }
 
-type Status = "carregando" | "pronto" | "salvando";
-
 const estiloCampo =
   "rounded border border-bordo-200 bg-white px-3 py-2 text-sm text-bordo-900 focus:border-bordo-500 focus:outline-none";
+
+const TEXTO_STATUS: Record<StatusAutosave, string> = {
+  pendente: "Alterações não salvas…",
+  salvando: "Salvando…",
+  salvo: "Salvo",
+  erro: "Erro ao salvar",
+};
 
 // Formulário mínimo de metadados (passo 1.3.4) — só os campos que o to-do
 // pede: título, autor, instituição, curso, orientador, cidade, ano e
@@ -28,7 +35,6 @@ const estiloCampo =
 export function FormMetadados({ documentoId }: FormMetadadosProps) {
   const persistencia = usePersistencia();
   const [documento, setDocumento] = useState<Documento | null>(null);
-  const [status, setStatus] = useState<Status>("carregando");
 
   useEffect(() => {
     if (!persistencia) return;
@@ -39,7 +45,6 @@ export function FormMetadados({ documentoId }: FormMetadadosProps) {
       // Documento inexistente = primeira vez que este id é usado; nasce
       // vazio, com o id que foi pedido (não o que novoDocumento() geraria).
       setDocumento(encontrado ?? { ...novoDocumento(), id: documentoId });
-      setStatus("pronto");
     });
 
     return () => {
@@ -47,21 +52,40 @@ export function FormMetadados({ documentoId }: FormMetadadosProps) {
     };
   }, [persistencia, documentoId]);
 
+  if (!documento || !persistencia) {
+    return <p className="text-sm text-bordo-700">Carregando metadados…</p>;
+  }
+
+  // `CamposMetadados` só monta quando `documento` já existe — é o que faz o
+  // "não salva na primeira renderização" do useAutosave (src/lib/useAutosave.ts)
+  // coincidir com "não salva o que acabou de ser carregado, sem edição
+  // nenhuma": o primeiro `valor` que o hook vê já é o documento carregado.
+  return (
+    <CamposMetadados
+      documento={documento}
+      onDocumentoChange={setDocumento}
+      persistencia={persistencia}
+    />
+  );
+}
+
+function CamposMetadados({
+  documento,
+  onDocumentoChange,
+  persistencia,
+}: {
+  documento: Documento;
+  onDocumentoChange: Dispatch<SetStateAction<Documento | null>>;
+  persistencia: AdaptadorPersistencia;
+}) {
+  // Debounce de 3–5s (passo 1.3.6) — dez teclas seguidas geram uma escrita
+  // só, no blur, no Enter, em qualquer troca de foco: em qualquer edição.
+  const status = useAutosave(documento, (atual) => persistencia.salvarDocumento(atual));
+
   function atualizarCampo<K extends keyof Metadados>(campo: K, valor: Metadados[K]) {
-    setDocumento((atual) =>
+    onDocumentoChange((atual) =>
       atual ? { ...atual, metadados: { ...atual.metadados, [campo]: valor } } : atual,
     );
-  }
-
-  async function salvar() {
-    if (!documento || !persistencia) return;
-    setStatus("salvando");
-    await persistencia.salvarDocumento(documento);
-    setStatus("pronto");
-  }
-
-  if (!documento) {
-    return <p className="text-sm text-bordo-700">Carregando metadados…</p>;
   }
 
   const { metadados } = documento;
@@ -77,7 +101,6 @@ export function FormMetadados({ documentoId }: FormMetadadosProps) {
           className={estiloCampo}
           value={metadados.titulo}
           onChange={(evento) => atualizarCampo("titulo", evento.target.value)}
-          onBlur={salvar}
         />
       </Campo>
 
@@ -88,7 +111,6 @@ export function FormMetadados({ documentoId }: FormMetadadosProps) {
           onChange={(evento) =>
             atualizarCampo("autores", evento.target.value ? [evento.target.value] : [])
           }
-          onBlur={salvar}
         />
       </Campo>
 
@@ -97,7 +119,6 @@ export function FormMetadados({ documentoId }: FormMetadadosProps) {
           className={estiloCampo}
           value={metadados.instituicao}
           onChange={(evento) => atualizarCampo("instituicao", evento.target.value)}
-          onBlur={salvar}
         />
       </Campo>
 
@@ -106,7 +127,6 @@ export function FormMetadados({ documentoId }: FormMetadadosProps) {
           className={estiloCampo}
           value={metadados.curso}
           onChange={(evento) => atualizarCampo("curso", evento.target.value)}
-          onBlur={salvar}
         />
       </Campo>
 
@@ -115,7 +135,6 @@ export function FormMetadados({ documentoId }: FormMetadadosProps) {
           className={estiloCampo}
           value={metadados.orientador}
           onChange={(evento) => atualizarCampo("orientador", evento.target.value)}
-          onBlur={salvar}
         />
       </Campo>
 
@@ -124,7 +143,6 @@ export function FormMetadados({ documentoId }: FormMetadadosProps) {
           className={estiloCampo}
           value={metadados.local}
           onChange={(evento) => atualizarCampo("local", evento.target.value)}
-          onBlur={salvar}
         />
       </Campo>
 
@@ -134,7 +152,6 @@ export function FormMetadados({ documentoId }: FormMetadadosProps) {
           type="number"
           value={metadados.ano}
           onChange={(evento) => atualizarCampo("ano", Number(evento.target.value))}
-          onBlur={salvar}
         />
       </Campo>
 
@@ -143,13 +160,12 @@ export function FormMetadados({ documentoId }: FormMetadadosProps) {
           className={estiloCampo}
           value={metadados.naturezaTrabalho}
           onChange={(evento) => atualizarCampo("naturezaTrabalho", evento.target.value)}
-          onBlur={salvar}
           placeholder="Ex.: Trabalho de Conclusão de Curso apresentado a..."
         />
       </Campo>
 
       <p role="status" className="text-xs text-bordo-600">
-        {status === "salvando" ? "Salvando…" : "Salvo"}
+        {TEXTO_STATUS[status]}
       </p>
     </form>
   );
