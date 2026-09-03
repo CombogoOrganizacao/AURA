@@ -9,13 +9,29 @@
 
 export type NivelSecao = 1 | 2 | 3;
 
-// Nó de conteúdo do editor. A lista fechada de tipos — parágrafo, citação
-// longa, lista, figura, tabela, fórmula, nota de rodapé, e as marcas inline —
-// chega no passo 1.1.2 (docs/schema-tiptap.md). Por ora `NoConteudo` só
-// existe para `Secao["content"]` não precisar de `any`.
-export interface NoConteudo {
-  type: string;
+// Texto inline dentro de um parágrafo. Sem `marks` ainda — negrito, itálico,
+// citação e sugestão (docs/schema-tiptap.md §5) entram quando cada marca
+// ganhar código próprio.
+export interface NoTexto {
+  type: "text";
+  text: string;
 }
+
+// `paragraph` e não `parágrafo`: o nó ainda é o `Paragraph` de fábrica do
+// TipTap (src/components/editor/Editor.tsx), sem nó customizado próprio no
+// plano — o `type` aqui espelha o que o editor produz de verdade, não o
+// nome em prosa de docs/schema-tiptap.md §4.2.
+export interface NoParagrafo {
+  type: "paragraph";
+  content?: NoTexto[];
+}
+
+// Lista fechada de conteúdo de `Secao`/`ElementoPosTextual`. Cresce um membro
+// de cada vez, só quando o nó correspondente ganha código em
+// src/core/editor/nodes/ (ver docs/schema-tiptap.md §7) — por ora cobre só o
+// que existe: parágrafo. `citacao_longa`, `lista`, `figura`, `tabela` e
+// `formula` entram conforme cada um for implementado (Fase 3 em diante).
+export type NoConteudo = NoParagrafo;
 
 export interface Secao {
   id: string;
