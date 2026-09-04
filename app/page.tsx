@@ -39,32 +39,32 @@ export default function Home() {
 
   return (
     <div className="flex flex-1 flex-col items-center gap-8 p-10 font-sans">
-      <h1 className="font-serif text-2xl font-bold text-bordo-900">Meus trabalhos</h1>
+      <h1 className="font-serif text-2xl font-bold text-title">Meus trabalhos</h1>
 
       <button
         type="button"
         onClick={criarDocumento}
         disabled={!persistencia}
-        className="rounded bg-bordo-900 px-4 py-2 text-sm font-medium text-creme-50 hover:bg-bordo-800 disabled:opacity-50"
+        className="rounded-sm bg-bordo-700 px-4 py-2 text-sm font-medium text-on-bordo hover:bg-bordo-800 disabled:opacity-50"
       >
         Criar novo documento
       </button>
 
       {/* Estado vazio mostra só a ação de criar — nada de tabela vazia. */}
       {documentos === null ? (
-        <p className="text-sm text-bordo-700">Carregando…</p>
+        <p className="text-sm text-muted">Carregando…</p>
       ) : documentos.length === 0 ? (
-        <p className="text-sm text-bordo-700">Nenhum documento ainda.</p>
+        <p className="text-sm text-muted">Nenhum documento ainda.</p>
       ) : (
         <ul className="flex w-full max-w-xl flex-col gap-2">
           {documentos.map((documento) => (
             <li key={documento.id}>
               <Link
                 href={`/documento/${documento.id}`}
-                className="flex items-center justify-between rounded border border-bordo-200 bg-white px-4 py-3 hover:border-bordo-400"
+                className="flex items-center justify-between rounded-lg border border-ink-200 bg-card px-4 py-3 hover:bg-bordo-50"
               >
-                <span className="text-bordo-900">{documento.titulo || "Documento sem título"}</span>
-                <span className="text-xs text-bordo-600">
+                <span className="text-body">{documento.titulo || "Documento sem título"}</span>
+                <span className="text-xs text-subtle">
                   {documento.atualizadoEm.toLocaleDateString("pt-BR")}
                 </span>
               </Link>

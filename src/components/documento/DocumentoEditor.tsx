@@ -51,7 +51,7 @@ export function DocumentoEditor({ documentoId }: DocumentoEditorProps) {
   }, [persistencia, documentoId]);
 
   if (!documento || !persistencia) {
-    return <p className="text-sm text-bordo-700">Carregando documento…</p>;
+    return <p className="text-sm text-muted">Carregando documento…</p>;
   }
 
   // `Carregado` só monta quando `documento` já existe — é o que faz o "não
@@ -85,7 +85,7 @@ function Carregado({
 
       <Editor sections={documento.sections} onSectionsChange={atualizarSecoes} />
 
-      <p role="status" className="text-xs text-bordo-600">
+      <p role="status" className="text-xs text-subtle">
         {TEXTO_STATUS[status]}
       </p>
     </div>

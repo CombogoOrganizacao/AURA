@@ -51,7 +51,7 @@ export function BotaoExportar({ documentoId }: BotaoExportarProps) {
       type="button"
       onClick={exportar}
       disabled={!persistencia || status === "exportando"}
-      className="rounded bg-bordo-900 px-4 py-2 text-sm font-medium text-creme-50 hover:bg-bordo-800 disabled:opacity-50"
+      className="rounded-sm bg-bordo-700 px-4 py-2 text-sm font-medium text-on-bordo hover:bg-bordo-800 disabled:opacity-50"
     >
       {status === "exportando"
         ? "Exportando…"

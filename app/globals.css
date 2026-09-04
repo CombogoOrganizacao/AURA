@@ -1,75 +1,312 @@
 @import "tailwindcss";
 
 /*
- * Paleta AURA: bordô e creme (UNICAP). Sem tema escuro — ver
- * docs/aura-decisoes-e-pendencias.md §1.12.
+ * Design system AURA (Fase 2.1) — ver docs/design.md para a referência
+ * completa e o raciocínio por trás de cada escala.
  *
- * `--bordo-900` e `--creme-300` são os valores de marca exatos. O resto da
- * escala é derivado deles por `color-mix`, não por hex escolhido à mão, para
- * que a escala inteira siga de uma única fonte de verdade.
+ * Origem dos valores: a Agent Skill `aura-design` (bordô/creme auditados
+ * contra a marca da UNICAP, resto proposto e documentado nos `guidelines/`
+ * daquela skill). Não são derivados por `color-mix` — são os hex exatos que
+ * a skill já testou em contraste e estado (hover/press/foco). Se a paleta
+ * mudar, o ponto de partida é a skill, não este arquivo.
+ *
+ * Três blocos:
+ * - `@theme` — tokens estáticos que viram classe utilitária (`bg-bordo-700`,
+ *   `text-title`, `rounded-lg`, `shadow-sheet`...) e, para os que alguma
+ *   classe usa, também variável CSS real em `:root`. Nomeados no namespace
+ *   que o Tailwind espera (`--color-*`, `--text-*`, `--radius-*`,
+ *   `--shadow-*`) — por isso alguns tokens da skill (CSS simples, sem
+ *   Tailwind) mudam de nome aqui; a tradução de cada um está em
+ *   docs/design.md.
+ * - `@theme inline` — só as famílias de fonte, porque elas precisam
+ *   referenciar as variáveis que o next/font injeta em tempo de execução
+ *   (app/layout.tsx); é o caso de uso documentado do Tailwind para isso.
+ * - `:root` — tokens sem namespace correspondente no Tailwind v4 (fonte do
+ *   documento por norma, escala de documento em pt, geometria da folha A4,
+ *   densidade de controles, movimento). Consumidos via `var(...)` em CSS
+ *   próprio, nunca por classe utilitária.
  */
-:root {
-  --bordo-900: rgb(112 0 27);
-  --bordo-50: color-mix(in srgb, var(--bordo-900) 3%, white);
-  --bordo-100: color-mix(in srgb, var(--bordo-900) 8%, white);
-  --bordo-200: color-mix(in srgb, var(--bordo-900) 18%, white);
-  --bordo-300: color-mix(in srgb, var(--bordo-900) 32%, white);
-  --bordo-400: color-mix(in srgb, var(--bordo-900) 48%, white);
-  --bordo-500: color-mix(in srgb, var(--bordo-900) 65%, white);
-  --bordo-600: color-mix(in srgb, var(--bordo-900) 78%, white);
-  --bordo-700: color-mix(in srgb, var(--bordo-900) 88%, white);
-  --bordo-800: color-mix(in srgb, var(--bordo-900) 95%, white);
-  --bordo-950: color-mix(in srgb, var(--bordo-900) 85%, black);
 
-  --creme-300: rgb(254 212 136);
-  --creme-50: color-mix(in srgb, var(--creme-300) 25%, white);
-  --creme-100: color-mix(in srgb, var(--creme-300) 45%, white);
-  --creme-200: color-mix(in srgb, var(--creme-300) 70%, white);
-  --creme-400: color-mix(in srgb, var(--creme-300) 88%, black);
-  --creme-500: color-mix(in srgb, var(--creme-300) 75%, black);
-  --creme-600: color-mix(in srgb, var(--creme-300) 62%, black);
-  --creme-700: color-mix(in srgb, var(--creme-300) 50%, black);
-  --creme-800: color-mix(in srgb, var(--creme-300) 35%, black);
-  --creme-900: color-mix(in srgb, var(--creme-300) 22%, black);
-  --creme-950: color-mix(in srgb, var(--creme-300) 12%, black);
+@theme {
+  /* ============ COR ============ */
+  /* Paleta bruta. Bordô é a cor de autoridade (rail, botão primário,
+     títulos); creme é o par de destaque. As duas nunca competem na mesma
+     superfície com o mesmo peso — ver docs/design.md. */
+  --color-bordo-50: #fdf5f6;
+  --color-bordo-100: #f9e7eb;
+  --color-bordo-200: #efc6ce;
+  --color-bordo-300: #db94a2;
+  --color-bordo-400: #c25a70;
+  --color-bordo-500: #a62a46;
+  --color-bordo-600: #8c1130;
+  --color-bordo-700: #70001b; /* valor de marca exato: rgb(112 0 27) */
+  --color-bordo-800: #52000f;
+  --color-bordo-900: #38000a;
 
-  --background: var(--creme-50);
-  --foreground: var(--bordo-900);
+  --color-creme-50: #fffbf0;
+  --color-creme-100: #fff4dc;
+  --color-creme-200: #fee9bc;
+  --color-creme-300: #fed488; /* valor de marca exato: rgb(254 212 136) */
+  --color-creme-400: #f7be5c;
+  --color-creme-500: #e5a23a;
+  --color-creme-600: #c4822a;
+  --color-creme-700: #96601d;
+
+  /* Neutros quentes (nunca azulados — o sistema imita papel). */
+  --color-ink-50: #f7f4ef;
+  --color-ink-100: #efeae4;
+  --color-ink-200: #e2dbd4;
+  --color-ink-300: #c9c0b9;
+  --color-ink-400: #a99f98;
+  --color-ink-500: #8a807a;
+  --color-ink-600: #6e645d;
+  --color-ink-700: #574e48;
+  --color-ink-800: #3f3833;
+  --color-ink-900: #2b2522;
+  --color-ink-950: #1a1614;
+
+  /* Semânticas — dessaturadas, escuras o bastante para conviver com o
+     bordô sem virar semáforo. */
+  --color-success: #1f6f4a;
+  --color-success-soft: #e3f2e9;
+  --color-warning: #a8710b;
+  --color-warning-soft: #fdf1d6;
+  --color-danger: #b3261e;
+  --color-danger-soft: #fbe6e4;
+  --color-info: #2b5a7e;
+  --color-info-soft: #e5eff5;
+
+  /* Marcas de revisão do documento — cores próprias, exclusivas; não
+     aparecem fora do texto do documento. */
+  --color-revision-insert: #1f6f4a;
+  --color-revision-delete: #b3261e;
+  --color-revision-comment: #fed488;
+  --color-revision-citation: #2b5a7e;
+  --color-revision-highlight: #fff2cc;
+
+  /* Aliases semânticos — preferir a estes em vez da paleta bruta ao
+     escrever componente (ver docs/design.md, "quando usar alias"). */
+  --color-title: var(--color-bordo-700);
+  --color-body: var(--color-ink-900);
+  --color-muted: var(--color-ink-600);
+  --color-subtle: var(--color-ink-500);
+  --color-disabled: var(--color-ink-400);
+  --color-on-bordo: var(--color-creme-100);
+  --color-on-creme: var(--color-bordo-800);
+  --color-link: var(--color-bordo-600);
+  --color-link-hover: var(--color-bordo-800);
+  --color-page: #faf7f2; /* --paper-tint da skill: fundo da aplicação */
+  --color-card: #ffffff; /* --paper da skill: cartões e a folha A4 */
+  --color-sunken: var(--color-ink-50);
+  --color-sheet: #ffffff;
+  --color-brand: var(--color-bordo-700);
+  --color-brand-soft: var(--color-bordo-50);
+  --color-accent: var(--color-creme-300);
+  --color-accent-soft: var(--color-creme-100);
+
+  /* ============ TIPOGRAFIA ============ */
+  /* Escala de interface, em px, base 14 — não intercambiável com a escala
+     de documento (em pt, em `:root` abaixo). Sobrescreve os tamanhos
+     padrão do Tailwind com os valores do design system e soma `2xs`/`md`,
+     que o Tailwind não tem por padrão. */
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 27px;
+  --text-3xl: 34px;
+  --text-4xl: 44px;
+  --text-5xl: 56px;
+
+  --font-weight-light: 300; /* só em números muito grandes */
+  --font-weight-regular: 400; /* corpo */
+  --font-weight-medium: 500; /* rótulos e botões */
+  --font-weight-semibold: 600; /* títulos */
+  --font-weight-bold: 700; /* só títulos de seção do documento */
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.3;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  --tracking-tight: -0.02em; /* títulos ≥34px */
+  --tracking-normal: 0em;
+  --tracking-wide: 0.04em;
+  --tracking-caps: 0.09em; /* rótulos em caixa alta de 11px */
+
+  /* ============ ESPAÇAMENTO ============ */
+  /* A escala 4px da skill (--space-1..24) já É a escala numérica padrão do
+     Tailwind (p-1 = 4px, p-6 = 24px, p-8 = 32px...) — nenhuma redeclaração
+     necessária, ver docs/design.md. As larguras nomeadas do layout do app
+     (rail, sidebar, inspetor, topbar) não têm utilitário próprio — testado:
+     `--spacing-<nome>` não gera `w-<nome>` nesta versão do Tailwind, ao
+     contrário do que a documentação de temas sugere. Ficam só como token em
+     `:root`, consumidas por valor arbitrário (`w-[var(--sidebar-w)]`) ou em
+     CSS próprio — ver bloco `:root` abaixo. */
+
+  /* ============ RAIOS ============ */
+  /* A folha A4 nunca tem canto arredondado — nenhum componente aplica
+     `rounded-*` a ela. `squircle` é exclusivo do ícone da marca. */
+  --radius-xs: 2px;
+  --radius-sm: 4px; /* controles: botão, campo, tag, aba */
+  --radius-md: 6px; /* avisos */
+  --radius-lg: 10px; /* cartões */
+  --radius-xl: 16px; /* painéis grandes */
+  --radius-2xl: 24px;
+  --radius-squircle: 28%; /* só o ícone da marca */
+  --radius-full: 999px; /* cápsula: badge, marcador numérico, progresso */
+
+  /* ============ ELEVAÇÃO ============ */
+  /* Sombras neutras quentes, sempre suaves — nunca sombra colorida fora de
+     `shadow-brand`. */
+  --shadow-xs: 0 1px 1px rgba(26, 22, 20, 0.05);
+  --shadow-sm: 0 1px 2px rgba(26, 22, 20, 0.07), 0 1px 1px rgba(26, 22, 20, 0.04);
+  --shadow-md: 0 2px 6px rgba(26, 22, 20, 0.08), 0 1px 2px rgba(26, 22, 20, 0.06);
+  --shadow-lg: 0 8px 24px rgba(26, 22, 20, 0.1), 0 2px 6px rgba(26, 22, 20, 0.06);
+  --shadow-sheet: 0 1px 2px rgba(26, 22, 20, 0.08), 0 12px 32px rgba(26, 22, 20, 0.1);
+  --shadow-inset: inset 0 1px 2px rgba(26, 22, 20, 0.06);
+  --shadow-brand: 0 6px 18px rgba(112, 0, 27, 0.18); /* única sombra colorida do sistema */
+  --shadow-focus-ring: 0 0 0 3px var(--color-bordo-200);
 }
 
+/* Só as fontes: precisam referenciar as variáveis que o next/font injeta em
+   `<html>` (app/layout.tsx), então usam `inline` para resolver no momento
+   em que a classe utilitária é gerada, não uma vez só no build. */
 @theme inline {
-  --color-bordo-50: var(--bordo-50);
-  --color-bordo-100: var(--bordo-100);
-  --color-bordo-200: var(--bordo-200);
-  --color-bordo-300: var(--bordo-300);
-  --color-bordo-400: var(--bordo-400);
-  --color-bordo-500: var(--bordo-500);
-  --color-bordo-600: var(--bordo-600);
-  --color-bordo-700: var(--bordo-700);
-  --color-bordo-800: var(--bordo-800);
-  --color-bordo-900: var(--bordo-900);
-  --color-bordo-950: var(--bordo-950);
+  --font-sans: var(--font-work-sans), "Helvetica Neue", Arial, sans-serif;
+  --font-serif: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, "SFMono-Regular", monospace;
+  --font-brand: var(--font-roboto-brand), var(--font-work-sans), Helvetica, sans-serif;
+}
 
-  --color-creme-50: var(--creme-50);
-  --color-creme-100: var(--creme-100);
-  --color-creme-200: var(--creme-200);
-  --color-creme-300: var(--creme-300);
-  --color-creme-400: var(--creme-400);
-  --color-creme-500: var(--creme-500);
-  --color-creme-600: var(--creme-600);
-  --color-creme-700: var(--creme-700);
-  --color-creme-800: var(--creme-800);
-  --color-creme-900: var(--creme-900);
-  --color-creme-950: var(--creme-950);
+:root {
+  /* ---- Fonte do documento — decidida pela norma, não pela marca. A NBR
+     14724 admite Times New Roman ou Arial; a escolha é do usuário (caixa na
+     barra do editor, Fase 3.3), vale para o documento inteiro. Newsreader
+     (a serifada da marca) nunca entra na folha. */
+  --doc-font-times: "Times New Roman", Times, serif;
+  --doc-font-arial: Arial, Helvetica, sans-serif;
+  --doc-font: var(--doc-font-times);
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
-  --font-serif: var(--font-lora);
+  /* ---- Tinta dentro da folha A4: preta, nunca o cinza da interface. */
+  --doc-ink: #000000;
+
+  /* ---- Escala de documento, em pt (mínimos da NBR 14724: corpo 12pt,
+     entrelinha 1,5). Fora do Tailwind de propósito — é uma escala paralela
+     à de interface (px), nunca intercambiável com ela. */
+  --doc-caption: 10pt;
+  --doc-body: 12pt;
+  --doc-body-lg: 13pt;
+  --doc-h3: 12pt;
+  --doc-h2: 14pt;
+  --doc-h1: 16pt;
+  --doc-title: 20pt;
+  --leading-doc: 1.5;
+  --leading-doc-abnt: 1.5;
+
+  /* ---- Medida de leitura ---- */
+  --measure-doc: 68ch;
+  --measure-ui: 56ch;
+
+  /* ---- Densidade de controles de interface ---- */
+  --control-h-sm: 28px;
+  --control-h-md: 36px;
+  --control-h-lg: 44px;
+  --control-pad-x-sm: 10px;
+  --control-pad-x-md: 14px;
+  --control-pad-x-lg: 18px;
+  --gutter-panel: 20px;
+  --gutter-section: 32px;
+
+  /* ---- Geometria da folha A4 e margens ABNT (NBR 14724: 3/3/2/2 cm) ---- */
+  --a4-width: 210mm;
+  --a4-height: 297mm;
+  --a4-margin-top: 30mm;
+  --a4-margin-left: 30mm;
+  --a4-margin-bottom: 20mm;
+  --a4-margin-right: 20mm;
+
+  /* ---- Larguras fixas do layout do app. Também expostas como
+     `--spacing-*` no `@theme` acima (uso em classe: `w-sidebar`); mantidas
+     aqui também porque `LayoutEdicao` (passo 2.4) precisa delas em cálculo
+     de redimensionamento em JS, não só em classe estática. */
+  --rail-w: 56px;
+  --sidebar-w: 264px;
+  --inspector-w: 320px;
+  --topbar-h: 56px;
+
+  /* ---- Bordas ---- */
+  --border-w-hairline: 1px;
+  --border-w-thick: 2px;
+  --border-w-rule: 3px;
+  --border-subtle: var(--color-ink-200);
+  --border-default: var(--color-ink-300);
+  --border-strong: var(--color-ink-500);
+  --border-brand: var(--color-bordo-700);
+  --border-focus: var(--color-bordo-600);
+
+  /* ---- Ações — já expressáveis pela paleta bruta (bg-bordo-700 etc.);
+     mantidos aqui só como referência nomeada para quem escreve CSS fora do
+     Tailwind (ex.: editor TipTap). */
+  --action-primary: var(--color-bordo-700);
+  --action-primary-hover: var(--color-bordo-800);
+  --action-primary-active: var(--color-bordo-900);
+  --action-secondary: var(--color-creme-300);
+  --action-secondary-hover: var(--color-creme-400);
+  --action-secondary-active: var(--color-creme-500);
+  --action-ghost-hover: var(--color-bordo-50);
+  --action-disabled: var(--color-ink-200);
+
+  /* ---- Movimento — curto, sem elástico, easing único. Ficam fora de
+     `@theme` porque o Tailwind v4 não tem namespace de duração nomeada;
+     consumidos via `transition-duration: var(--dur-fast)` ou
+     `duration-[var(--dur-fast)]`. */
+  --ease-standard: cubic-bezier(0.2, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-instant: 80ms;
+  --dur-fast: 140ms;
+  --dur-normal: 220ms;
+  --dur-slow: 360ms;
+  --transition-control:
+    background-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-fast) var(--ease-standard);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background: var(--color-page);
+  color: var(--color-body);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-family: var(--font-serif);
+  color: var(--color-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-snug);
+  margin: 0;
+}
+
+::selection {
+  background: var(--color-creme-200);
+  color: var(--color-bordo-800);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

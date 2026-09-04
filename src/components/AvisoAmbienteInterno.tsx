@@ -5,7 +5,7 @@ export function AvisoAmbienteInterno() {
   return (
     <div
       role="status"
-      className="flex items-center justify-center gap-2 bg-bordo-900 px-4 py-2 text-center text-xs font-medium text-creme-50"
+      className="flex items-center justify-center gap-2 bg-bordo-700 px-4 py-2 text-center text-xs font-medium text-on-bordo"
     >
       <svg
         width="14"
@@ -20,8 +20,7 @@ export function AvisoAmbienteInterno() {
         <circle cx="8" cy="4.9" r="0.8" fill="currentColor" />
       </svg>
       <span>
-        Ambiente interno de testes — esta versão do AURA ainda não é final e
-        pode mudar sem aviso.
+        Ambiente interno de testes — esta versão do AURA ainda não é final e pode mudar sem aviso.
       </span>
     </div>
   );

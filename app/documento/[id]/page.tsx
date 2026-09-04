@@ -16,7 +16,7 @@ export default async function DocumentoPage(props: PageProps<"/documento/[id]">)
   return (
     <div className="flex flex-1 flex-col gap-8 p-10 font-sans">
       <div className="flex items-center justify-between">
-        <Link href="/" className="text-sm text-bordo-700 underline hover:text-bordo-900">
+        <Link href="/" className="text-sm text-bordo-700 underline hover:text-bordo-800">
           ← Meus trabalhos
         </Link>
         <BotaoExportar documentoId={id} />

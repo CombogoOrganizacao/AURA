@@ -8,7 +8,7 @@ interface FormMetadadosProps {
 }
 
 const estiloCampo =
-  "rounded border border-bordo-200 bg-white px-3 py-2 text-sm text-bordo-900 focus:border-bordo-500 focus:outline-none";
+  "rounded-sm border border-ink-300 bg-card px-3 py-2 text-sm text-body shadow-inset focus:border-bordo-600 focus:shadow-focus-ring focus:outline-none";
 
 // Formulário mínimo de metadados (passo 1.3.4) — só os campos que o to-do
 // pede: título, autor, instituição, curso, orientador, cidade, ano e
@@ -107,7 +107,7 @@ export function FormMetadados({ metadados, onChange }: FormMetadadosProps) {
 
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-sm text-bordo-900">
+    <label className="flex flex-col gap-1 text-xs font-medium text-body">
       {label}
       {children}
     </label>
