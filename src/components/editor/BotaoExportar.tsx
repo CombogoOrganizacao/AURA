@@ -20,10 +20,11 @@ type Status = "pronto" | "exportando" | "erro";
 // `src/core/export/docx/index.ts`).
 //
 // Exporta o que já está salvo, não o que está sendo digitado agora: o
-// editor ainda não persiste o corpo em tempo real (isso é autosave do
-// corpo, ainda não implementado — só os metadados salvam sozinhos desde o
-// passo 1.3.6). Capa e pré-textuais continuam placeholder no exportador
-// (dependem do passo 3.5.1); o `.docx` baixado reflete isso.
+// autosave (metadados desde 1.3.6, corpo desde 1.3.7) salva com debounce —
+// exportar logo após digitar pode pegar a versão anterior. Capa e
+// pré-textuais continuam placeholder no exportador, sem ler `metadados`
+// nenhum (dependem do passo 3.5.1); o `.docx` baixado reflete isso — só o
+// corpo (título de seção + parágrafos) vem do que foi digitado.
 export function BotaoExportar({ documentoId }: BotaoExportarProps) {
   const persistencia = usePersistencia();
   const [status, setStatus] = useState<Status>("pronto");
