@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./banner.jpg" alt="Combogó AURA" width="100%"/>
+</p>
+
 # AURA
 
 AURA é uma ferramenta de **formatação, revisão e organização** de trabalhos
