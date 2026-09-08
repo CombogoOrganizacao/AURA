@@ -1,11 +1,16 @@
 import {
+  Bold,
   Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
   FileText,
+  Heading1,
+  Heading2,
+  Heading3,
   Info,
+  Italic,
   PanelLeft,
   PanelRight,
   X,
@@ -26,6 +31,11 @@ const icones = {
   "file-text": FileText,
   "panel-left": PanelLeft,
   "panel-right": PanelRight,
+  bold: Bold,
+  italic: Italic,
+  "heading-1": Heading1,
+  "heading-2": Heading2,
+  "heading-3": Heading3,
 } satisfies Record<string, LucideIcon>;
 
 export type NomeIcone = keyof typeof icones;

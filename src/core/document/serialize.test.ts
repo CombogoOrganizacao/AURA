@@ -60,6 +60,55 @@ describe("fromDocumento / toDocumento", () => {
     expect(toDocumento(doc)).toEqual(secoes);
   });
 
+  it("faz o round-trip de texto com marca negrito e itálico (passo 2.5)", () => {
+    const secoes: Secao[] = [
+      {
+        id: "s1",
+        ordem: 0,
+        nivel: 1,
+        titulo: "Introdução",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              { type: "text", text: "normal " },
+              { type: "text", text: "negrito", marks: [{ type: "negrito" }] },
+              { type: "text", text: " " },
+              {
+                type: "text",
+                text: "negrito e itálico",
+                marks: [{ type: "negrito" }, { type: "italico" }],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    const doc = fromDocumento(secoes);
+    expect(toDocumento(doc)).toEqual(secoes);
+  });
+
+  it("recusa marca fora da lista fechada", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "secao",
+          attrs: { id: "s1", nivel: 1, titulo: "Introdução" },
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "sublinhado", marks: [{ type: "sublinhado" }] }],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(() => toDocumento(doc)).toThrow(/Marca ainda não suportada/);
+  });
+
   it("recusa nó de conteúdo fora da lista fechada", () => {
     const doc = {
       type: "doc",

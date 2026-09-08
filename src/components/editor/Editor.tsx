@@ -11,16 +11,22 @@ import { EstadoCarregando } from "@/components/ui/Estados";
 import { novaSecao } from "@/core/document/factory";
 import { fromDocumento, toDocumento } from "@/core/document/serialize";
 import type { Secao } from "@/core/document/types";
+import { Italico } from "@/core/editor/marks/italico";
+import { Negrito } from "@/core/editor/marks/negrito";
 import { Secao as SecaoNode } from "@/core/editor/nodes/section";
+
+import { Toolbar } from "./Toolbar";
 
 interface EditorProps {
   sections: Secao[];
   onSectionsChange: (secoes: Secao[]) => void;
 }
 
-// Editor com seções (passo 1.3.7 — antes só tinha parágrafo, 1.3.1). O nó
-// `secao` (1.3.2) entra aqui pela primeira vez; a lista fechada completa do
-// editor está em docs/schema-tiptap.md.
+// Editor com seções (passo 1.3.7) e formatação (passo 2.5: negrito, itálico,
+// nível de título — `Toolbar.tsx`). A lista fechada completa do editor está
+// em docs/schema-tiptap.md; "listas" (`lista`/`item_lista`) ainda não tem nó
+// aqui de propósito — fica pra Fase 3, junto com citação/figura/tabela
+// (`NoConteudo` só cobre parágrafo até lá, ver src/core/document/types.ts).
 //
 // Continua sem `@tiptap/starter-kit` de propósito — cada nó/marca entra por
 // decisão explícita, um passo do plano de cada vez.
@@ -40,7 +46,7 @@ export function Editor({ sections, onSectionsChange }: EditorProps) {
   );
 
   const editor = useEditor({
-    extensions: [TiptapDocument, TiptapParagraph, TiptapText, SecaoNode],
+    extensions: [TiptapDocument, TiptapParagraph, TiptapText, SecaoNode, Negrito, Italico],
     content: conteudoInicial,
     // Evita o nó ser renderizado no primeiro render do lado do servidor e
     // de novo no cliente — mismatch de hidratação clássico do TipTap com
@@ -66,5 +72,10 @@ export function Editor({ sections, onSectionsChange }: EditorProps) {
     return <EstadoCarregando texto="Carregando editor…" />;
   }
 
-  return <EditorContent editor={editor} />;
+  return (
+    <div className="flex flex-col">
+      <Toolbar editor={editor} />
+      <EditorContent editor={editor} />
+    </div>
+  );
 }

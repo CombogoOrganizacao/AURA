@@ -1,6 +1,20 @@
 import type { JSONContent } from "@tiptap/core";
 
-import type { NivelSecao, NoConteudo, NoParagrafo, NoTexto, Secao } from "./types";
+import type {
+  Marca,
+  NivelSecao,
+  NoConteudo,
+  NoParagrafo,
+  NoTexto,
+  Secao,
+  TipoMarca,
+} from "./types";
+
+const TIPOS_MARCA: readonly TipoMarca[] = ["negrito", "italico"];
+
+function ehTipoMarca(valor: string): valor is TipoMarca {
+  return (TIPOS_MARCA as readonly string[]).includes(valor);
+}
 
 // Costura entre a árvore do editor (TipTap/ProseMirror, aninhada — uma
 // subseção é um nó `secao` dentro do conteúdo da seção-mãe, ver
@@ -81,7 +95,19 @@ function paraNoTexto(no: JSONContent): NoTexto {
   if (no.type !== "text" || typeof no.text !== "string") {
     throw new Error(`Nó inline ainda não suportado dentro de parágrafo: "${no.type}"`);
   }
-  return { type: "text", text: no.text };
+  const marks = paraMarcas(no.marks);
+  return marks.length > 0
+    ? { type: "text", text: no.text, marks }
+    : { type: "text", text: no.text };
+}
+
+function paraMarcas(marks: JSONContent["marks"]): Marca[] {
+  return (marks ?? []).map((marca) => {
+    if (!ehTipoMarca(marca.type)) {
+      throw new Error(`Marca ainda não suportada: "${marca.type}"`);
+    }
+    return { type: marca.type };
+  });
 }
 
 // --- Canônico → TipTap -------------------------------------------------------
@@ -122,6 +148,12 @@ function deNoConteudo(no: NoConteudo): JSONContent {
   }
   return {
     type: "paragraph",
-    content: paragrafo.content.map((texto) => ({ type: "text", text: texto.text })),
+    content: paragrafo.content.map((texto) => ({
+      type: "text",
+      text: texto.text,
+      ...(texto.marks && texto.marks.length > 0
+        ? { marks: texto.marks.map((marca) => ({ type: marca.type })) }
+        : {}),
+    })),
   };
 }

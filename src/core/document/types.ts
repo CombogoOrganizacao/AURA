@@ -9,12 +9,22 @@
 
 export type NivelSecao = 1 | 2 | 3;
 
-// Texto inline dentro de um parágrafo. Sem `marks` ainda — negrito, itálico,
-// citação e sugestão (docs/schema-tiptap.md §5) entram quando cada marca
-// ganhar código próprio.
+// Lista fechada de marcas (docs/schema-tiptap.md §5) — cresce um membro de
+// cada vez, só quando a marca ganha código próprio em
+// src/core/editor/marks/. `negrito`/`italico` desde o passo 2.5; `citacao`
+// (referência ligada por `refId`) e `sugestao` (estado da IA) ainda não têm
+// nó/marca no editor — entram na Fase 4/6, quando ganharem código.
+export type TipoMarca = "negrito" | "italico";
+
+export interface Marca {
+  type: TipoMarca;
+}
+
+// Texto inline dentro de um parágrafo.
 export interface NoTexto {
   type: "text";
   text: string;
+  marks?: Marca[];
 }
 
 // `paragraph` e não `parágrafo`: o nó ainda é o `Paragraph` de fábrica do

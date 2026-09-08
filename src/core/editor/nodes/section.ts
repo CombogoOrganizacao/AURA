@@ -69,6 +69,21 @@ export const Secao = Node.create<SecaoOptions>({
   renderHTML({ HTMLAttributes }) {
     return ["section", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0];
   },
+
+  // Atalho de nível de título (passo 2.5) — `updateAttributes` é o comando
+  // de fábrica do TipTap, genérico por nome de nó; não precisou de comando
+  // próprio aqui. Muda o `nivel` da seção mais próxima da seleção, sem
+  // impedir salto de nível (quem confere isso é `validarDocumento()`, não o
+  // schema — já registrado em docs/schema-tiptap.md §4.1). `Toolbar.tsx`
+  // chama o mesmo `updateAttributes` no clique; o atalho existe
+  // independente do toolbar estar montado.
+  addKeyboardShortcuts() {
+    return {
+      "Mod-Alt-1": () => this.editor.commands.updateAttributes(this.name, { nivel: 1 }),
+      "Mod-Alt-2": () => this.editor.commands.updateAttributes(this.name, { nivel: 2 }),
+      "Mod-Alt-3": () => this.editor.commands.updateAttributes(this.name, { nivel: 3 }),
+    };
+  },
 });
 
 export default Secao;
