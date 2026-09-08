@@ -1,6 +1,17 @@
-// Página de amostra dos tokens visuais (passo 2.1). Não é tela da v1 — é a
-// referência viva do que está em app/globals.css e docs/design.md. Deve
-// continuar batendo com os dois sempre que um token mudar.
+// Página de amostra dos tokens visuais (passo 2.1) e dos componentes base
+// (passo 2.2). Não é tela da v1 — é a referência viva do que está em
+// app/globals.css, src/components/ui/ e docs/design.md. Deve continuar
+// batendo com os três sempre que um token ou componente mudar.
+
+import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Tabs } from "@/components/ui/Tabs";
+import { Tooltip } from "@/components/ui/Tooltip";
+
+import { DialogDemo } from "./DialogDemo";
+import { ToastDemo } from "./ToastDemo";
 
 // Classes escritas por extenso — não geradas de `bg-${nome}-${step}` — porque
 // o scanner do Tailwind só retém no build a variável de tema por trás de uma
@@ -106,6 +117,10 @@ const sombras = [
   { nome: "sheet", classe: "shadow-sheet" },
   { nome: "brand", classe: "shadow-brand" },
 ] as const;
+
+function Rotulo({ children }: { children: React.ReactNode }) {
+  return <span className="font-mono text-2xs text-subtle">{children}</span>;
+}
 
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
@@ -293,6 +308,113 @@ export default function DesignPage() {
               <span className="font-mono text-2xs text-subtle">{item.nome}</span>
             </div>
           ))}
+        </div>
+      </Secao>
+
+      <Secao titulo="Componentes — Button">
+        <p className="max-w-prose text-sm text-muted">
+          Hover escurece, nunca clareia. Foco visível usa o mesmo anel dos campos (
+          <code className="font-mono text-xs">shadow-focus-ring</code>) — testar com Tab, não só com
+          o mouse.
+        </p>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button variant="primary">Salvar</Button>
+            <Button variant="secondary">Aplicar correção</Button>
+            <Button variant="outline">Nova referência</Button>
+            <Button variant="ghost">Ignorar</Button>
+            <Button variant="quiet">Cancelar</Button>
+            <Button variant="danger">Excluir</Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button size="sm">Tamanho sm</Button>
+            <Button size="md">Tamanho md</Button>
+            <Button size="lg">Tamanho lg</Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button loading>Exportando…</Button>
+            <Button variant="primary" disabled>
+              Salvar
+            </Button>
+            <Button variant="outline" disabled>
+              Nova referência
+            </Button>
+          </div>
+        </div>
+      </Secao>
+
+      <Secao titulo="Componentes — Input (campo)">
+        <div className="flex max-w-sm flex-col gap-4">
+          <Input
+            label="Título do trabalho"
+            placeholder="Ex.: Impactos da IA na revisão por pares"
+          />
+          <Input
+            label="Palavras-chave"
+            placeholder="Ex.: ensino remoto, evasão"
+            hint="Separe por vírgula."
+          />
+          <Input label="Ano" defaultValue="20XX" error="Informe um ano com 4 dígitos." required />
+          <Input label="Instituição" defaultValue="Desabilitado" disabled />
+          <Input
+            label="Buscar norma"
+            placeholder="Ex.: NBR 6023"
+            icon={<Icon name="info" size={16} />}
+            suffix="ABNT"
+          />
+        </div>
+      </Secao>
+
+      <Secao titulo="Componentes — Select (seleção)">
+        <div className="flex max-w-sm flex-col gap-4">
+          <Select label="Norma" options={["ABNT NBR 14724", "APA 7", "Vancouver"]} />
+          <Select
+            label="Natureza do trabalho"
+            options={["TCC", "Dissertação", "Artigo"]}
+            error="Selecione uma opção."
+            required
+          />
+          <Select label="Idioma" options={["Português (Brasil)"]} disabled />
+        </div>
+      </Secao>
+
+      <Secao titulo="Componentes — Dialog (modal)">
+        <DialogDemo />
+      </Secao>
+
+      <Secao titulo="Componentes — Toast">
+        <ToastDemo />
+      </Secao>
+
+      <Secao titulo="Componentes — Tabs (aba)">
+        <div className="flex flex-col gap-6">
+          <Tabs
+            variant="underline"
+            items={[
+              { id: "normas", label: "Normas", count: 14 },
+              { id: "texto", label: "Texto", count: 3 },
+              { id: "referencias", label: "Referências" },
+            ]}
+          />
+          <Tabs
+            variant="segmented"
+            items={[
+              { id: "editor", label: "Editor" },
+              { id: "historico", label: "Histórico" },
+              { id: "bloqueada", label: "Em breve", disabled: true },
+            ]}
+          />
+        </div>
+      </Secao>
+
+      <Secao titulo="Componentes — Tooltip">
+        <div className="flex items-center gap-3 pb-6">
+          <Tooltip content="Aplicar a todas as ocorrências">
+            <Button variant="quiet" size="sm">
+              Passe o mouse ou dê Tab
+            </Button>
+          </Tooltip>
+          <Rotulo>role=&quot;tooltip&quot; associado por aria-describedby</Rotulo>
         </div>
       </Secao>
     </div>
