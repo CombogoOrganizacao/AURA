@@ -1,9 +1,10 @@
 // Página de amostra dos tokens visuais (passo 2.1) e dos componentes base
-// (passo 2.2). Não é tela da v1 — é a referência viva do que está em
+// (passos 2.2 e 2.3). Não é tela da v1 — é a referência viva do que está em
 // app/globals.css, src/components/ui/ e docs/design.md. Deve continuar
 // batendo com os três sempre que um token ou componente mudar.
 
 import { Button } from "@/components/ui/Button";
+import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/components/ui/Estados";
 import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -415,6 +416,36 @@ export default function DesignPage() {
             </Button>
           </Tooltip>
           <Rotulo>role=&quot;tooltip&quot; associado por aria-describedby</Rotulo>
+        </div>
+      </Secao>
+
+      <Secao titulo="Componentes — Estados (carregamento, vazio, erro)">
+        <p className="max-w-prose text-sm text-muted">
+          Substituem um painel ou tela inteira — não convivem com o conteúdo, ao contrário de um
+          aviso inline. Em uso real em <code className="font-mono text-xs">app/page.tsx</code>,{" "}
+          <code className="font-mono text-xs">DocumentoEditor.tsx</code> e{" "}
+          <code className="font-mono text-xs">Editor.tsx</code>.
+        </p>
+        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-ink-200 bg-ink-200 sm:grid-cols-3">
+          <div className="bg-card">
+            <EstadoCarregando />
+          </div>
+          <div className="bg-card">
+            <EstadoVazio
+              titulo="Nenhum documento ainda."
+              action={<Button size="sm">Criar novo documento</Button>}
+            />
+          </div>
+          <div className="bg-card">
+            <EstadoErro
+              titulo="Não foi possível carregar."
+              action={
+                <Button size="sm" variant="outline">
+                  Tentar de novo
+                </Button>
+              }
+            />
+          </div>
         </div>
       </Secao>
     </div>

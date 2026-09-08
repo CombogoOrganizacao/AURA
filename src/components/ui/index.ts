@@ -12,6 +12,8 @@ export type { SelectOption, SelectSize } from "./Select";
 
 export { Dialog } from "./Dialog";
 
+export { EstadoCarregando, EstadoErro, EstadoVazio } from "./Estados";
+
 export { Toast } from "./Toast";
 export type { ToastTone } from "./Toast";
 

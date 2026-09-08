@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { Editor } from "@/components/editor/Editor";
+import { Button } from "@/components/ui/Button";
+import { EstadoCarregando, EstadoErro } from "@/components/ui/Estados";
 import { novoDocumento } from "@/core/document/factory";
 import type { Documento, Metadados, Secao } from "@/core/document/types";
 import type { AdaptadorPersistencia } from "@/core/persistence/types";
@@ -33,25 +35,56 @@ const TEXTO_STATUS: Record<StatusAutosave, string> = {
 export function DocumentoEditor({ documentoId }: DocumentoEditorProps) {
   const persistencia = usePersistencia();
   const [documento, setDocumento] = useState<Documento | null>(null);
+  const [erroAoCarregar, setErroAoCarregar] = useState(false);
+  const [tentativa, setTentativa] = useState(0);
 
   useEffect(() => {
     if (!persistencia) return;
     let cancelado = false;
 
-    persistencia.carregarDocumento(documentoId).then((encontrado) => {
-      if (cancelado) return;
-      // Documento inexistente = primeira vez que este id é usado; nasce
-      // vazio, com o id que foi pedido (não o que novoDocumento() geraria).
-      setDocumento(encontrado ?? { ...novoDocumento(), id: documentoId });
-    });
+    persistencia
+      .carregarDocumento(documentoId)
+      .then((encontrado) => {
+        if (cancelado) return;
+        // Documento inexistente = primeira vez que este id é usado; nasce
+        // vazio, com o id que foi pedido (não o que novoDocumento() geraria).
+        setDocumento(encontrado ?? { ...novoDocumento(), id: documentoId });
+      })
+      .catch((erro: unknown) => {
+        if (cancelado) return;
+        console.error("Falha ao carregar documento:", erro);
+        setErroAoCarregar(true);
+      });
 
     return () => {
       cancelado = true;
     };
-  }, [persistencia, documentoId]);
+  }, [persistencia, documentoId, tentativa]);
+
+  // Reseta pro estado de carregamento aqui, não no efeito acima — mesmo
+  // motivo de `app/page.tsx`: setState síncrono dentro de efeito é o que o
+  // lint de hooks recusa.
+  function tentarDeNovo() {
+    setDocumento(null);
+    setErroAoCarregar(false);
+    setTentativa((n) => n + 1);
+  }
+
+  if (erroAoCarregar) {
+    return (
+      <EstadoErro
+        titulo="Não foi possível carregar este documento."
+        action={
+          <Button variant="outline" onClick={tentarDeNovo}>
+            Tentar de novo
+          </Button>
+        }
+      />
+    );
+  }
 
   if (!documento || !persistencia) {
-    return <p className="text-sm text-muted">Carregando documento…</p>;
+    return <EstadoCarregando texto="Carregando documento…" />;
   }
 
   // `Carregado` só monta quando `documento` já existe — é o que faz o "não

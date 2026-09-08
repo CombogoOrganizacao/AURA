@@ -7,6 +7,7 @@ import TiptapParagraph from "@tiptap/extension-paragraph";
 import TiptapText from "@tiptap/extension-text";
 import { EditorContent, useEditor } from "@tiptap/react";
 
+import { EstadoCarregando } from "@/components/ui/Estados";
 import { novaSecao } from "@/core/document/factory";
 import { fromDocumento, toDocumento } from "@/core/document/serialize";
 import type { Secao } from "@/core/document/types";
@@ -56,6 +57,14 @@ export function Editor({ sections, onSectionsChange }: EditorProps) {
       }
     },
   });
+
+  // `immediatelyRender: false` (acima) devolve `editor` como `null` no
+  // primeiro render do cliente de propósito (evita o mismatch de
+  // hidratação) — sem isso, essa janela mostrava a tela em branco por um
+  // instante em vez de um estado de carregamento.
+  if (!editor) {
+    return <EstadoCarregando texto="Carregando editor…" />;
+  }
 
   return <EditorContent editor={editor} />;
 }

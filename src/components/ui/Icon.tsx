@@ -1,15 +1,16 @@
-import { Check, ChevronDown, CircleAlert, Info, X } from "lucide-react";
+import { Check, ChevronDown, CircleAlert, FileText, Info, X } from "lucide-react";
 import type { LucideIcon, LucideProps } from "lucide-react";
 
 // Ponto único de acesso a ícone (regra da skill `aura-design`): nenhum outro
-// arquivo do sistema desenha SVG à mão. Só os glifos que os componentes de
-// 2.2 realmente usam entram no mapa — nada de importar o pacote inteiro.
+// arquivo do sistema desenha SVG à mão. Só os glifos que algum componente
+// realmente usa entram no mapa — nada de importar o pacote inteiro.
 const icones = {
   "chevron-down": ChevronDown,
   x: X,
   info: Info,
   check: Check,
   "circle-alert": CircleAlert,
+  "file-text": FileText,
 } satisfies Record<string, LucideIcon>;
 
 export type NomeIcone = keyof typeof icones;
