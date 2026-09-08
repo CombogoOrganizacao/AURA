@@ -1,8 +1,9 @@
 // Página de amostra dos tokens visuais (passo 2.1) e dos componentes base
-// (passos 2.2 e 2.3). Não é tela da v1 — é a referência viva do que está em
+// (passos 2.2 a 2.4). Não é tela da v1 — é a referência viva do que está em
 // app/globals.css, src/components/ui/ e docs/design.md. Deve continuar
 // batendo com os três sempre que um token ou componente mudar.
 
+import { LayoutEdicao } from "@/components/editor/LayoutEdicao";
 import { Button } from "@/components/ui/Button";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/components/ui/Estados";
 import { Icon } from "@/components/ui/Icon";
@@ -13,6 +14,8 @@ import { Tooltip } from "@/components/ui/Tooltip";
 
 import { DialogDemo } from "./DialogDemo";
 import { ToastDemo } from "./ToastDemo";
+
+const ITENS_AMOSTRA_LONGA = Array.from({ length: 24 }, (_, i) => i + 1);
 
 // Classes escritas por extenso — não geradas de `bg-${nome}-${step}` — porque
 // o scanner do Tailwind só retém no build a variável de tema por trás de uma
@@ -446,6 +449,61 @@ export default function DesignPage() {
               }
             />
           </div>
+        </div>
+      </Secao>
+
+      <Secao titulo="Componentes — Layout de edição">
+        <p className="max-w-prose text-sm text-muted">
+          Casca de três colunas — arraste a borda entre painéis (ou foque nela e use as setas do
+          teclado) e recarregue a página: a largura escolhida persiste. O botão no topo colapsa cada
+          painel lateral. Só o centro rola; role a lista de amostra em cada coluna e note que as
+          outras duas não se movem. Sem conteúdo de verdade ainda — seções, IA, histórico e
+          conformidade são da Fase 3+; aqui só existe a casca (
+          <code className="font-mono text-xs">LayoutEdicao.tsx</code>).
+        </p>
+        <div className="flex h-[420px] overflow-hidden rounded-lg border border-ink-200">
+          <LayoutEdicao
+            sidebar={
+              <>
+                <div className="shrink-0 border-b border-[var(--border-subtle)] px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body">
+                  Seções (amostra)
+                </div>
+                <div className="flex-1 overflow-auto px-2 py-2">
+                  {ITENS_AMOSTRA_LONGA.map((n) => (
+                    <div
+                      key={n}
+                      className="rounded-sm px-2 py-1.5 font-sans text-sm text-body hover:bg-bordo-50"
+                    >
+                      {n}. Seção de amostra
+                    </div>
+                  ))}
+                </div>
+              </>
+            }
+            inspetor={
+              <>
+                <div className="shrink-0 border-b border-[var(--border-subtle)] px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body">
+                  Inspetor (amostra)
+                </div>
+                <div className="flex-1 overflow-auto px-4 py-2">
+                  {ITENS_AMOSTRA_LONGA.map((n) => (
+                    <p key={n} className="py-1.5 font-sans text-xs text-muted">
+                      Item de amostra {n}
+                    </p>
+                  ))}
+                </div>
+              </>
+            }
+          >
+            <div className="flex flex-col gap-3 p-6">
+              {ITENS_AMOSTRA_LONGA.map((n) => (
+                <p key={n} className="font-serif text-sm text-body">
+                  Parágrafo de amostra {n} — só pra o centro ter altura suficiente pra rolar por
+                  conta própria, independente dos painéis laterais.
+                </p>
+              ))}
+            </div>
+          </LayoutEdicao>
         </div>
       </Secao>
     </div>

@@ -1,4 +1,15 @@
-import { Check, ChevronDown, CircleAlert, FileText, Info, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CircleAlert,
+  FileText,
+  Info,
+  PanelLeft,
+  PanelRight,
+  X,
+} from "lucide-react";
 import type { LucideIcon, LucideProps } from "lucide-react";
 
 // Ponto único de acesso a ícone (regra da skill `aura-design`): nenhum outro
@@ -6,11 +17,15 @@ import type { LucideIcon, LucideProps } from "lucide-react";
 // realmente usa entram no mapa — nada de importar o pacote inteiro.
 const icones = {
   "chevron-down": ChevronDown,
+  "chevron-left": ChevronLeft,
+  "chevron-right": ChevronRight,
   x: X,
   info: Info,
   check: Check,
   "circle-alert": CircleAlert,
   "file-text": FileText,
+  "panel-left": PanelLeft,
+  "panel-right": PanelRight,
 } satisfies Record<string, LucideIcon>;
 
 export type NomeIcone = keyof typeof icones;
