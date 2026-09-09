@@ -3,6 +3,7 @@
 // app/globals.css, src/components/ui/ e docs/design.md. Deve continuar
 // batendo com os três sempre que um token ou componente mudar.
 
+import { AppTopBar } from "@/components/app/AppTopBar";
 import { Brand } from "@/components/app/Brand";
 import { LayoutEdicao } from "@/components/editor/LayoutEdicao";
 import { Badge } from "@/components/ui/Badge";
@@ -736,6 +737,46 @@ export default function DesignPage() {
               as duas fontes que a NBR 14724 admite, escolhidas pelo usuário na barra do editor.
             </p>
           </PaperSheet>
+        </div>
+      </Secao>
+
+      <Secao titulo="Componentes — AppTopBar (barra superior)">
+        <p className="max-w-prose text-sm text-muted">
+          Uma barra, três modos. A marca aparece nos três; cada modo troca o que vem depois dela —
+          navegação pública, abas internas ou a barra de trabalho do editor. Teste o menu do usuário
+          (<code className="font-mono text-xs">UserChip</code>) com o teclado:{" "}
+          <kbd className="font-mono text-2xs">Tab</kbd>,{" "}
+          <kbd className="font-mono text-2xs">Enter</kbd> e{" "}
+          <kbd className="font-mono text-2xs">Esc</kbd> fecham e reabrem.
+        </p>
+        <div className="flex flex-col gap-4">
+          <div>
+            <Rotulo>mode=&quot;guest&quot;</Rotulo>
+            <div className="mt-1.5 overflow-hidden rounded-lg border border-ink-200">
+              <AppTopBar mode="guest" />
+            </div>
+          </div>
+          <div>
+            <Rotulo>mode=&quot;app&quot;</Rotulo>
+            <div className="mt-1.5 overflow-hidden rounded-lg border border-ink-200">
+              <AppTopBar mode="app" />
+            </div>
+          </div>
+          <div>
+            <Rotulo>mode=&quot;editor&quot;</Rotulo>
+            <div className="mt-1.5 overflow-hidden rounded-lg border border-ink-200">
+              <AppTopBar
+                mode="editor"
+                docTitle="Impactos da IA na revisão por pares"
+                statusAutosave="Salvo"
+                acoes={
+                  <Button size="sm" variant="outline" icon={<Icon name="file-down" size={15} />}>
+                    Exportar .docx
+                  </Button>
+                }
+              />
+            </div>
+          </div>
         </div>
       </Secao>
 

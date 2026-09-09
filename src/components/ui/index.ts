@@ -21,6 +21,8 @@ export type { IconButtonSize, IconButtonVariant } from "./IconButton";
 export { Input } from "./Input";
 export type { InputSize } from "./Input";
 
+export { LinkButton } from "./LinkButton";
+
 export { PaperSheet } from "./PaperSheet";
 export type { FonteDocumento } from "./PaperSheet";
 
