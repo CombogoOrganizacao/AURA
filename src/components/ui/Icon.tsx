@@ -26,6 +26,7 @@ import {
   ListOrdered,
   Loader,
   LogOut,
+  Minus,
   PanelLeft,
   PanelRight,
   Plus,
@@ -81,6 +82,7 @@ const icones = {
   // Estado e feedback
   info: Info,
   check: Check,
+  minus: Minus,
   "check-check": CheckCheck,
   "circle-alert": CircleAlert,
   "circle-check-big": CircleCheckBig,

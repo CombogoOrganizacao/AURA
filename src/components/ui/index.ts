@@ -1,3 +1,6 @@
+export { Alert } from "./Alert";
+export type { AlertTone } from "./Alert";
+
 export { Badge } from "./Badge";
 export type { BadgeTone } from "./Badge";
 
@@ -6,6 +9,8 @@ export type { ButtonSize, ButtonVariant } from "./Button";
 
 export { Card } from "./Card";
 export type { CardTone } from "./Card";
+
+export { Checkbox } from "./Checkbox";
 
 export { Icon, NOMES_ICONES } from "./Icon";
 export type { NomeIcone } from "./Icon";
@@ -16,8 +21,17 @@ export type { IconButtonSize, IconButtonVariant } from "./IconButton";
 export { Input } from "./Input";
 export type { InputSize } from "./Input";
 
+export { ProgressBar } from "./ProgressBar";
+export type { ProgressBarSize, ProgressBarTone } from "./ProgressBar";
+
+export { Radio } from "./Radio";
+
 export { Select } from "./Select";
 export type { SelectOption, SelectSize } from "./Select";
+
+export { Switch } from "./Switch";
+
+export { Textarea } from "./Textarea";
 
 export { Dialog } from "./Dialog";
 

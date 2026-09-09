@@ -9,14 +9,17 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/components/ui/Estados";
+import { Alert } from "@/components/ui/Alert";
 import { Icon, NOMES_ICONES } from "@/components/ui/Icon";
 import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
 import { Tooltip } from "@/components/ui/Tooltip";
 
 import { DialogDemo } from "./DialogDemo";
+import { AlertDismissDemo, CheckboxDemo, RadioDemo, SwitchDemo, TextareaDemo } from "./FormsDemo";
 import { TagDemo } from "./TagDemo";
 import { ToastDemo } from "./ToastDemo";
 
@@ -607,6 +610,83 @@ export default function DesignPage() {
           <IconButton name="undo-2" label="Desfazer" size="sm" />
           <IconButton name="undo-2" label="Desfazer" size="md" />
           <IconButton name="undo-2" label="Desfazer" size="lg" />
+        </div>
+      </Secao>
+
+      <Secao titulo="Componentes — Textarea (campo multilinha)">
+        <p className="max-w-prose text-sm text-muted">
+          Resumo, comentário, parágrafo colado. Usa a serifada do documento (
+          <code className="font-mono text-xs">font-serif</code>) — o texto digitado é texto
+          acadêmico, não rótulo de interface.
+        </p>
+        <TextareaDemo />
+      </Secao>
+
+      <Secao titulo="Componentes — Checkbox">
+        <p className="max-w-prose text-sm text-muted">
+          Marca creme sobre bordô, 18px. Sem <code className="font-mono text-xs">onChange</code>, o
+          campo alterna sozinho — controlado só quando alguém escuta a mudança.
+        </p>
+        <CheckboxDemo />
+      </Secao>
+
+      <Secao titulo="Componentes — Radio">
+        <p className="max-w-prose text-sm text-muted">
+          Escolha única num grupo (mesmo <code className="font-mono text-xs">name</code>). Sempre
+          controlado — ao contrário do Checkbox, um grupo sem handler não teria como trocar de
+          opção.
+        </p>
+        <RadioDemo />
+      </Secao>
+
+      <Secao titulo="Componentes — Switch">
+        <p className="max-w-prose text-sm text-muted">
+          Liga/desliga imediato. O pino vira creme quando ligado — o único lugar do sistema em que o
+          creme marca &ldquo;ativado&rdquo; fora de botão secundário.
+        </p>
+        <SwitchDemo />
+      </Secao>
+
+      <Secao titulo="Componentes — Alert (aviso fixo)">
+        <p className="max-w-prose text-sm text-muted">
+          Fixo no fluxo da página — pendência de norma, resultado de exportação. Ícone fixo por tom,
+          fundo suave + borda inteira da mesma família. Para confirmação passageira o componente é{" "}
+          <code className="font-mono text-xs">Toast</code>.
+        </p>
+        <div className="flex flex-col gap-3">
+          <Alert
+            tone="warning"
+            title="3 referências sem chamada no texto"
+            action={
+              <Button size="sm" variant="outline">
+                Revisar referências
+              </Button>
+            }
+          >
+            A NBR 6023 exige que toda referência listada seja citada ao menos uma vez.
+          </Alert>
+          <Alert tone="success" title="Conforme">
+            Todas as pendências desta seção foram resolvidas.
+          </Alert>
+          <Alert tone="danger" title="Falha ao exportar .docx">
+            Tente novamente em alguns segundos.
+          </Alert>
+          <Alert tone="brand" title="NBR 14724">
+            Estrutura do trabalho acadêmico — capa, elementos pré-textuais, corpo e pós-textuais.
+          </Alert>
+          <AlertDismissDemo />
+        </div>
+      </Secao>
+
+      <Secao titulo="Componentes — ProgressBar">
+        <p className="max-w-prose text-sm text-muted">
+          Progresso determinado — índice de conformidade, análise em curso. Números sempre em
+          monoespaçada.
+        </p>
+        <div className="flex max-w-sm flex-col gap-4">
+          <ProgressBar label="Conformidade ABNT" valueLabel="86%" value={86} tone="success" />
+          <ProgressBar label="Referências revisadas" valueLabel="12/14" value={12} max={14} />
+          <ProgressBar label="Envio" valueLabel="42%" value={42} tone="accent" size="sm" />
         </div>
       </Secao>
 
