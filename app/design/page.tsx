@@ -5,15 +5,19 @@
 
 import { Brand } from "@/components/app/Brand";
 import { LayoutEdicao } from "@/components/editor/LayoutEdicao";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/components/ui/Estados";
 import { Icon, NOMES_ICONES } from "@/components/ui/Icon";
+import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
 import { Tooltip } from "@/components/ui/Tooltip";
 
 import { DialogDemo } from "./DialogDemo";
+import { TagDemo } from "./TagDemo";
 import { ToastDemo } from "./ToastDemo";
 
 const ITENS_AMOSTRA_LONGA = Array.from({ length: 24 }, (_, i) => i + 1);
@@ -486,6 +490,123 @@ export default function DesignPage() {
               <span className="truncate font-mono text-2xs text-subtle">{nome}</span>
             </div>
           ))}
+        </div>
+      </Secao>
+
+      <Secao titulo="Componentes — Card (cartão)">
+        <p className="max-w-prose text-sm text-muted">
+          A superfície em que painel, item de lista e bloco de conteúdo se apoiam. Raio 10px, borda
+          1px cinza-quente, sombra sutil. <strong>Nunca</strong> borda colorida só à esquerda — é
+          uma das duas proibições explícitas do sistema. Aviso com cor de estado é papel do{" "}
+          <code className="font-mono text-xs">Alert</code>.
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <Card
+            title="Normas em uso"
+            subtitle="NBR 14724 · estrutura do trabalho"
+            actions={
+              <Button size="sm" variant="ghost">
+                Ver
+              </Button>
+            }
+            footer="Atualizado com a norma vigente."
+          >
+            <p className="text-sm text-muted">
+              Tom <code className="font-mono text-xs">default</code>, com cabeçalho, ações e rodapé.
+            </p>
+          </Card>
+          <Card tone="brand">
+            <p className="text-sm text-body">
+              Tom <code className="font-mono text-xs">brand</code> — bordô 50.
+            </p>
+          </Card>
+          <Card tone="accent">
+            <p className="text-sm text-body">
+              Tom <code className="font-mono text-xs">accent</code> — creme 100.
+            </p>
+          </Card>
+          <Card tone="sunken" interactive>
+            <p className="text-sm text-body">
+              Tom <code className="font-mono text-xs">sunken</code> com{" "}
+              <code className="font-mono text-xs">interactive</code>: passe o mouse e a sombra sobe.
+            </p>
+          </Card>
+        </div>
+      </Secao>
+
+      <Secao titulo="Componentes — Badge (etiqueta de estado)">
+        <p className="max-w-prose text-sm text-muted">
+          Só leitura, uma ou duas palavras em sentence case. Não é clicável — chip selecionável ou
+          removível é <code className="font-mono text-xs">Tag</code>.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge>Rascunho</Badge>
+          <Badge tone="brand">Gratuito, sempre</Badge>
+          <Badge tone="accent">Em revisão</Badge>
+          <Badge tone="success" dot>
+            Conforme
+          </Badge>
+          <Badge tone="warning" dot>
+            3 pendências
+          </Badge>
+          <Badge tone="danger" dot>
+            Fora da norma
+          </Badge>
+          <Badge tone="info">Desativado</Badge>
+        </div>
+        <Rotulo>Fundo cheio</Rotulo>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge solid>Rascunho</Badge>
+          <Badge tone="brand" solid>
+            Gratuito, sempre
+          </Badge>
+          <Badge tone="accent" solid>
+            Em revisão
+          </Badge>
+          <Badge tone="success" solid dot>
+            Conforme
+          </Badge>
+          <Badge tone="warning" solid>
+            3 pendências
+          </Badge>
+          <Badge tone="danger" solid>
+            Fora da norma
+          </Badge>
+          <Badge tone="info" solid>
+            Desativado
+          </Badge>
+        </div>
+      </Secao>
+
+      <Secao titulo="Componentes — Tag (chip)">
+        <p className="max-w-prose text-sm text-muted">
+          Filtros de revisão, palavras-chave, coautores. Mais quadrado que o Badge — raio 4px,
+          altura 26px, porque é um controle. Selecionado é bordô sólido.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <TagDemo />
+        </div>
+      </Secao>
+
+      <Secao titulo="Componentes — IconButton (botão de ícone)">
+        <p className="max-w-prose text-sm text-muted">
+          Quadrado, só ícone, para barra de ferramentas e cabeçalho de painel.{" "}
+          <code className="font-mono text-xs">label</code> é obrigatório: vira o{" "}
+          <code className="font-mono text-xs">aria-label</code> e o título de hover.
+        </p>
+        <Rotulo>Variantes (md)</Rotulo>
+        <div className="flex flex-wrap items-center gap-2">
+          <IconButton name="bold" label="Negrito" />
+          <IconButton name="italic" label="Itálico" variant="outline" />
+          <IconButton name="plus" label="Nova seção" variant="solid" />
+          <IconButton name="wand-sparkles" label="Aplicar formatação ABNT" active />
+          <IconButton name="table" label="Tabela" disabled />
+        </div>
+        <Rotulo>Tamanhos</Rotulo>
+        <div className="flex flex-wrap items-center gap-2">
+          <IconButton name="undo-2" label="Desfazer" size="sm" />
+          <IconButton name="undo-2" label="Desfazer" size="md" />
+          <IconButton name="undo-2" label="Desfazer" size="lg" />
         </div>
       </Secao>
 

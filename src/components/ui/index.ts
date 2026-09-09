@@ -1,8 +1,17 @@
+export { Badge } from "./Badge";
+export type { BadgeTone } from "./Badge";
+
 export { Button } from "./Button";
 export type { ButtonSize, ButtonVariant } from "./Button";
 
-export { Icon } from "./Icon";
+export { Card } from "./Card";
+export type { CardTone } from "./Card";
+
+export { Icon, NOMES_ICONES } from "./Icon";
 export type { NomeIcone } from "./Icon";
+
+export { IconButton } from "./IconButton";
+export type { IconButtonSize, IconButtonVariant } from "./IconButton";
 
 export { Input } from "./Input";
 export type { InputSize } from "./Input";
@@ -22,3 +31,5 @@ export type { TabItem, TabsVariant } from "./Tabs";
 
 export { Tooltip } from "./Tooltip";
 export type { TooltipPlacement } from "./Tooltip";
+
+export { Tag } from "./Tag";
