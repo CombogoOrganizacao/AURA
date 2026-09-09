@@ -8,14 +8,27 @@ import JSZip from "jszip";
 // recarregamento de página e sai no .docx exportado? Cobre título
 // (metadados, autosave desde 1.3.6) e corpo (editor, autosave desde 1.3.7)
 // juntos, na mesma sessão — é o cenário de corrida que 1.3.7 corrigiu.
+//
+// Ajustado no passo 2B.13: `/` deixou de ser a lista de documentos (2B.6
+// tomou essa rota para a landing) — o botão "Criar novo documento" agora
+// vive em `/documentos` (2B.8). O seletor do status de autosave também
+// mudou: o parágrafo solto virou um `<span role="status">` dentro do
+// `AppTopBar` (2B.10) — `p[role="status"]` nunca mais bate; `span` é o que
+// distingue esse status do `<div role="status">` do banner de ambiente
+// interno, que continua na página. E "Exportar .docx" passou a ter duas
+// instâncias (topbar + rodapé do inspetor, 2B.11) — escopado à barra
+// superior (`getByRole("banner")`) pra continuar único.
 test("criar, digitar, recarregar, persistir e exportar", async ({ page }) => {
   const titulo = "Trabalho de teste da fatia vertical";
   const corpo = "Texto digitado no corpo do editor para o passo 1.4.5.";
 
-  await page.goto("/");
-  await page.getByRole("button", { name: "Criar novo documento" }).click();
+  await page.goto("/documentos");
+  await page.getByRole("button", { name: "Novo documento" }).click();
   await page.waitForURL(/\/documento\//);
 
+  // "Dados do trabalho" é um `<details>` recolhido por padrão desde o
+  // 2B.10 — o campo "Título" só fica visível depois de abri-lo.
+  await page.getByText("Dados do trabalho").click();
   await page.getByLabel("Título").fill(titulo);
 
   // Editor sem toolbar nem data-testid próprio ainda — o único elemento
@@ -25,12 +38,15 @@ test("criar, digitar, recarregar, persistir e exportar", async ({ page }) => {
   await editor.pressSequentially(corpo);
 
   // Debounce do autosave é 4s (src/lib/useAutosave.ts) — espera o status
-  // real, não um sleep fixo. `p[role="status"]` porque a página também tem
-  // um banner de ambiente com o mesmo papel ARIA.
-  const statusAutosave = page.locator('p[role="status"]');
+  // real, não um sleep fixo.
+  const statusAutosave = page.locator('span[role="status"]');
   await expect(statusAutosave).toHaveText("Salvo", { timeout: 10_000 });
 
   await page.reload();
+
+  // `<details>` não persiste `open` entre recarregamentos — reabre antes
+  // de checar o campo.
+  await page.getByText("Dados do trabalho").click();
 
   // Título e corpo persistem JUNTOS — é a garantia que 1.3.7 introduziu
   // (antes, dois donos de `Documento` podiam apagar a mudança um do outro).
@@ -38,7 +54,7 @@ test("criar, digitar, recarregar, persistir e exportar", async ({ page }) => {
   await expect(editor).toContainText(corpo);
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Exportar .docx" }).click();
+  await page.getByRole("banner").getByRole("button", { name: "Exportar .docx" }).click();
   const download = await downloadPromise;
 
   const caminho = await download.path();
