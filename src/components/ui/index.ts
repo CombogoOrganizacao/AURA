@@ -21,10 +21,16 @@ export type { IconButtonSize, IconButtonVariant } from "./IconButton";
 export { Input } from "./Input";
 export type { InputSize } from "./Input";
 
+export { PaperSheet } from "./PaperSheet";
+export type { FonteDocumento } from "./PaperSheet";
+
 export { ProgressBar } from "./ProgressBar";
 export type { ProgressBarSize, ProgressBarTone } from "./ProgressBar";
 
 export { Radio } from "./Radio";
+
+export { RevisionMark } from "./RevisionMark";
+export type { RevisionMarkKind } from "./RevisionMark";
 
 export { Select } from "./Select";
 export type { SelectOption, SelectSize } from "./Select";

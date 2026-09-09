@@ -13,7 +13,9 @@ import { Alert } from "@/components/ui/Alert";
 import { Icon, NOMES_ICONES } from "@/components/ui/Icon";
 import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
+import { PaperSheet } from "@/components/ui/PaperSheet";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { RevisionMark } from "@/components/ui/RevisionMark";
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -687,6 +689,53 @@ export default function DesignPage() {
           <ProgressBar label="Conformidade ABNT" valueLabel="86%" value={86} tone="success" />
           <ProgressBar label="Referências revisadas" valueLabel="12/14" value={12} max={14} />
           <ProgressBar label="Envio" valueLabel="42%" value={42} tone="accent" size="sm" />
+        </div>
+      </Secao>
+
+      <Secao titulo="Componentes — PaperSheet (folha A4) e RevisionMark">
+        <p className="max-w-prose text-sm text-muted">
+          A folha em que todo editor, prévia e mock de exportação vive. Proporção 210×297 real,
+          margens da NBR 14724 (30/30/20/20 mm) e texto na escala de documento (pt) — nunca px
+          dentro da folha. <code className="font-mono text-xs">showMargins</code> desenha a guia
+          tracejada da área escrita.
+        </p>
+        <div className="flex flex-wrap items-start gap-6">
+          <PaperSheet width="330px" pageNumber={21} showMargins font="times">
+            <h1
+              className="m-0 mb-3 text-[12px] font-bold uppercase"
+              style={{ color: "var(--doc-ink)" }}
+            >
+              3 Metodologia
+            </h1>
+            <p
+              className="m-0 text-[10.5px] leading-[1.5]"
+              style={{ textIndent: "1.25cm", color: "var(--doc-ink)" }}
+            >
+              A pesquisa <RevisionMark kind="delete">foi feita</RevisionMark>{" "}
+              <RevisionMark kind="insert">realizou-se</RevisionMark> em três etapas sucessivas{" "}
+              <RevisionMark kind="citation" note="NBR 10520: falta a página">
+                (SILVA, 2021)
+              </RevisionMark>
+              . O corpus reuniu{" "}
+              <RevisionMark kind="comment" note="Especificar o critério de seleção">
+                documentos diversos
+              </RevisionMark>{" "}
+              coletados entre 2019 e 2023.{" "}
+              <RevisionMark kind="norm" note="NBR 14724: numeração progressiva">
+                Referencial teórico
+              </RevisionMark>{" "}
+              apoia-se em três eixos complementares.
+            </p>
+          </PaperSheet>
+          <PaperSheet width="330px" pageNumber={22} font="arial">
+            <p
+              className="m-0 text-[10.5px] leading-[1.5]"
+              style={{ textIndent: "1.25cm", color: "var(--doc-ink)" }}
+            >
+              A mesma folha com <code className="font-mono text-2xs">font=&quot;arial&quot;</code> —
+              as duas fontes que a NBR 14724 admite, escolhidas pelo usuário na barra do editor.
+            </p>
+          </PaperSheet>
         </div>
       </Secao>
 
