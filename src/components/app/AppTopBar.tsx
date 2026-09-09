@@ -63,7 +63,7 @@ export function AppTopBar({ mode, docTitle, statusAutosave, acoes }: AppTopBarPr
           >
             Entrar
           </Link>
-          <LinkButton href="/cadastrar" size="md">
+          <LinkButton href="/documentos" size="md">
             Comece grátis
           </LinkButton>
         </>
