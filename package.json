@@ -16,6 +16,7 @@
   "dependencies": {
     "@tiptap/core": "^3.31.2",
     "@tiptap/extension-document": "^3.31.2",
+    "@tiptap/extension-history": "3.31.2",
     "@tiptap/extension-paragraph": "^3.31.2",
     "@tiptap/extension-text": "^3.31.2",
     "@tiptap/pm": "^3.31.2",

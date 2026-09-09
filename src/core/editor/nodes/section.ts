@@ -42,6 +42,33 @@ export const Secao = Node.create<SecaoOptions>({
       id: {
         // Gerado por quem cria a seção (comando/UI), nunca aqui: um default
         // estático faria toda seção nova nascer com o mesmo id.
+        //
+        // **Tentei trocar isto por `isRequired: true` sem `default`** no
+        // passo 2B.12, esperando que o próprio ProseMirror recusasse criar
+        // uma seção sem id. Duas surpresas, as duas achadas ao vivo (uma
+        // via Vitest, não via navegador):
+        // (1) não funciona pro problema que motivou a mudança —
+        // `NodeType.create()`/`createAndFill()` chamados **sem nenhum
+        // argumento** tratam `attrs` como `null`, não `undefined`, e a
+        // checagem de atributo obrigatório do ProseMirror só dispara em
+        // `undefined`. É exatamente essa chamada sem argumento que o
+        // ProseMirror usa internamente pra preencher conteúdo obrigatório
+        // — a checagem nunca roda no caso que importa.
+        // (2) e ainda quebra a construção do schema: com `content:
+        // "secao+"` em `documento.ts`, o ProseMirror verifica se `secao` é
+        // "generatable" (consegue se criar só com defaults) — sem
+        // `default` em `id`, não consegue, e `new Schema(...)` lança
+        // "Only non-generatable nodes (secao) in a required position"
+        // antes de qualquer editor existir. Pego por
+        // `documento.test.ts`, não pelo navegador.
+        //
+        // A defesa real é o `filterTransaction` em `documento.ts`: ele
+        // inspeciona o **resultado** de cada transação e recusa qualquer
+        // uma que deixaria uma seção sem id, independente de como esse
+        // id ausente teria surgido. `default: null` aqui só precisa
+        // continuar existindo pra manter `secao` "generatable" — o
+        // schema pode construir um filler, mas o guarda garante que esse
+        // filler nunca chega a ser aplicado ao estado do editor.
         default: null,
         parseHTML: (element) => element.getAttribute("data-id"),
         renderHTML: (attributes) => ({ "data-id": attributes.id }),

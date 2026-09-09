@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import TiptapDocument from "@tiptap/extension-document";
+import TiptapHistory from "@tiptap/extension-history";
 import TiptapParagraph from "@tiptap/extension-paragraph";
 import TiptapText from "@tiptap/extension-text";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -14,6 +14,7 @@ import { fromDocumento, toDocumento } from "@/core/document/serialize";
 import type { Secao } from "@/core/document/types";
 import { Italico } from "@/core/editor/marks/italico";
 import { Negrito } from "@/core/editor/marks/negrito";
+import { Documento as DocumentoNode } from "@/core/editor/nodes/documento";
 import { Secao as SecaoNode } from "@/core/editor/nodes/section";
 
 import { Toolbar } from "./Toolbar";
@@ -47,7 +48,20 @@ export function Editor({ sections, onSectionsChange }: EditorProps) {
   );
 
   const editor = useEditor({
-    extensions: [TiptapDocument, TiptapParagraph, TiptapText, SecaoNode, Negrito, Italico],
+    extensions: [
+      DocumentoNode,
+      TiptapParagraph,
+      TiptapText,
+      SecaoNode,
+      Negrito,
+      Italico,
+      // Desfazer/refazer (passo 2B.12) não vem de graça: as extensões
+      // "core" do TipTap v3 (Editable, Commands, Keymap...) não incluem
+      // histórico — é um pacote separado desde sempre, agora
+      // `@tiptap/extension-history`. Sem isto, `editor.commands.undo()`
+      // simplesmente não existe.
+      TiptapHistory,
+    ],
     content: conteudoInicial,
     // Evita o nó ser renderizado no primeiro render do lado do servidor e
     // de novo no cliente — mismatch de hidratação clássico do TipTap com
