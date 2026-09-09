@@ -6,9 +6,10 @@ import { AppTopBar } from "@/components/app/AppTopBar";
 import { BotaoExportar } from "@/components/editor/BotaoExportar";
 import { Editor } from "@/components/editor/Editor";
 import { LayoutEdicao } from "@/components/editor/LayoutEdicao";
+import { PainelInspetor } from "@/components/editor/PainelInspetor";
 import { PainelSecoes } from "@/components/editor/PainelSecoes";
 import { Button } from "@/components/ui/Button";
-import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/components/ui/Estados";
+import { EstadoCarregando, EstadoErro } from "@/components/ui/Estados";
 import { novoDocumento } from "@/core/document/factory";
 import type { Documento, Metadados, Secao } from "@/core/document/types";
 import type { AdaptadorPersistencia } from "@/core/persistence/types";
@@ -161,12 +162,7 @@ function Carregado({
             <PainelSecoes sections={documento.sections} />
           </div>
         }
-        inspetor={
-          <EstadoVazio
-            titulo="Inspetor"
-            descricao="IA, histórico e conformidade chegam no próximo passo."
-          />
-        }
+        inspetor={<PainelInspetor documentoId={documentoId} />}
       >
         <Editor sections={documento.sections} onSectionsChange={atualizarSecoes} />
       </LayoutEdicao>
