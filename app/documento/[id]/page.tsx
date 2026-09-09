@@ -1,6 +1,3 @@
-import Link from "next/link";
-
-import { BotaoExportar } from "@/components/editor/BotaoExportar";
 import { DocumentoEditor } from "@/components/documento/DocumentoEditor";
 
 // Tela de edição (passo 1.3.5). Servidor só resolve o `id` da rota; quem faz
@@ -10,19 +7,13 @@ import { DocumentoEditor } from "@/components/documento/DocumentoEditor";
 // editor. Antes eram dois donos independentes (FormMetadados e Editor),
 // cada um com sua cópia do `Documento`; o autosave de um apagava em
 // silêncio a mudança mais recente do outro.
+//
+// A partir do passo 2B.10, esta página é só a fronteira Server → Client: o
+// "← Meus trabalhos" e o "Exportar .docx" que viviam aqui, soltos, agora
+// são o `AppTopBar` no modo `editor` e o slot `acoes` dentro do próprio
+// `DocumentoEditor` — a página não precisa mais deles.
 export default async function DocumentoPage(props: PageProps<"/documento/[id]">) {
   const { id } = await props.params;
 
-  return (
-    <div className="flex flex-1 flex-col gap-8 p-10 font-sans">
-      <div className="flex items-center justify-between">
-        <Link href="/" className="text-sm text-bordo-700 underline hover:text-bordo-800">
-          ← Meus trabalhos
-        </Link>
-        <BotaoExportar documentoId={id} />
-      </div>
-
-      <DocumentoEditor documentoId={id} />
-    </div>
-  );
+  return <DocumentoEditor documentoId={id} />;
 }

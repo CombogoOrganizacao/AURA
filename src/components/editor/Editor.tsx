@@ -8,6 +8,7 @@ import TiptapText from "@tiptap/extension-text";
 import { EditorContent, useEditor } from "@tiptap/react";
 
 import { EstadoCarregando } from "@/components/ui/Estados";
+import { PaperSheet } from "@/components/ui/PaperSheet";
 import { novaSecao } from "@/core/document/factory";
 import { fromDocumento, toDocumento } from "@/core/document/serialize";
 import type { Secao } from "@/core/document/types";
@@ -73,9 +74,23 @@ export function Editor({ sections, onSectionsChange }: EditorProps) {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <Toolbar editor={editor} />
-      <EditorContent editor={editor} />
+      {/*
+        Folha A4 real (passo 2B.10, `PaperSheet` do passo 2B.4) — mesma
+        moldura da amostra estática, agora com o `EditorContent` de
+        verdade dentro. `PaperSheet` recorta o que passa da altura da
+        folha (`overflow: hidden`, correto para uma página impressa sem
+        paginação real ainda) — o aviso de que a paginação real só existe
+        no `.docx` é o passo 3.3.3, deliberadamente fora daqui; para o
+        texto curto que a v1 produz hoje (a v1 não tem "nova seção" nem
+        rolagem de páginas), o limite não aparece na prática.
+      */}
+      <div className="flex flex-1 flex-col items-center gap-6 overflow-auto bg-ink-100 p-8">
+        <PaperSheet>
+          <EditorContent editor={editor} />
+        </PaperSheet>
+      </div>
     </div>
   );
 }

@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from "react";
 
+import { AppTopBar } from "@/components/app/AppTopBar";
+import { BotaoExportar } from "@/components/editor/BotaoExportar";
 import { Editor } from "@/components/editor/Editor";
+import { LayoutEdicao } from "@/components/editor/LayoutEdicao";
+import { PainelSecoes } from "@/components/editor/PainelSecoes";
 import { Button } from "@/components/ui/Button";
-import { EstadoCarregando, EstadoErro } from "@/components/ui/Estados";
+import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/components/ui/Estados";
 import { novoDocumento } from "@/core/document/factory";
 import type { Documento, Metadados, Secao } from "@/core/document/types";
 import type { AdaptadorPersistencia } from "@/core/persistence/types";
@@ -32,6 +36,11 @@ const TEXTO_STATUS: Record<StatusAutosave, string> = {
 // recente, em silêncio). Aqui só há um `useAutosave`, sobre o `Documento`
 // inteiro; `FormMetadados` e `Editor` são controlados — só editam sua
 // fatia (`metadados` / `sections`) e devolvem a mudança pra cá.
+//
+// A partir do passo 2B.10, esta é a única tela que monta `AppTopBar` no
+// modo `editor` — o que exige montá-lo também nos ramos de carregamento e
+// erro, aqui embaixo, sem `docTitle`/`statusAutosave`/`acoes` (não há
+// documento carregado ainda pra preenchê-los).
 export function DocumentoEditor({ documentoId }: DocumentoEditorProps) {
   const persistencia = usePersistencia();
   const [documento, setDocumento] = useState<Documento | null>(null);
@@ -72,32 +81,44 @@ export function DocumentoEditor({ documentoId }: DocumentoEditorProps) {
 
   if (erroAoCarregar) {
     return (
-      <EstadoErro
-        titulo="Não foi possível carregar este documento."
-        action={
-          <Button variant="outline" onClick={tentarDeNovo}>
-            Tentar de novo
-          </Button>
-        }
-      />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <AppTopBar mode="editor" />
+        <EstadoErro
+          titulo="Não foi possível carregar este documento."
+          action={
+            <Button variant="outline" onClick={tentarDeNovo}>
+              Tentar de novo
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
   if (!documento || !persistencia) {
-    return <EstadoCarregando texto="Carregando documento…" />;
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <AppTopBar mode="editor" />
+        <EstadoCarregando texto="Carregando documento…" />
+      </div>
+    );
   }
 
   // `Carregado` só monta quando `documento` já existe — é o que faz o "não
   // salva na primeira renderização" do useAutosave coincidir com "não
   // salva o que acabou de ser carregado, sem edição nenhuma" (mesmo
   // truque de FormMetadados no passo 1.3.6).
-  return <Carregado documentoInicial={documento} persistencia={persistencia} />;
+  return (
+    <Carregado documentoId={documentoId} documentoInicial={documento} persistencia={persistencia} />
+  );
 }
 
 function Carregado({
+  documentoId,
   documentoInicial,
   persistencia,
 }: {
+  documentoId: string;
   documentoInicial: Documento;
   persistencia: AdaptadorPersistencia;
 }) {
@@ -113,14 +134,42 @@ function Carregado({
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <FormMetadados metadados={documento.metadados} onChange={atualizarMetadados} />
-
-      <Editor sections={documento.sections} onSectionsChange={atualizarSecoes} />
-
-      <p role="status" className="text-xs text-subtle">
-        {TEXTO_STATUS[status]}
-      </p>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <AppTopBar
+        mode="editor"
+        docTitle={documento.metadados.titulo}
+        statusAutosave={TEXTO_STATUS[status]}
+        acoes={<BotaoExportar documentoId={documentoId} />}
+      />
+      <LayoutEdicao
+        sidebar={
+          <div className="flex min-h-0 flex-1 flex-col">
+            {/*
+              `<details>` nativo — recolhível sem estado React nem
+              primitivo de acordeão novo (não pedido neste passo). Começa
+              fechado: a seção é o que a coluna prioriza; metadados são
+              consulta ocasional, não o que se olha a cada abertura.
+            */}
+            <details className="shrink-0 border-b border-[var(--border-subtle)]">
+              <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                Dados do trabalho
+              </summary>
+              <div className="px-4 pb-4">
+                <FormMetadados metadados={documento.metadados} onChange={atualizarMetadados} />
+              </div>
+            </details>
+            <PainelSecoes sections={documento.sections} />
+          </div>
+        }
+        inspetor={
+          <EstadoVazio
+            titulo="Inspetor"
+            descricao="IA, histórico e conformidade chegam no próximo passo."
+          />
+        }
+      >
+        <Editor sections={documento.sections} onSectionsChange={atualizarSecoes} />
+      </LayoutEdicao>
     </div>
   );
 }

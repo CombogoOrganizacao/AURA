@@ -110,7 +110,10 @@ export function AppTopBar({ mode, docTitle, statusAutosave, acoes }: AppTopBarPr
               {docTitle || "Documento sem título"}
             </span>
             {statusAutosave && (
-              <span className="flex shrink-0 items-center gap-1 font-sans text-2xs text-subtle">
+              <span
+                role="status"
+                className="flex shrink-0 items-center gap-1 font-sans text-2xs text-subtle"
+              >
                 {statusAutosave}
               </span>
             )}
