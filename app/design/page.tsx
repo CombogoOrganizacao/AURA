@@ -3,10 +3,11 @@
 // app/globals.css, src/components/ui/ e docs/design.md. Deve continuar
 // batendo com os três sempre que um token ou componente mudar.
 
+import { Brand } from "@/components/app/Brand";
 import { LayoutEdicao } from "@/components/editor/LayoutEdicao";
 import { Button } from "@/components/ui/Button";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/components/ui/Estados";
-import { Icon } from "@/components/ui/Icon";
+import { Icon, NOMES_ICONES } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
@@ -449,6 +450,42 @@ export default function DesignPage() {
               }
             />
           </div>
+        </div>
+      </Secao>
+
+      <Secao titulo="Marca — lockup">
+        <p className="max-w-prose text-sm text-muted">
+          O único ativo de marca é <code className="font-mono text-xs">/logo-aura.png</code>. Já
+          traz o fundo bordô e o raio grande: não recolorir, não recortar, não usar sobre bordô
+          cheio nem sobre fotografia, e nunca sozinho como ícone de rail, botão ou lista. O tom{" "}
+          <code className="font-mono text-xs">creme</code> existe só para fundo bordô.
+        </p>
+        <div className="flex flex-wrap items-center gap-8">
+          <Brand />
+          <Brand size={44} />
+          <div className="flex items-center rounded-lg bg-bordo-700 px-6 py-4">
+            <Brand tone="creme" />
+          </div>
+        </div>
+      </Secao>
+
+      <Secao titulo="Ícones — vocabulário completo">
+        <p className="max-w-prose text-sm text-muted">
+          Todo ícone do sistema passa por <code className="font-mono text-xs">Icon.tsx</code>, que é
+          o único arquivo autorizado a produzir SVG. O mapa é fechado: só entram os glifos que
+          alguma tela usa de verdade. Monocromáticos, traço 2px, herdando a cor do contexto —{" "}
+          <span className="font-mono text-xs">{NOMES_ICONES.length}</span> no total.
+        </p>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-2">
+          {NOMES_ICONES.map((nome) => (
+            <div
+              key={nome}
+              className="flex items-center gap-2 rounded-sm border border-ink-200 bg-card px-2.5 py-2 text-muted"
+            >
+              <Icon name={nome} size={18} />
+              <span className="truncate font-mono text-2xs text-subtle">{nome}</span>
+            </div>
+          ))}
         </div>
       </Secao>
 
