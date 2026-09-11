@@ -18,6 +18,7 @@ import { Documento as DocumentoNode } from "@/core/editor/nodes/documento";
 import { Secao as SecaoNode } from "@/core/editor/nodes/section";
 import { moverSecaoDeTopo } from "@/core/editor/reorder";
 
+import { AvisoPaginacao } from "./AvisoPaginacao";
 import { SectionView } from "./nodes/SectionView";
 import { Toolbar } from "./Toolbar";
 
@@ -133,15 +134,17 @@ export function Editor({ sections, onSectionsChange, onReorderReady }: EditorPro
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <Toolbar editor={editor} />
+      <AvisoPaginacao />
       {/*
         Folha A4 real (passo 2B.10, `PaperSheet` do passo 2B.4) — mesma
         moldura da amostra estática, agora com o `EditorContent` de
         verdade dentro. `PaperSheet` recorta o que passa da altura da
         folha (`overflow: hidden`, correto para uma página impressa sem
         paginação real ainda) — o aviso de que a paginação real só existe
-        no `.docx` é o passo 3.3.3, deliberadamente fora daqui; para o
-        texto curto que a v1 produz hoje (a v1 não tem "nova seção" nem
-        rolagem de páginas), o limite não aparece na prática.
+        no `.docx` (passo 3.3.3, `AvisoPaginacao`, acima) fica fora deste
+        recorte de propósito: teria sumido rolando a folha; para o texto
+        curto que a v1 produz hoje (a v1 não tem "nova seção" nem rolagem de
+        páginas), o limite não aparece na prática.
       */}
       <div className="flex flex-1 flex-col items-center gap-6 overflow-auto bg-ink-100 p-8">
         <PaperSheet>
