@@ -68,7 +68,11 @@ export function SectionView({ node, editor, updateAttributes }: ReactNodeViewPro
   const rotulo = numero ? `${numero} Título da seção` : "Título da seção";
 
   return (
-    <NodeViewWrapper as="section" data-nivel={nivel}>
+    // `data-id` (não `id`): mesma convenção que `renderHTML()` já usava em
+    // `section.ts` antes deste node view existir — evita lidar com escape de
+    // seletor CSS pra um `id` que é um UUID, e é o que `PainelSecoes.tsx`
+    // (passo 3.2.3) procura pra rolar até a seção ao clicar.
+    <NodeViewWrapper as="section" data-id={id} data-nivel={nivel}>
       <div className="flex items-baseline gap-2" contentEditable={false}>
         {numero && (
           <span aria-hidden="true" className="shrink-0 font-semibold">
