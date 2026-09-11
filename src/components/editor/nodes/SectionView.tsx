@@ -56,9 +56,24 @@ function useNumeroSecao(editor: Editor, id: string | null): string | null {
 // documento editável (mesma técnica recomendada pelo TipTap para atributo
 // editável dentro de um node view React).
 //
-// Sem estilo por nível (h1/h2/h3 do mesmo tamanho aqui) de propósito — isso
-// é o passo 3.2.5. Fonte/cor do corpo vêm por herança de `PaperSheet.tsx`
-// (`--doc-font`, `--doc-ink`), não redeclaradas aqui.
+// Gradação h1/h2/h3 na tela (passo 3.2.5) — mesma escolha de estilo do
+// `.docx` (`heading1`/`heading2`/`heading3` em
+// `src/core/export/docx/styles.ts`, decidida no passo 3.1.1): nível 1 caixa
+// alta + negrito, nível 2 negrito, nível 3 itálico. Duplicado ali e aqui de
+// propósito, não derivado em runtime de `NORMAS.abnt.titulos`
+// (`src/core/standards/standards.ts`) — mesmo padrão já em uso entre
+// `docx/constants.ts` e `PaperSheet.tsx` (`NORMAS` ainda serve só o motor de
+// regras de Fase 5+, ver passo 3.1.2). NBR 6024 exige gradação visível e
+// consistência sumário↔texto, não esta combinação específica. Tamanho fica
+// igual nos três níveis (`--doc-h1/h2/h3` em app/globals.css não entram
+// aqui): a ABNT auditada (`NORMAS.abnt.titulos`, docs/auditoria-abnt.md) usa
+// 12pt nos três, e o `.docx` segue o mesmo.
+const ESTILO_TITULO_POR_NIVEL: Record<NivelSecao, string> = {
+  1: "font-bold uppercase",
+  2: "font-bold",
+  3: "italic",
+};
+
 export function SectionView({ node, editor, updateAttributes }: ReactNodeViewProps) {
   const id = node.attrs.id as string | null;
   const nivel = node.attrs.nivel as NivelSecao;
@@ -66,6 +81,7 @@ export function SectionView({ node, editor, updateAttributes }: ReactNodeViewPro
 
   const numero = useNumeroSecao(editor, id);
   const rotulo = numero ? `${numero} Título da seção` : "Título da seção";
+  const estiloNivel = ESTILO_TITULO_POR_NIVEL[nivel];
 
   return (
     // `data-id` (não `id`): mesma convenção que `renderHTML()` já usava em
@@ -75,7 +91,7 @@ export function SectionView({ node, editor, updateAttributes }: ReactNodeViewPro
     <NodeViewWrapper as="section" data-id={id} data-nivel={nivel}>
       <div className="flex items-baseline gap-2" contentEditable={false}>
         {numero && (
-          <span aria-hidden="true" className="shrink-0 font-semibold">
+          <span aria-hidden="true" className={["shrink-0", estiloNivel].join(" ")}>
             {numero}
           </span>
         )}
@@ -86,8 +102,9 @@ export function SectionView({ node, editor, updateAttributes }: ReactNodeViewPro
           placeholder="Título da seção"
           aria-label={rotulo}
           className={[
-            "w-full min-w-0 border-none bg-transparent font-semibold outline-none",
-            "placeholder:font-normal placeholder:text-subtle",
+            "w-full min-w-0 border-none bg-transparent outline-none",
+            estiloNivel,
+            "placeholder:font-normal placeholder:normal-case placeholder:text-subtle",
             "focus-visible:shadow-focus-ring focus-visible:rounded-xs",
           ].join(" ")}
         />
