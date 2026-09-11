@@ -5,7 +5,7 @@ import { useState } from "react";
 import TiptapHistory from "@tiptap/extension-history";
 import TiptapParagraph from "@tiptap/extension-paragraph";
 import TiptapText from "@tiptap/extension-text";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { EditorContent, ReactNodeViewRenderer, useEditor } from "@tiptap/react";
 
 import { EstadoCarregando } from "@/components/ui/Estados";
 import { PaperSheet } from "@/components/ui/PaperSheet";
@@ -17,7 +17,17 @@ import { Negrito } from "@/core/editor/marks/negrito";
 import { Documento as DocumentoNode } from "@/core/editor/nodes/documento";
 import { Secao as SecaoNode } from "@/core/editor/nodes/section";
 
+import { SectionView } from "./nodes/SectionView";
 import { Toolbar } from "./Toolbar";
+
+// `section.ts` (src/core/editor/) fica livre de React — o node view que
+// mostra a numeração (passo 3.2.2, `SectionView.tsx`) é ligado aqui, o
+// primeiro lugar de cima pra baixo onde React já está em escopo.
+const SecaoComVisualizacao = SecaoNode.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(SectionView);
+  },
+});
 
 interface EditorProps {
   sections: Secao[];
@@ -52,7 +62,7 @@ export function Editor({ sections, onSectionsChange }: EditorProps) {
       DocumentoNode,
       TiptapParagraph,
       TiptapText,
-      SecaoNode,
+      SecaoComVisualizacao,
       Negrito,
       Italico,
       // Desfazer/refazer (passo 2B.12) não vem de graça: as extensões
