@@ -36,12 +36,25 @@ export interface NoParagrafo {
   content?: NoTexto[];
 }
 
+// Citação longa (NBR 10520, docs/schema-tiptap.md §4.3) — passo 3.4.1.
+// `refId`/`pagina` espelham os atributos do nó `citacao_longa`
+// (src/core/editor/nodes/longQuote.ts), mas sem UI que os preencha ainda:
+// não existe lista de referências editável (`Documento.references` fica
+// sempre `[]` na prática), então `refId: null`/`pagina: ""` é o estado real
+// de todo bloco criado hoje — ligar de verdade é trabalho da Fase 4.
+export interface NoCitacaoLonga {
+  type: "citacao_longa";
+  refId: string | null;
+  pagina: string;
+  content?: NoTexto[];
+}
+
 // Lista fechada de conteúdo de `Secao`/`ElementoPosTextual`. Cresce um membro
 // de cada vez, só quando o nó correspondente ganha código em
-// src/core/editor/nodes/ (ver docs/schema-tiptap.md §7) — por ora cobre só o
-// que existe: parágrafo. `citacao_longa`, `lista`, `figura`, `tabela` e
-// `formula` entram conforme cada um for implementado (Fase 3 em diante).
-export type NoConteudo = NoParagrafo;
+// src/core/editor/nodes/ (ver docs/schema-tiptap.md §7) — por ora cobre
+// parágrafo e citação longa. `lista`, `figura`, `tabela` e `formula` entram
+// conforme cada um for implementado (Fase 3 em diante).
+export type NoConteudo = NoParagrafo | NoCitacaoLonga;
 
 export interface Secao {
   id: string;

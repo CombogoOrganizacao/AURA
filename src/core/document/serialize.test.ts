@@ -89,6 +89,54 @@ describe("fromDocumento / toDocumento", () => {
     expect(toDocumento(doc)).toEqual(secoes);
   });
 
+  it("faz o round-trip de citação longa com refId e pagina (passo 3.4.1)", () => {
+    const secoes: Secao[] = [
+      {
+        id: "s1",
+        ordem: 0,
+        nivel: 1,
+        titulo: "Revisão de literatura",
+        content: [
+          {
+            type: "citacao_longa",
+            refId: "ref-1",
+            pagina: "42",
+            content: [{ type: "text", text: "Trecho citado com mais de três linhas." }],
+          },
+        ],
+      },
+    ];
+
+    const doc = fromDocumento(secoes);
+    expect(doc.content?.[0]?.content?.[0]).toEqual({
+      type: "citacao_longa",
+      attrs: { refId: "ref-1", pagina: "42" },
+      content: [{ type: "text", text: "Trecho citado com mais de três linhas." }],
+    });
+    expect(toDocumento(doc)).toEqual(secoes);
+  });
+
+  it("citação longa sem refId/pagina preenchidos (sem UI pra isso ainda) faz round-trip com os defaults", () => {
+    const secoes: Secao[] = [
+      {
+        id: "s1",
+        ordem: 0,
+        nivel: 1,
+        titulo: "Revisão de literatura",
+        content: [{ type: "citacao_longa", refId: null, pagina: "", content: [] }],
+      },
+    ];
+
+    const doc = fromDocumento(secoes);
+    expect(doc.content?.[0]?.content?.[0]).toEqual({
+      type: "citacao_longa",
+      attrs: { refId: null, pagina: "" },
+    });
+    expect(toDocumento(doc)).toEqual([
+      { ...secoes[0], content: [{ type: "citacao_longa", refId: null, pagina: "" }] },
+    ]);
+  });
+
   it("recusa marca fora da lista fechada", () => {
     const doc = {
       type: "doc",

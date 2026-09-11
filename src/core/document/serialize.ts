@@ -1,14 +1,6 @@
 import type { JSONContent } from "@tiptap/core";
 
-import type {
-  Marca,
-  NivelSecao,
-  NoConteudo,
-  NoParagrafo,
-  NoTexto,
-  Secao,
-  TipoMarca,
-} from "./types";
+import type { Marca, NivelSecao, NoConteudo, NoTexto, Secao, TipoMarca } from "./types";
 
 const TIPOS_MARCA: readonly TipoMarca[] = ["negrito", "italico"];
 
@@ -88,6 +80,16 @@ function paraNoConteudo(no: JSONContent): NoConteudo {
     const conteudo = (no.content ?? []).map(paraNoTexto);
     return conteudo.length > 0 ? { type: "paragraph", content: conteudo } : { type: "paragraph" };
   }
+  if (no.type === "citacao_longa") {
+    const conteudo = (no.content ?? []).map(paraNoTexto);
+    const { refId, pagina } = (no.attrs ?? {}) as { refId?: string | null; pagina?: string };
+    return {
+      type: "citacao_longa",
+      refId: refId ?? null,
+      pagina: pagina ?? "",
+      ...(conteudo.length > 0 ? { content: conteudo } : {}),
+    };
+  }
   throw new Error(`Nó de conteúdo ainda não suportado: "${no.type}"`);
 }
 
@@ -141,19 +143,30 @@ export function fromDocumento(sections: Secao[]): JSONContent {
   return raiz;
 }
 
+// Texto+marca compartilhado por todo `NoConteudo` que carrega inline
+// diretamente (`paragrafo`, `citacao_longa`) — extraído aqui pra
+// `deNoConteudo` não repetir o mesmo mapeamento de marca por tipo de bloco.
+function deConteudoInline(content: NoTexto[] | undefined): JSONContent[] | undefined {
+  if (!content || content.length === 0) return undefined;
+  return content.map((texto) => ({
+    type: "text",
+    text: texto.text,
+    ...(texto.marks && texto.marks.length > 0
+      ? { marks: texto.marks.map((marca) => ({ type: marca.type })) }
+      : {}),
+  }));
+}
+
 function deNoConteudo(no: NoConteudo): JSONContent {
-  const paragrafo: NoParagrafo = no;
-  if (!paragrafo.content || paragrafo.content.length === 0) {
-    return { type: "paragraph" };
+  const conteudo = deConteudoInline(no.content);
+
+  if (no.type === "citacao_longa") {
+    return {
+      type: "citacao_longa",
+      attrs: { refId: no.refId, pagina: no.pagina },
+      ...(conteudo ? { content: conteudo } : {}),
+    };
   }
-  return {
-    type: "paragraph",
-    content: paragrafo.content.map((texto) => ({
-      type: "text",
-      text: texto.text,
-      ...(texto.marks && texto.marks.length > 0
-        ? { marks: texto.marks.map((marca) => ({ type: marca.type })) }
-        : {}),
-    })),
-  };
+
+  return conteudo ? { type: "paragraph", content: conteudo } : { type: "paragraph" };
 }

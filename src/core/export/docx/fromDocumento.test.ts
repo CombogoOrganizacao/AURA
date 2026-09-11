@@ -77,4 +77,23 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
 
     expect(xml.indexOf("Introdução")).toBeLessThan(xml.indexOf("Metodologia"));
   });
+
+  // Passo 3.4.1 acrescentou `citacao_longa` a `NoConteudo`, mas o estilo
+  // nomeado `CitacaoLonga` no `.docx` só chega no 3.4.2 — falha alto e claro
+  // agora é o comportamento certo, não gerar um parágrafo comum no lugar
+  // fingindo ser citação (CLAUDE.md, "Verificação").
+  it("recusa exportar citação longa antes do passo 3.4.2 existir", () => {
+    const documento = novoDocumento();
+    documento.sections = [
+      {
+        id: "s1",
+        ordem: 0,
+        nivel: 1,
+        titulo: "Revisão de literatura",
+        content: [{ type: "citacao_longa", refId: null, pagina: "42", content: [] }],
+      },
+    ];
+
+    expect(() => fromDocumento(documento)).toThrow(/citação longa/i);
+  });
 });

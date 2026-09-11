@@ -206,12 +206,26 @@
   --doc-title: 20pt;
   --leading-doc: 1.5;
   --leading-doc-abnt: 1.5;
+  /* ---- Espaço simples (NBR 14724/10520: citação longa, notas, referências,
+     legendas) — distinto de `--leading-doc-abnt`, que é 1,5. Mesmo valor de
+     `ABNT.espacamento1`/`ABNT.recuoCitacao` em
+     `src/core/export/docx/constants.ts` (240 twips = espaço simples lá; `1`
+     aqui porque CSS mede `line-height` como múltiplo da fonte, não em
+     twips). */
+  --leading-doc-simples: 1;
 
   /* ---- Recuo de primeira linha do parágrafo (NBR 14724: 1,25 cm) — mesmo
      valor de `ABNT.recuoParagrafo` em `src/core/export/docx/constants.ts`,
      duplicado aqui porque CSS não importa TS (mesmo padrão já documentado
      entre `docx/constants.ts` e `PaperSheet.tsx`). */
   --doc-indent-paragrafo: 1.25cm;
+
+  /* ---- Recuo de citação longa (NBR 10520: 4 cm, só a partir da 4ª linha —
+     `citacao_longa`, passo 3.4.1) — mesmo valor de `ABNT.recuoCitacao` em
+     `src/core/export/docx/constants.ts`, mesmo motivo de duplicação do
+     token acima. Só a esquerda: a PoC (`poc/docx/gerar.js`) já confere isso
+     — direita fica no alinhamento normal, sem recuo próprio. */
+  --doc-indent-citacao: 4cm;
 
   /* ---- Medida de leitura ---- */
   --measure-doc: 68ch;
@@ -309,10 +323,25 @@ h5 {
    `--leading-doc-abnt`, `text-align: justify`, `--doc-ink`) — conferido no
    inspetor antes de mexer aqui, pra não redeclarar o que já funciona.
    `.ProseMirror` é a classe que o TipTap aplica ao `contentEditable`
-   (`EditorContent`, `Editor.tsx`); `p` é o único bloco de corpo que a v1 tem
-   até a citação longa (3.4.1). */
+   (`EditorContent`, `Editor.tsx`); `p` é o bloco de corpo comum, distinto de
+   `blockquote` (citação longa) logo abaixo. */
 .ProseMirror p {
   text-indent: var(--doc-indent-paragrafo);
+}
+
+/* Citação longa (NBR 10520, `citacao_longa` — passo 3.4.1): recuo de 4 cm
+   só à esquerda, fonte menor (10pt, `--doc-caption`) e espaço simples
+   (`--leading-doc-simples`), os três valores que
+   `src/core/editor/nodes/longQuote.ts` deixa de propósito fora do nó. Sem
+   `text-indent` de primeira linha (essa regra é só de `p`, não alcança
+   `blockquote`) e sem reset de `font-style`/`margin` — o preflight do
+   Tailwind já deixa `blockquote` sem a itálica/margem que o navegador
+   aplicaria por padrão (conferido antes de escrever esta regra, mesmo
+   cuidado do passo 3.3.2). */
+.ProseMirror blockquote {
+  margin-left: var(--doc-indent-citacao);
+  font-size: var(--doc-caption);
+  line-height: var(--leading-doc-simples);
 }
 
 ::selection {

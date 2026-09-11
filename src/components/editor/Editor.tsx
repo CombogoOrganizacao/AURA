@@ -16,6 +16,7 @@ import type { Secao } from "@/core/document/types";
 import { Italico } from "@/core/editor/marks/italico";
 import { Negrito } from "@/core/editor/marks/negrito";
 import { Documento as DocumentoNode } from "@/core/editor/nodes/documento";
+import { CitacaoLonga } from "@/core/editor/nodes/longQuote";
 import { Secao as SecaoNode } from "@/core/editor/nodes/section";
 import { mapearHtmlColado, type NoHtmlColado } from "@/core/editor/paste";
 import { moverSecaoDeTopo } from "@/core/editor/reorder";
@@ -74,11 +75,13 @@ interface EditorProps {
   onReorderReady?: (mover: MoverSecao) => void;
 }
 
-// Editor com seções (passo 1.3.7) e formatação (passo 2.5: negrito, itálico,
-// nível de título — `Toolbar.tsx`). A lista fechada completa do editor está
-// em docs/schema-tiptap.md; "listas" (`lista`/`item_lista`) ainda não tem nó
-// aqui de propósito — fica pra Fase 3, junto com citação/figura/tabela
-// (`NoConteudo` só cobre parágrafo até lá, ver src/core/document/types.ts).
+// Editor com seções (passo 1.3.7), formatação (passo 2.5: negrito, itálico,
+// nível de título — `Toolbar.tsx`) e citação longa (passo 3.4.1, sem UI de
+// criação ainda). A lista fechada completa do editor está em
+// docs/schema-tiptap.md; "listas" (`lista`/`item_lista`) ainda não tem nó
+// aqui de propósito — fica pra Fase 3, junto com figura/tabela/fórmula
+// (`NoConteudo` só cobre parágrafo e citação longa até lá, ver
+// src/core/document/types.ts).
 //
 // Continua sem `@tiptap/starter-kit` de propósito — cada nó/marca entra por
 // decisão explícita, um passo do plano de cada vez.
@@ -103,6 +106,11 @@ export function Editor({ sections, onSectionsChange, onReorderReady }: EditorPro
       TiptapParagraph,
       TiptapText,
       SecaoComVisualizacao,
+      // Sem botão nem atalho pra criar uma ainda (isso é 3.4.2, o "botão de
+      // conversão na toolbar") — registrado aqui de propósito mesmo assim,
+      // mesmo padrão de `secao` (existe com round-trip completo desde muito
+      // antes de "nova seção" ganhar UI, ver docs/to-do.md).
+      CitacaoLonga,
       Negrito,
       Italico,
       // Desfazer/refazer (passo 2B.12) não vem de graça: as extensões
