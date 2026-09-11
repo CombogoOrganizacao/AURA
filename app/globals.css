@@ -207,6 +207,12 @@
   --leading-doc: 1.5;
   --leading-doc-abnt: 1.5;
 
+  /* ---- Recuo de primeira linha do parágrafo (NBR 14724: 1,25 cm) — mesmo
+     valor de `ABNT.recuoParagrafo` em `src/core/export/docx/constants.ts`,
+     duplicado aqui porque CSS não importa TS (mesmo padrão já documentado
+     entre `docx/constants.ts` e `PaperSheet.tsx`). */
+  --doc-indent-paragrafo: 1.25cm;
+
   /* ---- Medida de leitura ---- */
   --measure-doc: 68ch;
   --measure-ui: 56ch;
@@ -295,6 +301,18 @@ h5 {
   font-weight: var(--font-weight-semibold);
   line-height: var(--leading-snug);
   margin: 0;
+}
+
+/* Recuo de primeira linha do parágrafo de corpo (passo 3.3.2, NBR 14724).
+   Fonte 12pt, entrelinha 1,5, justificado e tinta preta já chegam ao
+   `<p>` por herança do `<div>` de conteúdo em `PaperSheet.tsx` (`--doc-body`,
+   `--leading-doc-abnt`, `text-align: justify`, `--doc-ink`) — conferido no
+   inspetor antes de mexer aqui, pra não redeclarar o que já funciona.
+   `.ProseMirror` é a classe que o TipTap aplica ao `contentEditable`
+   (`EditorContent`, `Editor.tsx`); `p` é o único bloco de corpo que a v1 tem
+   até a citação longa (3.4.1). */
+.ProseMirror p {
+  text-indent: var(--doc-indent-paragrafo);
 }
 
 ::selection {
