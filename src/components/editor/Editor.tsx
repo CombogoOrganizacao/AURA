@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import TiptapHistory from "@tiptap/extension-history";
 import TiptapParagraph from "@tiptap/extension-paragraph";
@@ -16,6 +16,7 @@ import { Italico } from "@/core/editor/marks/italico";
 import { Negrito } from "@/core/editor/marks/negrito";
 import { Documento as DocumentoNode } from "@/core/editor/nodes/documento";
 import { Secao as SecaoNode } from "@/core/editor/nodes/section";
+import { moverSecaoDeTopo } from "@/core/editor/reorder";
 
 import { SectionView } from "./nodes/SectionView";
 import { Toolbar } from "./Toolbar";
@@ -29,9 +30,22 @@ const SecaoComVisualizacao = SecaoNode.extend({
   },
 });
 
+// Assinatura do comando imperativo de reordenar (passo 3.2.4) que `Editor`
+// expõe pro pai via `onReorderReady` — não a instância inteira do editor:
+// `PainelSecoes.tsx` só precisa desta única capacidade, nunca da superfície
+// inteira do TipTap.
+export type MoverSecao = (idOrigem: string, idDestino: string, inserirDepois: boolean) => void;
+
 interface EditorProps {
   sections: Secao[];
   onSectionsChange: (secoes: Secao[]) => void;
+  /**
+   * Chamado com o comando `moverSecao` assim que o editor está pronto, e de
+   * novo com um no-op na desmontagem — quem chama guarda a versão mais
+   * recente numa ref (ver `DocumentoEditor.tsx`) pra `PainelSecoes`, um
+   * componente irmão sem acesso à instância do TipTap, poder reordenar.
+   */
+  onReorderReady?: (mover: MoverSecao) => void;
 }
 
 // Editor com seções (passo 1.3.7) e formatação (passo 2.5: negrito, itálico,
@@ -49,7 +63,7 @@ interface EditorProps {
 // digitando. Documento inexistente ganha uma seção-semente
 // (`novaSecao()`), porque `doc` exige pelo menos um bloco e um `secao`
 // vazio (`content: []`) não dá lugar pro cursor entrar.
-export function Editor({ sections, onSectionsChange }: EditorProps) {
+export function Editor({ sections, onSectionsChange, onReorderReady }: EditorProps) {
   // `useState` com inicializador preguiçoso — roda uma vez só, no mount, e
   // ler o valor durante o render é normal (diferente de `ref.current`, que
   // a regra `react-hooks/refs` proíbe fora de efeito/handler).
@@ -88,6 +102,25 @@ export function Editor({ sections, onSectionsChange }: EditorProps) {
       }
     },
   });
+
+  // Expõe `moverSecaoDeTopo` (src/core/editor/reorder.ts, passo 3.2.4) como
+  // comando imperativo pro pai — `sections` (a prop) só alimenta o conteúdo
+  // inicial (comentário acima), então reordenar não pode passar por ela: só
+  // uma transação de verdade dentro do editor move o nó de fato, e o
+  // `onUpdate` de cima já reage a ela do mesmo jeito que reage a qualquer
+  // outra digitação.
+  useEffect(() => {
+    if (!editor || !onReorderReady) return;
+    onReorderReady((idOrigem, idDestino, inserirDepois) => {
+      const tr = editor.state.tr;
+      if (moverSecaoDeTopo(tr, idOrigem, idDestino, inserirDepois)) {
+        editor.view.dispatch(tr);
+      }
+    });
+    return () => {
+      onReorderReady(() => {});
+    };
+  }, [editor, onReorderReady]);
 
   // `immediatelyRender: false` (acima) devolve `editor` como `null` no
   // primeiro render do cliente de propósito (evita o mismatch de

@@ -17,6 +17,7 @@ import {
   FileDown,
   FileSearch,
   FileText,
+  GripVertical,
   Heading1,
   Heading2,
   Heading3,
@@ -78,6 +79,7 @@ const icones = {
   "log-out": LogOut,
   star: Star,
   "trash-2": Trash2,
+  "grip-vertical": GripVertical,
 
   // Estado e feedback
   info: Info,

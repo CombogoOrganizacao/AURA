@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AppTopBar } from "@/components/app/AppTopBar";
 import { BotaoExportar } from "@/components/editor/BotaoExportar";
-import { Editor } from "@/components/editor/Editor";
+import { Editor, type MoverSecao } from "@/components/editor/Editor";
 import { LayoutEdicao } from "@/components/editor/LayoutEdicao";
 import { PainelInspetor } from "@/components/editor/PainelInspetor";
 import { PainelSecoes } from "@/components/editor/PainelSecoes";
@@ -134,6 +134,19 @@ function Carregado({
     setDocumento((atual) => ({ ...atual, sections: secoes }));
   }
 
+  // `PainelSecoes` (irmão de `Editor`, sem acesso à instância do TipTap)
+  // reordena através desta ref — passo 3.2.4. `useCallback` com deps vazias
+  // dá pro `onReorderReady` de `Editor.tsx` uma identidade estável, então o
+  // efeito que a chama roda só quando o editor troca de instância de
+  // verdade, não a cada re-render deste componente (autosave, digitação...).
+  const moverSecaoRef = useRef<MoverSecao | null>(null);
+  const registrarComandoDeReordenar = useCallback((mover: MoverSecao) => {
+    moverSecaoRef.current = mover;
+  }, []);
+  const reordenarSecoes: MoverSecao = useCallback((idOrigem, idDestino, inserirDepois) => {
+    moverSecaoRef.current?.(idOrigem, idDestino, inserirDepois);
+  }, []);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <AppTopBar
@@ -159,12 +172,16 @@ function Carregado({
                 <FormMetadados metadados={documento.metadados} onChange={atualizarMetadados} />
               </div>
             </details>
-            <PainelSecoes sections={documento.sections} />
+            <PainelSecoes sections={documento.sections} onReorder={reordenarSecoes} />
           </div>
         }
         inspetor={<PainelInspetor documentoId={documentoId} />}
       >
-        <Editor sections={documento.sections} onSectionsChange={atualizarSecoes} />
+        <Editor
+          sections={documento.sections}
+          onSectionsChange={atualizarSecoes}
+          onReorderReady={registrarComandoDeReordenar}
+        />
       </LayoutEdicao>
     </div>
   );
