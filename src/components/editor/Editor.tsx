@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import TiptapHistory from "@tiptap/extension-history";
 import TiptapParagraph from "@tiptap/extension-paragraph";
 import TiptapText from "@tiptap/extension-text";
+import { Fragment, Slice } from "@tiptap/pm/model";
 import { EditorContent, ReactNodeViewRenderer, useEditor } from "@tiptap/react";
 
 import { EstadoCarregando } from "@/components/ui/Estados";
@@ -16,6 +17,7 @@ import { Italico } from "@/core/editor/marks/italico";
 import { Negrito } from "@/core/editor/marks/negrito";
 import { Documento as DocumentoNode } from "@/core/editor/nodes/documento";
 import { Secao as SecaoNode } from "@/core/editor/nodes/section";
+import { mapearHtmlColado, type NoHtmlColado } from "@/core/editor/paste";
 import { moverSecaoDeTopo } from "@/core/editor/reorder";
 
 import { AvisoPaginacao } from "./AvisoPaginacao";
@@ -30,6 +32,29 @@ const SecaoComVisualizacao = SecaoNode.extend({
     return ReactNodeViewRenderer(SectionView);
   },
 });
+
+// Ponte entre `DOMParser` (só existe no navegador) e a árvore própria que
+// `mapearHtmlColado()` (src/core/editor/paste.ts, passo 3.3.4) sabe
+// percorrer — a decisão de "o que vira o quê" mora inteira lá, testável sem
+// navegador; aqui só anda o DOM e converte a forma, sem decidir nada.
+function noDomParaArvoreColada(no: Node): NoHtmlColado | null {
+  if (no.nodeType === Node.TEXT_NODE) {
+    return { tipo: "texto", texto: no.textContent ?? "" };
+  }
+  if (no.nodeType !== Node.ELEMENT_NODE) return null; // comentário etc. — descartado
+  const elemento = no as Element;
+  const filhos = Array.from(elemento.childNodes)
+    .map(noDomParaArvoreColada)
+    .filter((filho): filho is NoHtmlColado => filho !== null);
+  return { tipo: "elemento", tag: elemento.tagName.toLowerCase(), filhos };
+}
+
+function arvoreColadaDoHtml(html: string): NoHtmlColado[] {
+  const documento = new DOMParser().parseFromString(html, "text/html");
+  return Array.from(documento.body.childNodes)
+    .map(noDomParaArvoreColada)
+    .filter((no): no is NoHtmlColado => no !== null);
+}
 
 // Assinatura do comando imperativo de reordenar (passo 3.2.4) que `Editor`
 // expõe pro pai via `onReorderReady` — não a instância inteira do editor:
@@ -92,6 +117,28 @@ export function Editor({ sections, onSectionsChange, onReorderReady }: EditorPro
     // de novo no cliente — mismatch de hidratação clássico do TipTap com
     // Next.js. Ver https://tiptap.dev/docs/guides/ssr.
     immediatelyRender: false,
+    editorProps: {
+      // Colar do Word e de outras fontes (passo 3.3.4). Sem isto, o
+      // `DOMParser` de fábrica do ProseMirror já recusaria tag/marca fora do
+      // schema (fechado, docs/schema-tiptap.md) — mas o resultado disso é
+      // implícito e não testável sem navegador; interceptar aqui faz a regra
+      // ("o que não mapeia vira parágrafo simples", CLAUDE.md "nenhum HTML
+      // bruto no schema") explícita e coberta por Vitest, não uma
+      // consequência acidental do parser genérico.
+      handlePaste(view, event) {
+        const html = event.clipboardData?.getData("text/html");
+        if (!html) return false; // sem HTML (só texto puro) — o padrão do TipTap já serve
+
+        const conteudo = mapearHtmlColado(arvoreColadaDoHtml(html));
+        if (conteudo.length === 0) return false; // nada aproveitável — sem handler nenhum sobraria só texto puro, se houver
+
+        event.preventDefault();
+        const { state, dispatch } = view;
+        const fragmento = Fragment.fromArray(conteudo.map((no) => state.schema.nodeFromJSON(no)));
+        dispatch(state.tr.replaceSelection(new Slice(fragmento, 0, 0)).scrollIntoView());
+        return true;
+      },
+    },
     onUpdate({ editor }) {
       try {
         onSectionsChange(toDocumento(editor.getJSON()));
