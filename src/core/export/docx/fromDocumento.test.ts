@@ -78,11 +78,9 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
     expect(xml.indexOf("Introdução")).toBeLessThan(xml.indexOf("Metodologia"));
   });
 
-  // Passo 3.4.1 acrescentou `citacao_longa` a `NoConteudo`, mas o estilo
-  // nomeado `CitacaoLonga` no `.docx` só chega no 3.4.2 — falha alto e claro
-  // agora é o comportamento certo, não gerar um parágrafo comum no lugar
-  // fingindo ser citação (CLAUDE.md, "Verificação").
-  it("recusa exportar citação longa antes do passo 3.4.2 existir", () => {
+  // Passo 3.4.2: citação longa exporta com o estilo nomeado `CitacaoLonga`
+  // (docx/styles.ts), não um parágrafo comum sem recuo fingindo ser citação.
+  it("citação longa exporta com o estilo nomeado CitacaoLonga (passo 3.4.2)", async () => {
     const documento = novoDocumento();
     documento.sections = [
       {
@@ -90,10 +88,28 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
         ordem: 0,
         nivel: 1,
         titulo: "Revisão de literatura",
-        content: [{ type: "citacao_longa", refId: null, pagina: "42", content: [] }],
+        content: [
+          {
+            type: "citacao_longa",
+            refId: null,
+            pagina: "42",
+            content: [{ type: "text", text: "Trecho citado com mais de três linhas." }],
+          },
+        ],
       },
     ];
 
-    expect(() => fromDocumento(documento)).toThrow(/citação longa/i);
+    const buffer = await empacotar(documento);
+    const zip = await JSZip.loadAsync(buffer);
+    const xml = await zip.file("word/document.xml")!.async("string");
+
+    const posTexto = xml.indexOf("Trecho citado com mais de três linhas.");
+    expect(posTexto).toBeGreaterThan(-1);
+
+    // O `<w:p>` que envolve o texto referencia o estilo nomeado — não
+    // formatação solta (`w:ind`/`w:spacing` direto no parágrafo), que é
+    // como a PoC congelada faz e a AURA decidiu não repetir neste passo.
+    const paragrafo = xml.slice(xml.lastIndexOf("<w:p>", posTexto), posTexto);
+    expect(paragrafo).toContain('<w:pStyle w:val="CitacaoLonga"/>');
   });
 });

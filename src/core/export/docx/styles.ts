@@ -65,5 +65,26 @@ export const ESTILOS_DOCUMENTO: IStylesOptions = {
         spacing: { after: 360, line: ABNT.espacamento15 },
       },
     },
+    // NBR 10520 — citação direta com mais de três linhas (passo 3.4.2, nó
+    // `citacao_longa` desde 3.4.1). Nomeado, ao contrário do que
+    // `poc/docx/gerar.js` fazia (formatação solta no `Paragraph`, sem
+    // `paragraphStyles` próprio) — é o que faz o Word listar "Citacao Longa"
+    // no painel de Estilos (critério do 6.1.1, que estende esta lista com
+    // Corpo/Referencia/Legenda mais adiante). `recuoCitacao` (4 cm) só à
+    // esquerda, mesma decisão da PoC e do CSS do editor (globals.css,
+    // `--doc-indent-citacao`, passo 3.4.1) — nunca as duas margens.
+    {
+      id: "CitacaoLonga",
+      name: "Citacao Longa",
+      basedOn: "Normal",
+      next: "Normal",
+      quickFormat: true,
+      run: { font: ABNT.fonte, size: ABNT.tamanhoMenor, color: "000000" },
+      paragraph: {
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { before: 240, after: 240, line: ABNT.espacamento1 },
+        indent: { left: ABNT.recuoCitacao },
+      },
+    },
   ],
 };

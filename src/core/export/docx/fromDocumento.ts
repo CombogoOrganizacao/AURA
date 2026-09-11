@@ -10,13 +10,17 @@ import { montarDocumento } from "./index";
 // dependem de layout de metadados que é o passo 3.5.1.
 //
 // `NoConteudo` cobre `paragraph` (desde 1.3.3) e `citacao_longa` (desde
-// 3.4.1, ver src/core/document/types.ts) — mas o estilo nomeado
-// `CitacaoLonga` no `.docx` só chega no passo 3.4.2; até lá,
-// `paragrafoCorpo()` recusa citação longa explicitamente (erro alto e claro,
-// não um parágrafo comum sem recuo fingindo ser citação — CLAUDE.md,
-// "Verificação": nunca dar exportação por completa sem conferência real).
-// Lista, figura, tabela e fórmula entram aqui na mesma hora em que ganham nó
-// no editor (docs/schema-tiptap.md §7) — não antes.
+// 3.4.1, estilo nomeado `CitacaoLonga` desde 3.4.2 — ver
+// src/core/document/types.ts e docx/styles.ts). Lista, figura, tabela e
+// fórmula entram aqui na mesma hora em que ganham nó no editor
+// (docs/schema-tiptap.md §7) — não antes.
+//
+// **Sem a "chamada" de autoria ao final** (ex.: "(SOBRENOME, ano, p. 42)")
+// que `poc/docx/gerar.js` já sabe montar: lá ela vem de `no.chamada` +
+// `no.refId` resolvido contra uma lista de referências de verdade — aqui
+// `refId` é sempre `null` na prática (`Documento.references` não tem UI que
+// escreva nele, ver `longQuote.ts`), então não há do que montar a chamada
+// ainda. Fica para quando a Fase 4 ligar `refId` a uma referência real.
 //
 // Devolve o `Document` (docx), não empacotado — mesmo motivo de
 // `montarDocumento()` em `index.ts`: quem chama escolhe `Packer.toBuffer()`
@@ -36,14 +40,15 @@ function paragrafoTitulo(secao: Secao): Paragraph {
 }
 
 function paragrafoCorpo(no: NoConteudo): Paragraph {
-  if (no.type === "citacao_longa") {
-    throw new Error(
-      "Exportação de citação longa pro .docx ainda não existe (chega no passo 3.4.2, " +
-        "estilo nomeado CitacaoLonga) — não dá pra gerar um parágrafo comum no lugar dela " +
-        "sem perder o recuo/fonte/espaçamento que a NBR 10520 exige.",
-    );
-  }
   const texto = (no.content ?? []).map((noTexto) => noTexto.text).join("");
+
+  if (no.type === "citacao_longa") {
+    // Estilo nomeado carrega recuo/fonte/espaçamento sozinho (styles.ts) —
+    // nada repetido aqui, ao contrário do parágrafo comum abaixo, que ainda
+    // não tem estilo nomeado próprio (isso é "Corpo" em 6.1.1).
+    return new Paragraph({ children: [new TextRun(texto)], style: "CitacaoLonga" });
+  }
+
   return new Paragraph({
     children: [new TextRun(texto)],
     alignment: AlignmentType.JUSTIFIED,

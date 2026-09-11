@@ -51,6 +51,14 @@ function idsDeEstilo(xmlEstilos: string): string[] {
   return [...xmlEstilos.matchAll(/<w:style [^>]*w:styleId="([^"]+)"/g)].map((m) => m[1]).sort();
 }
 
+// A PoC não nomeia todo estilo — citação longa, por exemplo, é formatação
+// solta no `Paragraph` (`poc/docx/gerar.js`, `case "citacao_longa"`), nunca
+// um `paragraphStyles` próprio. `CitacaoLonga` (passo 3.4.2) é o primeiro
+// estilo que a AURA nomeia e a PoC nunca nomeou — a paridade abaixo passa a
+// ser "referência + isto", não mais igualdade estrita; 6.1.1 (Corpo,
+// Referencia, Legenda) vai crescer esta lista do mesmo jeito, um de cada vez.
+const ESTILOS_ALEM_DA_POC = ["CitacaoLonga"];
+
 describe("montarDocumento — esqueleto das três seções OOXML (passo 1.4.1)", () => {
   it("word/document.xml tem os mesmos três <w:sectPr> da PoC, só o segundo com w:pgNumType/w:start", async () => {
     const referencia = await abrirZip(readFileSync(CAMINHO_REFERENCIA));
@@ -71,14 +79,14 @@ describe("montarDocumento — esqueleto das três seções OOXML (passo 1.4.1)",
     expect(padraoGerado).toEqual(padraoReferencia);
   });
 
-  it("word/styles.xml declara os mesmos estilos nomeados da PoC", async () => {
+  it("word/styles.xml declara os estilos nomeados da PoC, mais os que a AURA nomeou além dela", async () => {
     const referencia = await abrirZip(readFileSync(CAMINHO_REFERENCIA));
     const idsReferencia = idsDeEstilo(await referencia.file("word/styles.xml")!.async("string"));
 
     const zip = await abrirZip(await gerarBuffer());
     const idsGerado = idsDeEstilo(await zip.file("word/styles.xml")!.async("string"));
 
-    expect(idsGerado).toEqual(idsReferencia);
+    expect(idsGerado).toEqual([...idsReferencia, ...ESTILOS_ALEM_DA_POC].sort());
   });
 
   it("gera um pacote OOXML válido com as partes essenciais", async () => {

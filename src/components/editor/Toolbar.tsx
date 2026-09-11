@@ -87,7 +87,6 @@ const CONTROLES_FUTUROS: ReadonlyArray<{ nome: NomeIcone; label: string }> = [
   { nome: "underline", label: "Sublinhado — sem nó no schema ainda" },
   { nome: "align-justify", label: "Justificar — chega na Fase 3.3" },
   { nome: "list-ordered", label: "Lista numerada — chega na Fase 3" },
-  { nome: "quote", label: "Citação longa — chega na Fase 3.4" },
   { nome: "table", label: "Tabela — chega na Fase 3.6" },
   { nome: "superscript", label: "Nota de rodapé — chega na Fase 6" },
 ];
@@ -103,14 +102,18 @@ interface ToolbarProps {
 // src/core/editor/nodes/section.ts), o atalho de nível funciona mesmo sem
 // esta barra montada; desfazer/refazer usam o atalho de fábrica do
 // `@tiptap/extension-history` (`Mod-z`/`Mod-shift-z`), adicionado neste
-// passo.
+// passo. Citação longa (passo 3.4.2) também é de verdade: alterna o bloco
+// da seleção entre `paragrafo` e `citacao_longa`
+// (`editor.chain().toggleNode("citacao_longa", "paragraph")`) — primeiro
+// jeito de criar um `citacao_longa` pela interface (o nó existe desde 3.4.1,
+// sem UI própria até aqui).
 //
 // Todo o resto — estilo de parágrafo, fonte do documento, corpo, sublinhado,
-// justificar, lista, citação longa, tabela, nota de rodapé, "Aplicar
-// formatação ABNT" — é visual e desabilitado: prévia do que a Fase 3+ liga,
-// não um controle que finge funcionar. `CONTROLES_FUTUROS` cobre os
-// botões de ícone; os três seletores (`Select`, também desabilitados)
-// ficam escritos por extenso abaixo porque cada um tem opções próprias.
+// justificar, lista, tabela, nota de rodapé, "Aplicar formatação ABNT" — é
+// visual e desabilitado: prévia do que a Fase 3+ liga, não um controle que
+// finge funcionar. `CONTROLES_FUTUROS` cobre os botões de ícone; os três
+// seletores (`Select`, também desabilitados) ficam escritos por extenso
+// abaixo porque cada um tem opções próprias.
 //
 // Nível de título muda a seção mais próxima da seleção
 // (`editor.chain().updateAttributes("secao", { nivel })`), não um parágrafo
@@ -195,6 +198,13 @@ export function Toolbar({ editor }: ToolbarProps) {
         onClick={() => editor.chain().focus().toggleMark("italico").run()}
       >
         <Icon name="italic" size={16} />
+      </BotaoToolbar>
+      <BotaoToolbar
+        label="Citação longa (NBR 10520 — recuo 4 cm, fonte menor, espaço simples)"
+        ativo={editor.isActive("citacao_longa")}
+        onClick={() => editor.chain().focus().toggleNode("citacao_longa", "paragraph").run()}
+      >
+        <Icon name="quote" size={16} />
       </BotaoToolbar>
       {CONTROLES_FUTUROS.map((item) => (
         <BotaoToolbar key={item.nome} label={item.label} disabled>
