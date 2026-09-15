@@ -1,5 +1,7 @@
 import { AlignmentType, PageBreak, Paragraph, TextRun } from "docx";
 
+import type { LinhaPreTextual } from "../../document/elements/linhaPreTextual";
+import { gerarOpcionaisPreTextuais } from "../../document/elements/opcionaisPreTextuais";
 import type { Metadados } from "../../document/types";
 import { ABNT } from "./constants";
 
@@ -85,14 +87,55 @@ export function paragrafosAbstract(metadados: Metadados): Paragraph[] {
   return bloco("ABSTRACT", metadados.abstract, "Keywords", metadados.keywords);
 }
 
+// Ponte entre a camada `core/document/elements/` (que diz ordem e
+// alinhamento, sem saber o que é um twip) e o OOXML — passo 3.5.3. Dedicatória,
+// agradecimentos e epígrafe chegam assim; capa e folha de rosto, que já
+// falam a mesma língua desde o 3.5.1, podem passar por aqui quando alguém
+// as ligar (3.7.2).
+//
+// "Recuada a partir do meio da mancha gráfica para a margem direita" (a nota
+// de natureza do trabalho na NBR 14724 §5.2, e por convenção a dedicatória e
+// a epígrafe) vira recuo à esquerda de metade da largura útil: é o mesmo
+// `CM(8)` que a PoC congelada usa na folha de rosto, derivado aqui de
+// `ABNT.larguraUtil` em vez de repetido como número solto.
+const RECUO_METADE = Math.round(ABNT.larguraUtil / 2);
+
+function paragrafoDeLinha(linha: LinhaPreTextual): Paragraph {
+  if (linha.titulo) return paragrafoTituloPreTextual(linha.texto);
+
+  if (linha.alinhamento === "recuada-a-direita") {
+    return new Paragraph({
+      children: [new TextRun(linha.texto)],
+      alignment: AlignmentType.JUSTIFIED,
+      spacing: { line: ABNT.espacamento15 },
+      indent: { left: RECUO_METADE },
+    });
+  }
+
+  return new Paragraph({
+    children: [new TextRun(linha.texto)],
+    alignment:
+      linha.alinhamento === "centro" ? AlignmentType.CENTER : AlignmentType.JUSTIFIED,
+    spacing: { line: ABNT.espacamento15 },
+  });
+}
+
 // Cada elemento pré-textual começa em página própria (NBR 14724, e é o que
 // a PoC faz). A quebra vai ENTRE os blocos, nunca antes do primeiro: a
 // seção OOXML já começa numa página nova, e uma quebra à frente dela
 // deixaria uma página em branco. Por isso o `join` aqui em vez de cada
 // bloco trazer a própria quebra — qual deles é o primeiro depende de quais
 // campos a pessoa preencheu.
+//
+// Ordem canônica até onde este passo alcança (docs/to-do.md 3.7.2):
+// dedicatória, agradecimentos, epígrafe, resumo, abstract. Capa e folha de
+// rosto continuam fora — `sections.ts` mantém o placeholder da capa.
 export function montarPreTextuais(metadados: Metadados): Paragraph[] {
-  const blocos = [paragrafosResumo(metadados), paragrafosAbstract(metadados)].filter(
+  const opcionais = gerarOpcionaisPreTextuais(metadados).map((bloco) =>
+    bloco.map(paragrafoDeLinha)
+  );
+
+  const blocos = [...opcionais, paragrafosResumo(metadados), paragrafosAbstract(metadados)].filter(
     (paragrafos) => paragrafos.length > 0
   );
 

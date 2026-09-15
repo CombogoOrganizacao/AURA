@@ -18,6 +18,7 @@ import { useAutosave, type StatusAutosave } from "@/lib/useAutosave";
 
 import { Abstract } from "./Abstract";
 import { FormMetadados } from "./FormMetadados";
+import { PainelElementos } from "./PainelElementos";
 import { Resumo } from "./Resumo";
 
 interface DocumentoEditorProps {
@@ -188,6 +189,14 @@ function Carregado({
               </summary>
               <div className="px-4 pb-4">
                 <Abstract metadados={documento.metadados} onChange={atualizarMetadados} />
+              </div>
+            </details>
+            <details className="shrink-0 border-b border-[var(--border-subtle)]">
+              <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                Elementos opcionais
+              </summary>
+              <div className="px-4 pb-4">
+                <PainelElementos metadados={documento.metadados} onChange={atualizarMetadados} />
               </div>
             </details>
             <PainelSecoes sections={documento.sections} onReorder={reordenarSecoes} />

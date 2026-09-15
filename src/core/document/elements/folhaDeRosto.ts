@@ -1,6 +1,7 @@
 import type { Metadados } from "../types";
 
-import { type LinhaPreTextual, linhaCentro, tituloComSubtitulo } from "./capa";
+import { tituloComSubtitulo } from "./capa";
+import { type LinhaPreTextual, linhaCentro } from "./linhaPreTextual";
 
 // NBR 14724 §5.2 — elementos da folha de rosto, nesta ordem:
 // a) nome do autor (um por linha, quando houver mais de um);

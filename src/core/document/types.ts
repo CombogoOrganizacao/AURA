@@ -118,6 +118,17 @@ export interface Referencia {
 // nunca de nós do editor — é o que os mantém fora do corpo editável e do
 // sumário (NBR 6027).
 
+// Elemento pré-textual opcional e sem norma de conteúdo: dedicatória,
+// agradecimentos e epígrafe (NBR 14724 §4.2.1, passo 3.5.3). `ativo` é
+// separado de `texto` de propósito — desligar o elemento no painel de
+// composição **não** apaga o que a pessoa escreveu, então religar devolve o
+// texto intacto. É o que justifica o liga/desliga existir, em vez de "campo
+// vazio = desligado" (que é como o abstract funciona, em 3.5.2).
+export interface ElementoOpcional {
+  ativo: boolean;
+  texto: string;
+}
+
 export interface Metadados {
   // A v1 atende só TCC em ABNT; os campos existem para não ter que migrar o
   // formato quando outra norma ou tipo de trabalho entrar.
@@ -138,6 +149,16 @@ export interface Metadados {
   palavrasChave: string[];
   abstract: string;
   keywords: string[];
+
+  // Opcionais (NBR 14724 §4.2.1) — passo 3.5.3. **Opcionais no tipo, não só
+  // na norma**: documento gravado antes deste passo não tem estes campos no
+  // IndexedDB, e o `?` é o que diz a verdade sobre o que pode vir de lá. É
+  // por isso que não existe migração nem valor padrão em `novoDocumento()`:
+  // ausente e `ativo: false` significam a mesma coisa — desligado —, então
+  // não há estado a corrigir, só `?.` na leitura.
+  dedicatoria?: ElementoOpcional;
+  agradecimentos?: ElementoOpcional;
+  epigrafe?: ElementoOpcional;
 }
 
 export interface Documento {

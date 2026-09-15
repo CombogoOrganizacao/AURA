@@ -1,27 +1,18 @@
 import type { Metadados } from "../types";
 
+import { type LinhaPreTextual, linhaCentro } from "./linhaPreTextual";
+
 // Capa e folha de rosto (NBR 14724 §5.1/5.2) não são texto corrido nem nós do
 // editor (docs/schema-tiptap.md §1) — são derivadas de `Metadados` toda vez
 // que alguém precisa exibi-las (tela ou exportador), nunca editadas
 // diretamente. Esta função só monta a lista ordenada de linhas; quem
 // consome decide a tipografia real (tamanho, negrito, caixa alta) — aqui só
 // o que a norma manda sobre ORDEM e ALINHAMENTO.
-
-// A norma centraliza toda a capa e toda a folha de rosto, com uma única
-// exceção: a nota de natureza do trabalho (só na folha de rosto, ver
-// `folhaDeRosto.ts`), recuada a partir do meio da mancha gráfica para a
-// margem direita. `"centro"` cobre tudo daqui; `"recuada-a-direita"` existe
-// só para essa nota.
-export type AlinhamentoLinhaPreTextual = "centro" | "recuada-a-direita";
-
-export interface LinhaPreTextual {
-  texto: string;
-  alinhamento: AlinhamentoLinhaPreTextual;
-}
-
-export function linhaCentro(texto: string): LinhaPreTextual {
-  return { texto, alinhamento: "centro" };
-}
+//
+// `LinhaPreTextual`/`linhaCentro` moraram aqui até o passo 3.5.3, quando
+// `opcionaisPreTextuais.ts` virou o terceiro consumidor e os levou para
+// `linhaPreTextual.ts` — exatamente a condição que o 3.5.1 registrou para
+// essa extração acontecer, nem antes nem depois.
 
 // "Subtítulo, se houver, deve ser precedido de dois-pontos, evidenciando a
 // sua subordinação ao título" (NBR 14724 §5.1-d/§5.2-c) — por isso uma linha

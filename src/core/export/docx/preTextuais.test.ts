@@ -143,4 +143,60 @@ describe("montarPreTextuais", () => {
   it("devolve lista vazia quando não há resumo nem abstract", () => {
     expect(montarPreTextuais(criarMetadados())).toEqual([]);
   });
+
+  // Passo 3.5.3 — os opcionais entram antes do resumo, na ordem da norma.
+  it("põe dedicatória, agradecimentos e epígrafe antes do resumo e do abstract", async () => {
+    const xml = await documentXmlDe(
+      montarPreTextuais(
+        criarMetadados({
+          dedicatoria: { ativo: true, texto: "À minha família." },
+          agradecimentos: { ativo: true, texto: "Ao meu orientador." },
+          epigrafe: { ativo: true, texto: "Uma citação." },
+          resumo: "Este trabalho investiga X.",
+          abstract: "This work investigates X.",
+        })
+      )
+    );
+
+    const posicoes = [
+      "À minha família.",
+      "AGRADECIMENTOS",
+      "Uma citação.",
+      "RESUMO",
+      "ABSTRACT",
+    ].map((trecho) => xml.indexOf(trecho));
+
+    for (const posicao of posicoes) expect(posicao).toBeGreaterThan(-1);
+    expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b));
+
+    // Cinco blocos, quatro quebras entre eles — nenhuma abrindo a seção.
+    expect(xml.match(QUEBRA_DE_PAGINA) ?? []).toHaveLength(4);
+  });
+
+  it("recua dedicatória e epígrafe a partir do meio da mancha; agradecimentos não", async () => {
+    const xml = await documentXmlDe(
+      montarPreTextuais(
+        criarMetadados({
+          dedicatoria: { ativo: true, texto: "À minha família." },
+          agradecimentos: { ativo: true, texto: "Ao meu orientador." },
+        })
+      )
+    );
+
+    // `larguraUtil` (16 cm) / 2 = 4535 twips — o mesmo número que `CM(8)`
+    // produz em `poc/docx/gerar.js` na nota da folha de rosto, conferido.
+    // Derivar da largura útil em vez de repetir o 8 é o que mantém os dois
+    // ligados se a margem mudar.
+    const paragrafoDedicatoria = xml.slice(
+      xml.lastIndexOf("<w:p>", xml.indexOf("À minha família.")),
+      xml.indexOf("À minha família.")
+    );
+    expect(paragrafoDedicatoria).toContain('w:left="4535"');
+
+    const paragrafoAgradecimento = xml.slice(
+      xml.lastIndexOf("<w:p>", xml.indexOf("Ao meu orientador.")),
+      xml.indexOf("Ao meu orientador.")
+    );
+    expect(paragrafoAgradecimento).not.toContain("w:ind");
+  });
 });
