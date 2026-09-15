@@ -16,7 +16,9 @@ import type { AdaptadorPersistencia } from "@/core/persistence/types";
 import { usePersistencia } from "@/lib/persistence-provider";
 import { useAutosave, type StatusAutosave } from "@/lib/useAutosave";
 
+import { Abstract } from "./Abstract";
 import { FormMetadados } from "./FormMetadados";
+import { Resumo } from "./Resumo";
 
 interface DocumentoEditorProps {
   documentoId: string;
@@ -170,6 +172,22 @@ function Carregado({
               </summary>
               <div className="px-4 pb-4">
                 <FormMetadados metadados={documento.metadados} onChange={atualizarMetadados} />
+              </div>
+            </details>
+            <details className="shrink-0 border-b border-[var(--border-subtle)]">
+              <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                Resumo e palavras-chave
+              </summary>
+              <div className="px-4 pb-4">
+                <Resumo metadados={documento.metadados} onChange={atualizarMetadados} />
+              </div>
+            </details>
+            <details className="shrink-0 border-b border-[var(--border-subtle)]">
+              <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                Abstract e keywords
+              </summary>
+              <div className="px-4 pb-4">
+                <Abstract metadados={documento.metadados} onChange={atualizarMetadados} />
               </div>
             </details>
             <PainelSecoes sections={documento.sections} onReorder={reordenarSecoes} />

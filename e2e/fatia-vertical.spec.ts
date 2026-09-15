@@ -29,7 +29,12 @@ test("criar, digitar, recarregar, persistir e exportar", async ({ page }) => {
   // "Dados do trabalho" é um `<details>` recolhido por padrão desde o
   // 2B.10 — o campo "Título" só fica visível depois de abri-lo.
   await page.getByText("Dados do trabalho").click();
-  await page.getByLabel("Título").fill(titulo);
+  // `exact: true` desde o passo 3.5.2: o campo de título de seção
+  // (`SectionView.tsx`, `aria-label="1 Título da seção"`) também casa com
+  // "Título" por substring, e `getByLabel` é estrito — dois elementos
+  // quebravam o `fill()`. Não é mudança deste passo, é conserto de um
+  // seletor que a Fase 3.2 já tinha deixado ambíguo.
+  await page.getByLabel("Título", { exact: true }).fill(titulo);
 
   // Editor sem toolbar nem data-testid próprio ainda — o único elemento
   // contenteditable da página é o TipTap.
@@ -50,7 +55,7 @@ test("criar, digitar, recarregar, persistir e exportar", async ({ page }) => {
 
   // Título e corpo persistem JUNTOS — é a garantia que 1.3.7 introduziu
   // (antes, dois donos de `Documento` podiam apagar a mudança um do outro).
-  await expect(page.getByLabel("Título")).toHaveValue(titulo);
+  await expect(page.getByLabel("Título", { exact: true })).toHaveValue(titulo);
   await expect(editor).toContainText(corpo);
 
   const downloadPromise = page.waitForEvent("download");

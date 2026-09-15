@@ -8,8 +8,11 @@ import { montarSecoes } from "./sections";
 // preciso empacotar de verdade (é XML que só existe depois do `Packer`).
 // Um `Document` mínimo, sem os estilos nomeados de `index.ts`, já basta:
 // este teste é sobre a estrutura das seções, não sobre estilo.
-async function documentXmlDe(corpo: readonly Paragraph[]): Promise<string> {
-  const documento = new Document({ sections: montarSecoes(corpo) });
+async function documentXmlDe(
+  corpo: readonly Paragraph[],
+  preTextuais: readonly Paragraph[] = []
+): Promise<string> {
+  const documento = new Document({ sections: montarSecoes(corpo, preTextuais) });
   const buffer = await Packer.toBuffer(documento);
   const zip = await JSZip.loadAsync(buffer);
   return zip.file("word/document.xml")!.async("string");
@@ -49,5 +52,22 @@ describe("montarSecoes — as três seções OOXML (passo 1.4.3)", () => {
     expect(secoes[0].headers).toBeUndefined();
     expect(secoes[1].headers).toBeUndefined();
     expect(secoes[2].headers?.default).toBeDefined();
+  });
+
+  it("põe `preTextuais` antes de SUMÁRIO na segunda seção (passo 3.5.2)", async () => {
+    const xml = await documentXmlDe([], [new Paragraph("Resumo de teste")]);
+
+    const posResumo = xml.indexOf("Resumo de teste");
+    const posSumario = xml.indexOf("SUMÁRIO");
+
+    expect(posResumo).toBeGreaterThan(-1);
+    expect(posSumario).toBeGreaterThan(-1);
+    expect(posResumo).toBeLessThan(posSumario);
+  });
+
+  it("sem `preTextuais`, a segunda seção continua só com o placeholder SUMÁRIO", () => {
+    const secoes = montarSecoes([]);
+
+    expect(secoes[1].children).toHaveLength(1);
   });
 });

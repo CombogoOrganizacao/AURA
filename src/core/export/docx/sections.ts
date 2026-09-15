@@ -2,6 +2,7 @@ import {
   AlignmentType,
   Header,
   NumberFormat,
+  PageBreak,
   PageNumber,
   Paragraph,
   TextRun,
@@ -9,6 +10,7 @@ import {
 } from "docx";
 
 import { ABNT } from "./constants";
+import { paragrafoTituloPreTextual } from "./preTextuais";
 
 // Montagem das três seções OOXML (passo 1.4.3) — fatorado de `index.ts`
 // (1.4.1/1.4.2) pra existir e ser testado por si só, independente de
@@ -19,21 +21,18 @@ import { ABNT } from "./constants";
 //   3. Corpo — contagem CONTINUA, número EXIBIDO (cabeçalho com o campo
 //      PAGE no canto superior direito, NBR 14724).
 //
-// Capa e pré-textuais aqui dentro continuam placeholder: dependem do layout
-// de metadados de verdade, que é o passo 3.5.1 — fora do escopo deste passo.
+// Capa continua placeholder: depende de layout próprio (página sem
+// numeração, sem cabeçalho — só a ordem/alinhamento já existe, em
+// `src/core/document/elements/capa.ts`/`folhaDeRosto.ts`, passo 3.5.1) que
+// ninguém ligou aqui ainda. Pré-textuais recebe resumo/abstract de verdade
+// desde o passo 3.5.2 (`preTextuais` abaixo, montado por `fromDocumento.ts`
+// a partir de `preTextuais.ts`) — "SUMÁRIO" continua placeholder, isso é
+// 3.6.1/3.6.2.
 
 const propriedadesPagina = {
   size: ABNT.paginaA4,
   margin: { ...ABNT.margem, header: ABNT.distanciaCabecalho },
 };
-
-// Mesma tipografia da seção primária, mas sem nível de estrutura — o que
-// mantém os pré-textuais fora do sumário (NBR 6027). Ver
-// poc/docx/gerar.js, `tituloPreTextual`; o estilo `TituloPreTextual` em si
-// é declarado em `index.ts`, junto dos demais estilos nomeados.
-function paragrafoTituloPreTextual(texto: string): Paragraph {
-  return new Paragraph({ text: texto, style: "TituloPreTextual", keepNext: true });
-}
 
 const cabecalhoComNumero = new Header({
   children: [
@@ -44,7 +43,10 @@ const cabecalhoComNumero = new Header({
   ],
 });
 
-export function montarSecoes(corpo: readonly Paragraph[]): ISectionOptions[] {
+export function montarSecoes(
+  corpo: readonly Paragraph[],
+  preTextuais: readonly Paragraph[] = []
+): ISectionOptions[] {
   return [
     // 1 — Capa: sem cabeçalho, fora da contagem de página.
     {
@@ -57,6 +59,9 @@ export function montarSecoes(corpo: readonly Paragraph[]): ISectionOptions[] {
       ],
     },
     // 2 — Pré-textuais: contagem REINICIA em 1, número NÃO exibido.
+    // `preTextuais` (resumo/abstract, passo 3.5.2) vem antes de "SUMÁRIO" —
+    // mesma ordem canônica que `docs/to-do.md` (3.7.2) já define: resumo,
+    // abstract, listas, sumário.
     {
       properties: {
         page: {
@@ -64,7 +69,14 @@ export function montarSecoes(corpo: readonly Paragraph[]): ISectionOptions[] {
           pageNumbers: { start: 1, formatType: NumberFormat.DECIMAL },
         },
       },
-      children: [paragrafoTituloPreTextual("SUMÁRIO")],
+      children: [
+        ...preTextuais,
+        // Cada elemento pré-textual em página própria — a quebra só existe
+        // se houver algo antes do sumário (senão sobra uma página em
+        // branco na abertura da seção). Mesma regra de `montarPreTextuais()`.
+        ...(preTextuais.length > 0 ? [new Paragraph({ children: [new PageBreak()] })] : []),
+        paragrafoTituloPreTextual("SUMÁRIO"),
+      ],
     },
     // 3 — Corpo: contagem CONTINUA, número EXIBIDO.
     {

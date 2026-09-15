@@ -3,11 +3,13 @@ import { AlignmentType, HeadingLevel, type Document, Paragraph, TextRun } from "
 import type { Documento, NoConteudo, Secao } from "../../document/types";
 import { ABNT } from "./constants";
 import { montarDocumento } from "./index";
+import { montarPreTextuais } from "./preTextuais";
 
 // Liga o exportador ao `Documento` canônico de verdade (passo 1.4.2) — não
-// mais ao JSON de teste da PoC. Só o corpo: capa e pré-textuais ainda são
-// placeholder em `index.ts` (ver comentário lá e docs/porte-poc.md) porque
-// dependem de layout de metadados que é o passo 3.5.1.
+// mais ao JSON de teste da PoC. Corpo desde 1.4.2, resumo/abstract desde
+// 3.5.2 (`preTextuais.ts`). Capa ainda é placeholder em `sections.ts` (ver
+// comentário lá e docs/porte-poc.md): depende de layout próprio que ainda
+// não foi ligado.
 //
 // `NoConteudo` cobre `paragraph` (desde 1.3.3) e `citacao_longa` (desde
 // 3.4.1, estilo nomeado `CitacaoLonga` desde 3.4.2 — ver
@@ -68,5 +70,5 @@ export function fromDocumento(documento: Documento): Document {
     }
   }
 
-  return montarDocumento({ corpo });
+  return montarDocumento({ corpo, preTextuais: montarPreTextuais(documento.metadados) });
 }
