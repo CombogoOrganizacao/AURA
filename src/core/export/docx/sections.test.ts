@@ -10,7 +10,7 @@ import { montarSecoes } from "./sections";
 // este teste é sobre a estrutura das seções, não sobre estilo.
 async function documentXmlDe(
   corpo: readonly Paragraph[],
-  preTextuais: readonly Paragraph[] = []
+  preTextuais: readonly Paragraph[] = [],
 ): Promise<string> {
   const documento = new Document({ sections: montarSecoes(corpo, preTextuais) });
   const buffer = await Packer.toBuffer(documento);
@@ -65,9 +65,12 @@ describe("montarSecoes — as três seções OOXML (passo 1.4.3)", () => {
     expect(posResumo).toBeLessThan(posSumario);
   });
 
-  it("sem `preTextuais`, a segunda seção continua só com o placeholder SUMÁRIO", () => {
+  // Sem `preTextuais` não há quebra de página nenhuma na abertura da seção —
+  // sobram exatamente os dois nós do sumário (título + campo `TOC`,
+  // `toc.ts`, passo 3.6.2), que antes eram só o parágrafo-placeholder.
+  it("sem `preTextuais`, a segunda seção fica só com o sumário, sem quebra antes", () => {
     const secoes = montarSecoes([]);
 
-    expect(secoes[1].children).toHaveLength(1);
+    expect(secoes[1].children).toHaveLength(2);
   });
 });

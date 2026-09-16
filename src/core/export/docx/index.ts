@@ -16,11 +16,12 @@ import { ESTILOS_DOCUMENTO } from "./styles";
 //
 // Corpo real desde o passo 1.4.2 (`fromDocumento.ts` converte `Documento`
 // canônico pra `ConteudoExportacao`). Resumo/abstract reais desde o passo
-// 3.5.2 (`preTextuais`, ver `docx/preTextuais.ts`). Capa continua
-// placeholder (ver `sections.ts`): depende de layout próprio que ninguém
-// ligou ainda. Os geradores dos demais blocos (lista, figura, tabela,
-// fórmula), referências, notas e sumário chegam um de cada vez, nos passos
-// da Fase 3/4 que os implementam de verdade no editor primeiro.
+// 3.5.2 (`preTextuais`, ver `docx/preTextuais.ts`); sumário como campo `TOC`
+// desde o 3.6.2 (`docx/toc.ts`). Capa continua placeholder (ver
+// `sections.ts`): depende de layout próprio que ninguém ligou ainda. Os
+// geradores dos demais blocos (lista, figura, tabela, fórmula), referências
+// e notas chegam um de cada vez, nos passos da Fase 3/4 que os implementam
+// de verdade no editor primeiro.
 
 export interface ConteudoExportacao {
   // Corpo já convertido para nós do `docx` — quem faz essa conversão a
@@ -41,6 +42,13 @@ export interface ConteudoExportacao {
 // vale pra `fs.readFileSync` (docs/porte-poc.md).
 export function montarDocumento({ corpo, preTextuais = [] }: ConteudoExportacao): Document {
   return new Document({
+    // `<w:updateFields/>` em `word/settings.xml` — porte do mesmo `features`
+    // de `poc/docx/gerar.js` (passo 3.6.2), que só passou a ter efeito agora
+    // que existe campo no documento. Faz o Word oferecer atualizar os campos
+    // ao abrir, e é o que enche o sumário (`toc.ts`) com os números de página
+    // sem a pessoa precisar achar "Atualizar sumário" sozinha. O campo já vai
+    // marcado `w:dirty="true"`; isto é o outro lado do mesmo par.
+    features: { updateFields: true },
     styles: ESTILOS_DOCUMENTO,
     sections: montarSecoes(corpo, preTextuais),
   });

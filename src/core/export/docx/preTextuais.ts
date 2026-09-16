@@ -16,7 +16,8 @@ import { ABNT } from "./constants";
 //
 // Capa e folha de rosto (`src/core/document/elements/`, passo 3.5.1)
 // continuam sem gerador de `.docx`: a PoC monta a folha de rosto no mesmo
-// array, mas ligar isso aqui é outro passo. Sumário e listas: 3.6.1+.
+// array, mas ligar isso aqui é outro passo. O sumário saiu daqui: é campo
+// `TOC`, em `toc.ts` (3.6.2). Listas de figuras/tabelas: 3.6.4.
 //
 // NBR 6028 pede parágrafo único, por isso sem recuo de primeira linha (ao
 // contrário do corpo comum, em `fromDocumento.ts`). A norma é omissa sobre
@@ -26,10 +27,10 @@ import { ABNT } from "./constants";
 // que virar a constante mude o resultado de verdade.
 const espacoResumo = ABNT.resumoEspacoSimples ? ABNT.espacamento1 : ABNT.espacamento15;
 
-// Mesmo estilo nomeado que `sections.ts` já usa pra "SUMÁRIO" — título fora
-// do sumário (NBR 6027), sem nível de estrutura. Movido pra cá porque
-// resumo/abstract também precisam dele; `sections.ts` importa daqui agora,
-// em vez de declarar a própria cópia.
+// Estilo nomeado de título de elemento pré-textual — título fora do sumário
+// (NBR 6027), sem nível de estrutura: por não ser Heading, o campo `TOC` não
+// o recolhe (ver `toc.ts`). Um lugar só, usado por resumo/abstract aqui,
+// pelos opcionais abaixo e pelo título "SUMÁRIO" em `toc.ts`.
 export function paragrafoTituloPreTextual(texto: string): Paragraph {
   return new Paragraph({ text: texto, style: "TituloPreTextual", keepNext: true });
 }
@@ -114,8 +115,7 @@ function paragrafoDeLinha(linha: LinhaPreTextual): Paragraph {
 
   return new Paragraph({
     children: [new TextRun(linha.texto)],
-    alignment:
-      linha.alinhamento === "centro" ? AlignmentType.CENTER : AlignmentType.JUSTIFIED,
+    alignment: linha.alinhamento === "centro" ? AlignmentType.CENTER : AlignmentType.JUSTIFIED,
     spacing: { line: ABNT.espacamento15 },
   });
 }
@@ -132,14 +132,14 @@ function paragrafoDeLinha(linha: LinhaPreTextual): Paragraph {
 // rosto continuam fora — `sections.ts` mantém o placeholder da capa.
 export function montarPreTextuais(metadados: Metadados): Paragraph[] {
   const opcionais = gerarOpcionaisPreTextuais(metadados).map((bloco) =>
-    bloco.map(paragrafoDeLinha)
+    bloco.map(paragrafoDeLinha),
   );
 
   const blocos = [...opcionais, paragrafosResumo(metadados), paragrafosAbstract(metadados)].filter(
-    (paragrafos) => paragrafos.length > 0
+    (paragrafos) => paragrafos.length > 0,
   );
 
   return blocos.flatMap((paragrafos, indice) =>
-    indice === 0 ? paragrafos : [new Paragraph({ children: [new PageBreak()] }), ...paragrafos]
+    indice === 0 ? paragrafos : [new Paragraph({ children: [new PageBreak()] }), ...paragrafos],
   );
 }

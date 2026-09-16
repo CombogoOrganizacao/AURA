@@ -1,5 +1,7 @@
 import { AlignmentType, HeadingLevel, type Document, Paragraph, TextRun } from "docx";
 
+import { textoItemSumario } from "../../document/elements/sumario";
+import { numerarSecoes } from "../../document/numbering";
 import type { Documento, NoConteudo, Secao } from "../../document/types";
 import { ABNT } from "./constants";
 import { montarDocumento } from "./index";
@@ -34,11 +36,23 @@ const NIVEL_PARA_HEADING = [
   HeadingLevel.HEADING_3,
 ] as const;
 
-// Sem numeração no título (§2 de docs/schema-tiptap.md): "1.2 Metodologia"
-// é derivado, não digitado — e ainda não há de onde derivar aqui (passo
-// 3.2.1). Título sai só com o texto por ora.
-function paragrafoTitulo(secao: Secao): Paragraph {
-  return new Paragraph({ text: secao.titulo, heading: NIVEL_PARA_HEADING[secao.nivel - 1] });
+// O indicativo numérico é DERIVADO, nunca digitado (§2 de
+// docs/schema-tiptap.md): `Secao.titulo` guarda "Metodologia", e "2.1
+// Metodologia" só existe na saída. Quem deriva é `numerarSecoes()` (3.2.1),
+// a mesma função do painel de seções e do sumário — e quem monta a string é
+// `textoItemSumario()` (3.6.1), pelo mesmo motivo.
+//
+// **A grafia daqui é a grafia do sumário.** O campo `TOC` (`toc.ts`, passo
+// 3.6.2) não remonta título nenhum: o Word copia o texto destes parágrafos
+// para dentro da entrada. Se o indicativo faltar aqui, falta lá — e a NBR
+// 6027 pede que o sumário reproduza os títulos como aparecem no texto. Era
+// o que `docs/porte-poc.md` registrava como pendente ("até lá, títulos de
+// seção no exportador continuam sem indicativo numérico").
+function paragrafoTitulo(secao: Secao, numero: string | null): Paragraph {
+  return new Paragraph({
+    text: textoItemSumario({ numero, titulo: secao.titulo }),
+    heading: NIVEL_PARA_HEADING[secao.nivel - 1],
+  });
 }
 
 function paragrafoCorpo(no: NoConteudo): Paragraph {
@@ -61,10 +75,14 @@ function paragrafoCorpo(no: NoConteudo): Paragraph {
 
 export function fromDocumento(documento: Documento): Document {
   const secoesEmOrdem = [...documento.sections].sort((a, b) => a.ordem - b.ordem);
+  const numeracao = numerarSecoes(documento.sections);
 
   const corpo: Paragraph[] = [];
   for (const secao of secoesEmOrdem) {
-    corpo.push(paragrafoTitulo(secao));
+    // `?? null` pelo mesmo motivo de `gerarSumario()`: o `Map` é indexado
+    // por `id`, e uma seção ausente dele sai sem indicativo em vez de com
+    // `undefined` no meio do título.
+    corpo.push(paragrafoTitulo(secao, numeracao.get(secao.id) ?? null));
     for (const no of secao.content) {
       corpo.push(paragrafoCorpo(no));
     }

@@ -62,7 +62,13 @@ export const TITULO_SUMARIO = "SUMÁRIO";
 // e a entrada do sumário saírem com a MESMA grafia — a 6027 pede que o
 // sumário reproduza os títulos como aparecem no texto, e a única forma de
 // garantir isso é os dois chamarem a mesma função.
-export function textoItemSumario(item: ItemSumario): string {
+//
+// `Pick` em vez de `ItemSumario` inteiro (passo 3.6.2): quem monta o título
+// da seção no `.docx` (`export/docx/fromDocumento.ts`) tem `numero` e
+// `titulo` em mãos, e não uma entrada de sumário — obrigá-lo a fabricar um
+// `ItemSumario` só para chamar esta função seria inventar um objeto para
+// satisfazer uma assinatura. `ItemSumario` continua satisfazendo o tipo.
+export function textoItemSumario(item: Pick<ItemSumario, "numero" | "titulo">): string {
   return item.numero ? `${item.numero} ${item.titulo}` : item.titulo;
 }
 

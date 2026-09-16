@@ -10,7 +10,7 @@ import {
 } from "docx";
 
 import { ABNT } from "./constants";
-import { paragrafoTituloPreTextual } from "./preTextuais";
+import { blocoSumario } from "./toc";
 
 // Montagem das três seções OOXML (passo 1.4.3) — fatorado de `index.ts`
 // (1.4.1/1.4.2) pra existir e ser testado por si só, independente de
@@ -26,8 +26,8 @@ import { paragrafoTituloPreTextual } from "./preTextuais";
 // `src/core/document/elements/capa.ts`/`folhaDeRosto.ts`, passo 3.5.1) que
 // ninguém ligou aqui ainda. Pré-textuais recebe resumo/abstract de verdade
 // desde o passo 3.5.2 (`preTextuais` abaixo, montado por `fromDocumento.ts`
-// a partir de `preTextuais.ts`) — "SUMÁRIO" continua placeholder, isso é
-// 3.6.1/3.6.2.
+// a partir de `preTextuais.ts`) e o sumário é campo `TOC` de verdade desde
+// o passo 3.6.2 (`toc.ts`).
 
 const propriedadesPagina = {
   size: ABNT.paginaA4,
@@ -45,7 +45,7 @@ const cabecalhoComNumero = new Header({
 
 export function montarSecoes(
   corpo: readonly Paragraph[],
-  preTextuais: readonly Paragraph[] = []
+  preTextuais: readonly Paragraph[] = [],
 ): ISectionOptions[] {
   return [
     // 1 — Capa: sem cabeçalho, fora da contagem de página.
@@ -59,9 +59,10 @@ export function montarSecoes(
       ],
     },
     // 2 — Pré-textuais: contagem REINICIA em 1, número NÃO exibido.
-    // `preTextuais` (resumo/abstract, passo 3.5.2) vem antes de "SUMÁRIO" —
+    // `preTextuais` (resumo/abstract, passo 3.5.2) vem antes do sumário —
     // mesma ordem canônica que `docs/to-do.md` (3.7.2) já define: resumo,
-    // abstract, listas, sumário.
+    // abstract, listas, sumário. O sumário é o ÚLTIMO pré-textual (NBR
+    // 6027), e é por isso que ele fecha esta seção.
     {
       properties: {
         page: {
@@ -75,7 +76,7 @@ export function montarSecoes(
         // se houver algo antes do sumário (senão sobra uma página em
         // branco na abertura da seção). Mesma regra de `montarPreTextuais()`.
         ...(preTextuais.length > 0 ? [new Paragraph({ children: [new PageBreak()] })] : []),
-        paragrafoTituloPreTextual("SUMÁRIO"),
+        ...blocoSumario(),
       ],
     },
     // 3 — Corpo: contagem CONTINUA, número EXIBIDO.

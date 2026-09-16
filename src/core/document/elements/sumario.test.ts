@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { NivelSecao, Secao } from "../types";
 
-import { TITULO_SUMARIO, gerarSumario, textoItemSumario } from "./sumario";
+import { TITULO_SUMARIO, type ItemSumario, gerarSumario, textoItemSumario } from "./sumario";
 
 function secao(id: string, ordem: number, nivel: NivelSecao, titulo: string): Secao {
   return { id, ordem, nivel, titulo, content: [] };
@@ -125,19 +125,21 @@ describe("gerarSumario — sumário derivado da árvore de seções (passo 3.6.1
 });
 
 describe("textoItemSumario — indicativo e título na mesma grafia do corpo", () => {
-  // NBR 6024: indicativo separado do título por um espaço.
+  // NBR 6024: indicativo separado do título por um espaço. Uma entrada de
+  // sumário inteira continua servindo de argumento — a assinatura só pede
+  // `numero`/`titulo` (passo 3.6.2) para que o título do corpo no `.docx`
+  // possa chamar a mesma função sem fabricar um `ItemSumario`.
   it("junta indicativo e título por um espaço", () => {
-    expect(textoItemSumario({ id: "s1", numero: "3.1.2", titulo: "Coleta", nivel: 3 })).toBe(
-      "3.1.2 Coleta",
-    );
+    const item: ItemSumario = { id: "s1", numero: "3.1.2", titulo: "Coleta", nivel: 3 };
+
+    expect(textoItemSumario(item)).toBe("3.1.2 Coleta");
+    expect(textoItemSumario({ numero: "3.1.2", titulo: "Coleta" })).toBe("3.1.2 Coleta");
   });
 
   // Forma das entradas pós-textuais (referências, apêndices, anexos — passo
   // 3.7.2), que entram no sumário sem indicativo numérico.
   it("sai só com o título quando não há indicativo", () => {
-    expect(textoItemSumario({ id: "ref", numero: null, titulo: "REFERÊNCIAS", nivel: 1 })).toBe(
-      "REFERÊNCIAS",
-    );
+    expect(textoItemSumario({ numero: null, titulo: "REFERÊNCIAS" })).toBe("REFERÊNCIAS");
   });
 
   it("o título do próprio sumário é uma constante compartilhada", () => {
