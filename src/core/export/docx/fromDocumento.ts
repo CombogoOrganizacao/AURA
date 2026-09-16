@@ -12,7 +12,8 @@ import type {
 import { ABNT } from "./constants";
 import { paragrafoFonte, paragrafoLegenda } from "./legenda";
 import { montarDocumento } from "./index";
-import { montarPreTextuais } from "./preTextuais";
+import { blocosDeListas } from "./listas";
+import { comQuebrasEntreBlocos, montarPreTextuais } from "./preTextuais";
 
 // Liga o exportador ao `Documento` canônico de verdade (passo 1.4.2) — não
 // mais ao JSON de teste da PoC. Corpo desde 1.4.2, resumo/abstract desde
@@ -153,5 +154,16 @@ export function fromDocumento(documento: Documento): Document {
     }
   }
 
-  return montarDocumento({ corpo, preTextuais: montarPreTextuais(documento.metadados) });
+  // Ordem canônica dos pré-textuais (docs/to-do.md 3.7.2): opcionais,
+  // resumo e abstract (`montarPreTextuais`), depois as listas de figuras,
+  // tabelas e abreviaturas (3.6.4) — o sumário fecha a seção, em
+  // `sections.ts`. `comQuebrasEntreBlocos` trata o que já veio de
+  // `montarPreTextuais()` como um bloco só, então a quebra de página cai
+  // entre ele e a primeira lista, e entre uma lista e a seguinte.
+  const preTextuais = comQuebrasEntreBlocos([
+    montarPreTextuais(documento.metadados),
+    ...blocosDeListas(documento),
+  ]);
+
+  return montarDocumento({ corpo, preTextuais });
 }

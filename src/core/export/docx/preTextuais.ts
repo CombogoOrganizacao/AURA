@@ -1,4 +1,4 @@
-import { AlignmentType, PageBreak, Paragraph, TextRun } from "docx";
+import { AlignmentType, PageBreak, Paragraph, TextRun, type FileChild } from "docx";
 
 import type { LinhaPreTextual } from "../../document/elements/linhaPreTextual";
 import { gerarOpcionaisPreTextuais } from "../../document/elements/opcionaisPreTextuais";
@@ -123,23 +123,36 @@ function paragrafoDeLinha(linha: LinhaPreTextual): Paragraph {
 // Cada elemento pré-textual começa em página própria (NBR 14724, e é o que
 // a PoC faz). A quebra vai ENTRE os blocos, nunca antes do primeiro: a
 // seção OOXML já começa numa página nova, e uma quebra à frente dela
-// deixaria uma página em branco. Por isso o `join` aqui em vez de cada
-// bloco trazer a própria quebra — qual deles é o primeiro depende de quais
-// campos a pessoa preencheu.
+// deixaria uma página em branco. Por isso a junção aqui em vez de cada bloco
+// trazer a própria quebra — qual deles é o primeiro depende de quais campos
+// a pessoa preencheu.
 //
-// Ordem canônica até onde este passo alcança (docs/to-do.md 3.7.2):
-// dedicatória, agradecimentos, epígrafe, resumo, abstract. Capa e folha de
-// rosto continuam fora — `sections.ts` mantém o placeholder da capa.
-export function montarPreTextuais(metadados: Metadados): Paragraph[] {
+// Exportada no passo 3.6.4 para `fromDocumento.ts` emendar as listas
+// (figuras, tabelas, abreviaturas — `docx/listas.ts`) depois do abstract
+// seguindo a mesma regra de quebra, em vez de reimplementá-la. Fala em
+// `FileChild`, não em `Paragraph`: a lista de figuras é um campo
+// `TableOfContents`, que não é parágrafo.
+export function comQuebrasEntreBlocos(blocos: readonly FileChild[][]): FileChild[] {
+  return blocos
+    .filter((bloco) => bloco.length > 0)
+    .flatMap((bloco, indice) =>
+      indice === 0 ? bloco : [new Paragraph({ children: [new PageBreak()] }), ...bloco],
+    );
+}
+
+// Ordem canônica até onde os metadados alcançam (docs/to-do.md 3.7.2):
+// dedicatória, agradecimentos, epígrafe, resumo, abstract. As listas vêm
+// logo depois, emendadas por `fromDocumento.ts` (3.6.4), e o sumário fecha a
+// seção (`sections.ts`). Capa e folha de rosto continuam fora —
+// `sections.ts` mantém o placeholder da capa.
+export function montarPreTextuais(metadados: Metadados): FileChild[] {
   const opcionais = gerarOpcionaisPreTextuais(metadados).map((bloco) =>
     bloco.map(paragrafoDeLinha),
   );
 
-  const blocos = [...opcionais, paragrafosResumo(metadados), paragrafosAbstract(metadados)].filter(
-    (paragrafos) => paragrafos.length > 0,
-  );
-
-  return blocos.flatMap((paragrafos, indice) =>
-    indice === 0 ? paragrafos : [new Paragraph({ children: [new PageBreak()] }), ...paragrafos],
-  );
+  return comQuebrasEntreBlocos([
+    ...opcionais,
+    paragrafosResumo(metadados),
+    paragrafosAbstract(metadados),
+  ]);
 }

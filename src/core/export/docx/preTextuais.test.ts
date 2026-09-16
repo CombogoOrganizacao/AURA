@@ -1,4 +1,4 @@
-import { Document, Packer } from "docx";
+import { Document, Packer, type FileChild } from "docx";
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 
@@ -28,8 +28,11 @@ function criarMetadados(overrides: Partial<Metadados> = {}): Metadados {
 // Mesmo padrão de `fromDocumento.test.ts`/`sections.test.ts`: inspeciona o
 // XML de verdade, gerado pelo `Packer`, em vez de reimplementar por conta
 // própria como a lib `docx` guarda texto em `Paragraph`/`TextRun`.
-async function documentXmlDe(paragrafos: readonly ReturnType<typeof paragrafosResumo>[number][]) {
-  const documento = new Document({ sections: [{ properties: {}, children: [...paragrafos] }] });
+// `FileChild`, não `Paragraph`: desde o passo 3.6.4 um bloco pré-textual
+// pode conter um campo `TableOfContents` (a lista de figuras), que não é
+// parágrafo.
+async function documentXmlDe(filhos: readonly FileChild[]) {
+  const documento = new Document({ sections: [{ properties: {}, children: [...filhos] }] });
   const buffer = await Packer.toBuffer(documento);
   const zip = await JSZip.loadAsync(buffer);
   return zip.file("word/document.xml")!.async("string");

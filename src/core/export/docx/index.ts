@@ -1,4 +1,4 @@
-import { Document, Paragraph } from "docx";
+import { Document, Paragraph, type FileChild } from "docx";
 
 import { montarSecoes } from "./sections";
 import { ESTILOS_DOCUMENTO } from "./styles";
@@ -27,11 +27,14 @@ export interface ConteudoExportacao {
   // Corpo já convertido para nós do `docx` — quem faz essa conversão a
   // partir do `Documento` canônico é `fromDocumento.ts` (passo 1.4.2).
   corpo: Paragraph[];
-  // Resumo + abstract já convertidos (passo 3.5.2, `fromDocumento.ts` chama
-  // `docx/preTextuais.ts`). Opcional porque a capa continua sem gerador
-  // próprio: quem só testa o corpo (`index.test.ts`) não precisa passar
-  // nada aqui.
-  preTextuais?: Paragraph[];
+  // Pré-textuais já convertidos: resumo/abstract e opcionais (3.5.2/3.5.3,
+  // `docx/preTextuais.ts`) mais as listas de figuras, tabelas e abreviaturas
+  // (3.6.4, `docx/listas.ts`) — `fromDocumento.ts` compõe os dois na ordem
+  // canônica. `FileChild` e não `Paragraph` porque as listas de figuras e
+  // tabelas são campos `TableOfContents`, que não são parágrafo. Opcional
+  // porque a capa continua sem gerador próprio: quem só testa o corpo
+  // (`index.test.ts`) não precisa passar nada aqui.
+  preTextuais?: FileChild[];
 }
 
 // Só monta o `Document` (docx) — não empacota. Quem chama escolhe o

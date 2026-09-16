@@ -179,6 +179,18 @@ export interface ElementoOpcional {
   texto: string;
 }
 
+// Abreviatura ou sigla usada no texto (NBR 14724) — passo 3.6.4. É campo de
+// `Metadados`, e não nó do editor, pela invariante do CLAUDE.md: elemento
+// pré-textual é metadado. O que a pessoa cadastra é o PAR (sigla e o que ela
+// significa); a lista em si — quem entra, em que ordem — é derivada.
+export interface Abreviatura {
+  // Chave estável da linha no painel: `sigla` não serve, porque muda
+  // enquanto se digita.
+  id: string;
+  sigla: string;
+  significado: string;
+}
+
 export interface Metadados {
   // A v1 atende só TCC em ABNT; os campos existem para não ter que migrar o
   // formato quando outra norma ou tipo de trabalho entrar.
@@ -209,6 +221,12 @@ export interface Metadados {
   dedicatoria?: ElementoOpcional;
   agradecimentos?: ElementoOpcional;
   epigrafe?: ElementoOpcional;
+
+  // Lista de abreviaturas e siglas (passo 3.6.4) — opcional no tipo pelo
+  // mesmo motivo dos três acima: documento gravado antes deste passo não tem
+  // o campo no IndexedDB, e ausente significa "nenhuma cadastrada". Sem
+  // migração nem valor padrão em `novoDocumento()`, só `?? []` na leitura.
+  abreviaturas?: Abreviatura[];
 }
 
 export interface Documento {

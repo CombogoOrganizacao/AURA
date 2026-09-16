@@ -6,6 +6,7 @@ import {
   PageNumber,
   Paragraph,
   TextRun,
+  type FileChild,
   type ISectionOptions,
 } from "docx";
 
@@ -45,7 +46,7 @@ const cabecalhoComNumero = new Header({
 
 export function montarSecoes(
   corpo: readonly Paragraph[],
-  preTextuais: readonly Paragraph[] = [],
+  preTextuais: readonly FileChild[] = [],
 ): ISectionOptions[] {
   return [
     // 1 — Capa: sem cabeçalho, fora da contagem de página.

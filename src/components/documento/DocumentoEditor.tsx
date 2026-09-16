@@ -17,6 +17,7 @@ import { usePersistencia } from "@/lib/persistence-provider";
 import { useAutosave, type StatusAutosave } from "@/lib/useAutosave";
 
 import { Abstract } from "./Abstract";
+import { PainelAbreviaturas } from "./PainelAbreviaturas";
 import { FormMetadados } from "./FormMetadados";
 import { PainelElementos } from "./PainelElementos";
 import { Resumo } from "./Resumo";
@@ -197,6 +198,25 @@ function Carregado({
               </summary>
               <div className="px-4 pb-4">
                 <PainelElementos metadados={documento.metadados} onChange={atualizarMetadados} />
+              </div>
+            </details>
+            <details className="shrink-0 border-b border-[var(--border-subtle)]">
+              <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                Abreviaturas e siglas
+              </summary>
+              <div className="px-4 pb-4">
+                {/*
+                  Recebe `sections` além de `metadados` (passo 3.6.4): o
+                  painel avisa quando uma sigla cadastrada ainda não aparece
+                  no texto, e para isso precisa olhar o corpo. É leitura, não
+                  edição — quem escreve em `sections` continua sendo só o
+                  editor.
+                */}
+                <PainelAbreviaturas
+                  metadados={documento.metadados}
+                  sections={documento.sections}
+                  onChange={atualizarMetadados}
+                />
               </div>
             </details>
             <PainelSecoes sections={documento.sections} onReorder={reordenarSecoes} />
