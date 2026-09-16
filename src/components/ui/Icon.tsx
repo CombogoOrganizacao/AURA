@@ -22,6 +22,7 @@ import {
   Heading2,
   Heading3,
   History,
+  Image as ImageIcon,
   Info,
   Italic,
   ListOrdered,
@@ -116,6 +117,9 @@ const icones = {
   "undo-2": Undo2,
   "redo-2": Redo2,
   table: Table,
+  // `Image as ImageIcon` no import: `Image` colide com o construtor global
+  // de mesmo nome do DOM.
+  image: ImageIcon,
   superscript: Superscript,
 } satisfies Record<string, LucideIcon>;
 

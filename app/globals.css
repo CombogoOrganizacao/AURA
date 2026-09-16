@@ -344,6 +344,105 @@ h5 {
   line-height: var(--leading-doc-simples);
 }
 
+/* Figura e tabela (passo 3.6.3) — docs/schema-tiptap.md §4.6/§4.7. Legenda e
+   fonte em 10pt (`--doc-caption`) e espaço simples (`--leading-doc-simples`),
+   os mesmos dois valores da citação longa acima e os mesmos que
+   `src/core/export/docx/legenda.ts` aplica no `.docx` (`ABNT.tamanhoMenor` /
+   `ABNT.espacamento1`). Centralizadas, como o exportador também as
+   centraliza.
+
+   O número dentro da legenda NÃO vem daqui nem de um contador CSS: é
+   calculado em JS a cada transação (`numerarNumeraveisProseMirror`) e
+   renderizado pelo node view, porque o `.docx` precisa do mesmo número e um
+   `counter-increment` não sai do navegador. */
+.ProseMirror .doc-legenda {
+  display: flex;
+  justify-content: center;
+  gap: 0.25ch;
+  font-size: var(--doc-caption);
+  line-height: var(--leading-doc-simples);
+  text-indent: 0; /* a regra de `p` não alcança aqui, mas o input herdaria */
+}
+
+/* O `<input>` da legenda encolhe até o próprio conteúdo, para a linha
+   inteira ficar centralizada como no `.docx` — um input de largura padrão
+   comeria a sobra e empurraria tudo para a esquerda. `field-sizing` é
+   recente; onde não houver, o `min-width` garante um alvo de clique usável e
+   a linha fica alinhada à esquerda, que é degradação aceitável para uma
+   afordância de edição (o documento exportado continua centralizado). */
+.ProseMirror .doc-legenda input {
+  field-sizing: content;
+  min-width: 12ch;
+  max-width: 100%;
+}
+
+/* Placeholder da imagem — `imagem` é sempre `null` na v1; embutir o arquivo
+   de verdade é o passo 6.1.2, e até lá o `.docx` sai com a mesma moldura (é
+   o que a PoC congelada faz). Tracejado para ler como "reservado", nunca
+   como uma borda do documento. */
+.ProseMirror .doc-figura-moldura {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 6rem;
+  margin-block: 0.25rem;
+  border: 1px dashed var(--border-subtle);
+  font-size: var(--doc-caption);
+  font-style: italic;
+  color: var(--color-subtle);
+}
+
+/* Padrão IBGE adotado pela ABNT: laterais ABERTAS, sem nenhum traço
+   vertical; um fio fecha em cima e outro embaixo, e um terceiro separa o
+   cabeçalho do corpo. `border-collapse` para os fios não duplicarem na
+   junção das células. */
+.ProseMirror .doc-tabela table {
+  width: 100%;
+  /* Colunas de largura igual, como o exportador faz (`largCol =
+     larguraUtil / nCols` em `poc/docx/gerar.js`). Com `auto`, uma coluna
+     ainda vazia encolhe a quase nada e o fio do cabeçalho aparece como um
+     risco curto, sem relação com o que vai sair no `.docx`. */
+  table-layout: fixed;
+  border-collapse: collapse;
+  border-block: 1px solid var(--doc-ink);
+  font-size: var(--doc-caption);
+  line-height: var(--leading-doc-simples);
+}
+
+/* O `NodeViewContent` do React embrulha o conteúdo num `<div>` próprio
+   (`data-node-view-content-react`), que aqui cai ENTRE o `<tbody>` e os
+   `<tr>` — um `<div>` nessa posição tira as linhas do contexto de layout de
+   tabela, e as colunas colapsam. `display: contents` faz o wrapper sumir do
+   layout sem sumir do DOM (o ProseMirror continua precisando dele como
+   `contentDOM`). Achado inspecionando o DOM renderizado: o sintoma na tela
+   era o fio do cabeçalho aparecer como um risco curto em vez de atravessar
+   a tabela. */
+.ProseMirror .doc-tabela [data-node-view-content-react] {
+  display: contents;
+}
+
+/* Altura mínima na LINHA (célula não aceita `min-height`): sem isto, uma
+   tabela recém-criada tem células vazias sem caixa de linha nenhuma, fica
+   com ~8px de altura e quase não dá pra clicar dentro. Não há guia vertical
+   de propósito — mostrar uma faria a pessoa esperar um traço que o padrão
+   IBGE não tem e que o `.docx` não vai ter. */
+.ProseMirror .doc-tabela tr {
+  height: 1.75rem;
+}
+
+.ProseMirror .doc-tabela th,
+.ProseMirror .doc-tabela td {
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+  text-indent: 0;
+  vertical-align: top;
+}
+
+.ProseMirror .doc-tabela th {
+  border-bottom: 1px solid var(--doc-ink);
+  font-weight: 700;
+}
+
 ::selection {
   background: var(--color-creme-200);
   color: var(--color-bordo-800);

@@ -16,13 +16,17 @@ import type { Secao } from "@/core/document/types";
 import { Italico } from "@/core/editor/marks/italico";
 import { Negrito } from "@/core/editor/marks/negrito";
 import { Documento as DocumentoNode } from "@/core/editor/nodes/documento";
+import { Figura as FiguraNode } from "@/core/editor/nodes/figure";
 import { CitacaoLonga } from "@/core/editor/nodes/longQuote";
 import { Secao as SecaoNode } from "@/core/editor/nodes/section";
+import { CelulaTabela, LinhaTabela, Tabela as TabelaNode } from "@/core/editor/nodes/table";
 import { mapearHtmlColado, type NoHtmlColado } from "@/core/editor/paste";
 import { moverSecaoDeTopo } from "@/core/editor/reorder";
 
 import { AvisoPaginacao } from "./AvisoPaginacao";
+import { FiguraView } from "./nodes/FiguraView";
 import { SectionView } from "./nodes/SectionView";
+import { TabelaView } from "./nodes/TabelaView";
 import { Toolbar } from "./Toolbar";
 
 // `section.ts` (src/core/editor/) fica livre de React — o node view que
@@ -31,6 +35,21 @@ import { Toolbar } from "./Toolbar";
 const SecaoComVisualizacao = SecaoNode.extend({
   addNodeView() {
     return ReactNodeViewRenderer(SectionView);
+  },
+});
+
+// Mesma divisão para figura e tabela (passo 3.6.3): o nó fica livre de React
+// em `src/core/editor/nodes/`, o node view que desenha legenda/fonte e mostra
+// o número derivado é ligado aqui.
+const FiguraComVisualizacao = FiguraNode.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(FiguraView);
+  },
+});
+
+const TabelaComVisualizacao = TabelaNode.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(TabelaView);
   },
 });
 
@@ -76,12 +95,11 @@ interface EditorProps {
 }
 
 // Editor com seções (passo 1.3.7), formatação (passo 2.5: negrito, itálico,
-// nível de título — `Toolbar.tsx`) e citação longa (passo 3.4.1, sem UI de
-// criação ainda). A lista fechada completa do editor está em
-// docs/schema-tiptap.md; "listas" (`lista`/`item_lista`) ainda não tem nó
-// aqui de propósito — fica pra Fase 3, junto com figura/tabela/fórmula
-// (`NoConteudo` só cobre parágrafo e citação longa até lá, ver
-// src/core/document/types.ts).
+// nível de título — `Toolbar.tsx`), citação longa (passo 3.4.1) e
+// figura/tabela com legenda numerada (passo 3.6.3). A lista fechada completa
+// do editor está em docs/schema-tiptap.md; "listas" (`lista`/`item_lista`) e
+// "fórmula" ainda não têm nó aqui de propósito — 3.6.5 e Fase 3
+// (`NoConteudo` não os cobre até lá, ver src/core/document/types.ts).
 //
 // Continua sem `@tiptap/starter-kit` de propósito — cada nó/marca entra por
 // decisão explícita, um passo do plano de cada vez.
@@ -111,6 +129,14 @@ export function Editor({ sections, onSectionsChange, onReorderReady }: EditorPro
       // mesmo padrão de `secao` (existe com round-trip completo desde muito
       // antes de "nova seção" ganhar UI, ver docs/to-do.md).
       CitacaoLonga,
+      // Figura e tabela (passo 3.6.3) — inseridas pela toolbar
+      // (`Toolbar.tsx`), a tabela só no desktop. `linha_tabela`/
+      // `celula_tabela` não têm node view próprio: são desenhadas pelo
+      // `NodeViewContent` de `TabelaView`, dentro do `<table>`.
+      FiguraComVisualizacao,
+      TabelaComVisualizacao,
+      LinhaTabela,
+      CelulaTabela,
       Negrito,
       Italico,
       // Desfazer/refazer (passo 2B.12) não vem de graça: as extensões

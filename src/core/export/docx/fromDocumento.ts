@@ -2,8 +2,15 @@ import { AlignmentType, HeadingLevel, type Document, Paragraph, TextRun } from "
 
 import { textoItemSumario } from "../../document/elements/sumario";
 import { numerarSecoes } from "../../document/numbering";
-import type { Documento, NoConteudo, Secao } from "../../document/types";
+import type {
+  Documento,
+  NoCitacaoLonga,
+  NoNumeravel,
+  NoParagrafo,
+  Secao,
+} from "../../document/types";
 import { ABNT } from "./constants";
+import { paragrafoFonte, paragrafoLegenda } from "./legenda";
 import { montarDocumento } from "./index";
 import { montarPreTextuais } from "./preTextuais";
 
@@ -13,11 +20,20 @@ import { montarPreTextuais } from "./preTextuais";
 // comentário lá e docs/porte-poc.md): depende de layout próprio que ainda
 // não foi ligado.
 //
-// `NoConteudo` cobre `paragraph` (desde 1.3.3) e `citacao_longa` (desde
-// 3.4.1, estilo nomeado `CitacaoLonga` desde 3.4.2 — ver
-// src/core/document/types.ts e docx/styles.ts). Lista, figura, tabela e
+// `NoConteudo` cobre `paragraph` (desde 1.3.3), `citacao_longa` (desde
+// 3.4.1, estilo nomeado `CitacaoLonga` desde 3.4.2) e `figura`/`tabela`
+// (desde 3.6.3) — ver src/core/document/types.ts e docx/styles.ts. Lista e
 // fórmula entram aqui na mesma hora em que ganham nó no editor
 // (docs/schema-tiptap.md §7) — não antes.
+//
+// **Figura e tabela saem com legenda e fonte, não com o objeto.** A imagem
+// de verdade em `word/media/` é o passo 6.1.2 (`imagem` é sempre `null` hoje,
+// ver `editor/nodes/figure.ts`) e a grade OOXML da tabela é o 6.1.3 — os dois
+// já estão no plano com arquivo próprio. O que este passo entrega é a
+// **legenda numerada**, que é o que ele promete: campo `SEQ` em `legenda.ts`,
+// porte da PoC. A moldura da figura é o mesmo placeholder honesto que a PoC
+// congelada usa; a tabela sai com um aviso no lugar da grade, em vez de sumir
+// em silêncio do documento exportado.
 //
 // **Sem a "chamada" de autoria ao final** (ex.: "(SOBRENOME, ano, p. 42)")
 // que `poc/docx/gerar.js` já sabe montar: lá ela vem de `no.chamada` +
@@ -55,7 +71,52 @@ function paragrafoTitulo(secao: Secao, numero: string | null): Paragraph {
   });
 }
 
-function paragrafoCorpo(no: NoConteudo): Paragraph {
+// Placeholder honesto da figura, igual ao de `poc/docx/gerar.js` — a PoC
+// também não embute imagem (6.1.2). `keepNext` prende a moldura à linha de
+// fonte que vem logo abaixo.
+function molduraFigura(): Paragraph {
+  return new Paragraph({
+    children: [new TextRun({ text: "[ espaço reservado para a imagem ]", italics: true })],
+    alignment: AlignmentType.CENTER,
+    spacing: { line: ABNT.espacamento1, before: 120, after: 120 },
+    keepNext: true,
+  });
+}
+
+// A grade de verdade (`<w:tbl>`, bordas no padrão IBGE, cabeçalho repetido)
+// é o passo 6.1.3, que tem `docx/table.ts` próprio no plano. Até lá a tabela
+// exporta legenda + aviso + fonte: quem abrir o `.docx` vê que falta algo,
+// em vez de descobrir depois que a tabela evaporou.
+function avisoTabelaPendente(): Paragraph {
+  return new Paragraph({
+    children: [
+      new TextRun({
+        text: "[ grade da tabela ainda não exportada — ver passo 6.1.3 ]",
+        italics: true,
+      }),
+    ],
+    alignment: AlignmentType.CENTER,
+    spacing: { line: ABNT.espacamento1, before: 120, after: 120 },
+    keepNext: true,
+  });
+}
+
+// Legenda ACIMA do objeto, tanto em figura quanto em tabela — é a convenção
+// corrente, mas **não** foi conferida na fonte primária: ver o cabeçalho de
+// `src/core/document/elements/legenda.ts`, que registra o que a auditoria do
+// 3.1.1 cobriu e o que ficou pendente.
+function paragrafosNumeravel(no: NoNumeravel): Paragraph[] {
+  return [
+    paragrafoLegenda(no),
+    no.type === "figura" ? molduraFigura() : avisoTabelaPendente(),
+    ...paragrafoFonte(no),
+  ];
+}
+
+// Recebe só os blocos que carregam inline direto. Figura e tabela ficam de
+// fora pelo tipo, não por um `if` aqui dentro: elas não têm `content`, e
+// tratá-las neste mesmo caminho seria exportá-las como parágrafo vazio.
+function paragrafoCorpo(no: NoParagrafo | NoCitacaoLonga): Paragraph {
   const texto = (no.content ?? []).map((noTexto) => noTexto.text).join("");
 
   if (no.type === "citacao_longa") {
@@ -84,7 +145,11 @@ export function fromDocumento(documento: Documento): Document {
     // `undefined` no meio do título.
     corpo.push(paragrafoTitulo(secao, numeracao.get(secao.id) ?? null));
     for (const no of secao.content) {
-      corpo.push(paragrafoCorpo(no));
+      if (no.type === "figura" || no.type === "tabela") {
+        corpo.push(...paragrafosNumeravel(no));
+      } else {
+        corpo.push(paragrafoCorpo(no));
+      }
     }
   }
 

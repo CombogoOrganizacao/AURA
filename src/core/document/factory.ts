@@ -1,4 +1,4 @@
-import type { Documento, Metadados, NivelSecao, Secao } from "./types";
+import type { Documento, Metadados, NivelSecao, NoFigura, NoTabela, Secao } from "./types";
 
 // Documento em branco: metadados com os campos zerados, para o formulário
 // mínimo (passo 1.3.4) preencher, e nenhuma seção, referência, apêndice ou
@@ -44,5 +44,33 @@ export function novaSecao(ordem: number, nivel: NivelSecao = 1): Secao {
     nivel,
     titulo: "",
     content: [{ type: "paragraph" }],
+  };
+}
+
+// Figura e tabela em branco (passo 3.6.3). Existem aqui, e não num default
+// do nó do editor, pelo mesmo motivo que `Secao.id` não tem default estático
+// (src/core/editor/nodes/section.ts): um default gerado no schema faria toda
+// figura nova nascer com o mesmo id. Quem insere chama isto.
+//
+// Sem número em lugar nenhum — "Figura 1" é derivado da posição
+// (`numerarFiguras()`, ./numbering.ts).
+export function novaFigura(): NoFigura {
+  return { type: "figura", id: crypto.randomUUID(), legenda: "", fonte: "", imagem: null };
+}
+
+// Tabela nasce 2x2 com a primeira linha de cabeçalho: uma tabela sem linha
+// nenhuma não tem onde receber o cursor, e uma sem cabeçalho não mostra o
+// fio que separa cabeçalho do corpo (padrão IBGE) — a pessoa não veria o que
+// está formatando. Acrescentar linha/coluna é a próxima camada de UI; o nó
+// aceita qualquer número das duas.
+export function novaTabela(colunas = 2, linhas = 2): NoTabela {
+  return {
+    type: "tabela",
+    id: crypto.randomUUID(),
+    legenda: "",
+    fonte: "",
+    linhas: Array.from({ length: linhas }, (_, indiceLinha) => ({
+      celulas: Array.from({ length: colunas }, () => ({ cabecalho: indiceLinha === 0 })),
+    })),
   };
 }

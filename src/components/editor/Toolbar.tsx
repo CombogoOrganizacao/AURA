@@ -8,7 +8,9 @@ import { Icon } from "@/components/ui/Icon";
 import type { NomeIcone } from "@/components/ui/Icon";
 import { Select } from "@/components/ui/Select";
 import { Tooltip } from "@/components/ui/Tooltip";
-import type { NivelSecao } from "@/core/document/types";
+import { novaFigura, novaTabela } from "@/core/document/factory";
+import { deNoConteudo } from "@/core/document/serialize";
+import type { NivelSecao, NoConteudo } from "@/core/document/types";
 
 // Re-renderiza a toolbar a cada transação do editor — é como o estado
 // "ativo" dos botões (negrito ligado, nível 2 selecionado...) acompanha a
@@ -38,10 +40,12 @@ interface BotaoToolbarProps {
   disabled?: boolean;
   onClick?: () => void;
   label: string;
+  /** Classes extras do botão — hoje só o `hidden md:flex` da tabela. */
+  className?: string;
   children: ReactNode;
 }
 
-function BotaoToolbar({ ativo, disabled, onClick, label, children }: BotaoToolbarProps) {
+function BotaoToolbar({ ativo, disabled, onClick, label, className, children }: BotaoToolbarProps) {
   return (
     <Tooltip content={label}>
       <button
@@ -55,6 +59,7 @@ function BotaoToolbar({ ativo, disabled, onClick, label, children }: BotaoToolba
           "focus-visible:outline-none focus-visible:shadow-focus-ring",
           "disabled:cursor-not-allowed disabled:text-disabled disabled:hover:bg-transparent",
           ativo ? "bg-brand-soft text-bordo-700" : "text-muted hover:bg-sunken hover:text-body",
+          className ?? "",
         ].join(" ")}
       >
         {children}
@@ -87,7 +92,6 @@ const CONTROLES_FUTUROS: ReadonlyArray<{ nome: NomeIcone; label: string }> = [
   { nome: "underline", label: "Sublinhado — sem nó no schema ainda" },
   { nome: "align-justify", label: "Justificar — chega na Fase 3.3" },
   { nome: "list-ordered", label: "Lista numerada — chega na Fase 3" },
-  { nome: "table", label: "Tabela — chega na Fase 3.6" },
   { nome: "superscript", label: "Nota de rodapé — chega na Fase 6" },
 ];
 
@@ -108,8 +112,16 @@ interface ToolbarProps {
 // jeito de criar um `citacao_longa` pela interface (o nó existe desde 3.4.1,
 // sem UI própria até aqui).
 //
+// Figura e tabela (passo 3.6.3) também são de verdade: `insertContent()` com
+// o nó que `novaFigura()`/`novaTabela()` (src/core/document/factory.ts)
+// produzem, convertido pra JSON do TipTap pela mesma `deNoConteudo()` do
+// round-trip (`serialize.ts`) — não um literal montado aqui, que seria uma
+// segunda definição da forma do nó. Os dois ids saem de `crypto.randomUUID()`
+// na fábrica, nunca de um default do schema. A tabela é **só desktop**; ver o
+// comentário no botão.
+//
 // Todo o resto — estilo de parágrafo, fonte do documento, corpo, sublinhado,
-// justificar, lista, tabela, nota de rodapé, "Aplicar formatação ABNT" — é
+// justificar, lista, nota de rodapé, "Aplicar formatação ABNT" — é
 // visual e desabilitado: prévia do que a Fase 3+ liga, não um controle que
 // finge funcionar. `CONTROLES_FUTUROS` cobre os botões de ícone; os três
 // seletores (`Select`, também desabilitados) ficam escritos por extenso
@@ -125,6 +137,15 @@ export function Toolbar({ editor }: ToolbarProps) {
   if (!editor) return null;
 
   const nivelAtual = editor.getAttributes("secao").nivel as NivelSecao | undefined;
+
+  // `insertContentAt(selection.to)`, não `insertContent()`: quando a seleção
+  // é o nó inteiro — e é o que acontece logo depois de inserir uma figura,
+  // que é atômica —, `insertContent()` SUBSTITUI o que está selecionado.
+  // Clicar em "figura" e depois em "tabela" apagava a figura recém-criada.
+  // Achado olhando a tela, não pelo Vitest: é comportamento de seleção do
+  // ProseMirror, que só existe com um editor de verdade montado.
+  const inserirBloco = (no: NoConteudo) =>
+    editor.chain().focus().insertContentAt(editor.state.selection.to, deNoConteudo(no)).run();
 
   return (
     <div
@@ -205,6 +226,27 @@ export function Toolbar({ editor }: ToolbarProps) {
         onClick={() => editor.chain().focus().toggleNode("citacao_longa", "paragraph").run()}
       >
         <Icon name="quote" size={16} />
+      </BotaoToolbar>
+      <BotaoToolbar
+        label="Figura — legenda e fonte numeradas automaticamente"
+        onClick={() => inserirBloco(novaFigura())}
+      >
+        <Icon name="image" size={16} />
+      </BotaoToolbar>
+      {/*
+        Tabela **só no desktop** (critério do passo 3.6.3): `hidden md:flex`,
+        mesma abordagem de `PainelSecoes.tsx` pra reordenar arrastando
+        (3.2.4). Montar uma grade célula a célula com o teclado virtual
+        cobrindo metade da tela não é uma tarefa que a v1 se proponha a
+        resolver; a tabela já criada continua visível e editável em qualquer
+        largura — o que o breakpoint tira é o botão de CRIAR uma.
+      */}
+      <BotaoToolbar
+        label="Tabela (só no computador) — padrão IBGE, laterais abertas"
+        className="hidden md:flex"
+        onClick={() => inserirBloco(novaTabela())}
+      >
+        <Icon name="table" size={16} />
       </BotaoToolbar>
       {CONTROLES_FUTUROS.map((item) => (
         <BotaoToolbar key={item.nome} label={item.label} disabled>

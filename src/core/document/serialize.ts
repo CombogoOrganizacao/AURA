@@ -1,6 +1,15 @@
 import type { JSONContent } from "@tiptap/core";
 
-import type { Marca, NivelSecao, NoConteudo, NoTexto, Secao, TipoMarca } from "./types";
+import type {
+  CelulaTabela,
+  LinhaTabela,
+  Marca,
+  NivelSecao,
+  NoConteudo,
+  NoTexto,
+  Secao,
+  TipoMarca,
+} from "./types";
 
 const TIPOS_MARCA: readonly TipoMarca[] = ["negrito", "italico"];
 
@@ -90,7 +99,67 @@ function paraNoConteudo(no: JSONContent): NoConteudo {
       ...(conteudo.length > 0 ? { content: conteudo } : {}),
     };
   }
+  if (no.type === "figura") {
+    const { id, legenda, fonte, imagem } = (no.attrs ?? {}) as {
+      id?: string | null;
+      legenda?: string;
+      fonte?: string;
+      imagem?: string | null;
+    };
+    // Mesma exigência que `secao` já faz: sem id não há como numerar a
+    // figura nem apontar pra ela na lista de ilustrações (3.6.4). Quem cria
+    // gera o id (`novaFigura()`), nunca o schema.
+    if (!id) {
+      throw new Error("Figura sem id — todo nó figura precisa de id ao ser criado");
+    }
+    return {
+      type: "figura",
+      id,
+      legenda: legenda ?? "",
+      fonte: fonte ?? "",
+      imagem: imagem ?? null,
+    };
+  }
+  if (no.type === "tabela") {
+    const { id, legenda, fonte } = (no.attrs ?? {}) as {
+      id?: string | null;
+      legenda?: string;
+      fonte?: string;
+    };
+    if (!id) {
+      throw new Error("Tabela sem id — todo nó tabela precisa de id ao ser criado");
+    }
+    return {
+      type: "tabela",
+      id,
+      legenda: legenda ?? "",
+      fonte: fonte ?? "",
+      linhas: (no.content ?? []).map(paraLinhaTabela),
+    };
+  }
   throw new Error(`Nó de conteúdo ainda não suportado: "${no.type}"`);
+}
+
+// `linha_tabela`/`celula_tabela` (docs/schema-tiptap.md §4.7) não são membros
+// de `NoConteudo`: existem só dentro de uma tabela, então viram campos
+// aninhados de `NoTabela` em vez de blocos que uma seção poderia conter.
+function paraLinhaTabela(no: JSONContent): LinhaTabela {
+  if (no.type !== "linha_tabela") {
+    throw new Error(`Nó inesperado dentro de tabela: "${no.type}" (esperava "linha_tabela")`);
+  }
+  return { celulas: (no.content ?? []).map(paraCelulaTabela) };
+}
+
+function paraCelulaTabela(no: JSONContent): CelulaTabela {
+  if (no.type !== "celula_tabela") {
+    throw new Error(`Nó inesperado dentro de linha: "${no.type}" (esperava "celula_tabela")`);
+  }
+  const { cabecalho } = (no.attrs ?? {}) as { cabecalho?: boolean };
+  const conteudo = (no.content ?? []).map(paraNoTexto);
+  return {
+    cabecalho: cabecalho === true,
+    ...(conteudo.length > 0 ? { content: conteudo } : {}),
+  };
 }
 
 function paraNoTexto(no: JSONContent): NoTexto {
@@ -157,7 +226,28 @@ function deConteudoInline(content: NoTexto[] | undefined): JSONContent[] | undef
   }));
 }
 
-function deNoConteudo(no: NoConteudo): JSONContent {
+// Exportada (passo 3.6.3) para a toolbar inserir uma figura/tabela nova sem
+// escrever um segundo literal com a forma do nó: `novaFigura()` produz o nó
+// canônico, esta função o converte pro JSON do TipTap, e é a MESMA conversão
+// que o round-trip usa — uma divergência entre as duas seria impossível.
+export function deNoConteudo(no: NoConteudo): JSONContent {
+  if (no.type === "figura") {
+    // Atômico — `content` nenhum, nem vazio: o nó do editor é `atom: true`
+    // (src/core/editor/nodes/figure.ts) e tudo o que ele carrega é atributo.
+    return {
+      type: "figura",
+      attrs: { id: no.id, legenda: no.legenda, fonte: no.fonte, imagem: no.imagem },
+    };
+  }
+
+  if (no.type === "tabela") {
+    return {
+      type: "tabela",
+      attrs: { id: no.id, legenda: no.legenda, fonte: no.fonte },
+      content: no.linhas.map(deLinhaTabela),
+    };
+  }
+
   const conteudo = deConteudoInline(no.content);
 
   if (no.type === "citacao_longa") {
@@ -169,4 +259,17 @@ function deNoConteudo(no: NoConteudo): JSONContent {
   }
 
   return conteudo ? { type: "paragraph", content: conteudo } : { type: "paragraph" };
+}
+
+function deLinhaTabela(linha: LinhaTabela): JSONContent {
+  return { type: "linha_tabela", content: linha.celulas.map(deCelulaTabela) };
+}
+
+function deCelulaTabela(celula: CelulaTabela): JSONContent {
+  const conteudo = deConteudoInline(celula.content);
+  return {
+    type: "celula_tabela",
+    attrs: { cabecalho: celula.cabecalho },
+    ...(conteudo ? { content: conteudo } : {}),
+  };
 }

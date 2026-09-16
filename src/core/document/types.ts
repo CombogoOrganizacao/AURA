@@ -49,12 +49,62 @@ export interface NoCitacaoLonga {
   content?: NoTexto[];
 }
 
+// Figura (docs/schema-tiptap.md §4.6) — passo 3.6.3. Atômico: não há texto
+// editável dentro do nó, só atributos.
+//
+// **Sem campo de número.** "Figura 3" é DERIVADO da posição do nó no
+// documento (`numerarFiguras()`, src/core/document/numbering.ts), pelo mesmo
+// motivo que `Secao` não guarda "2.1": um número gravado fica errado no
+// instante em que alguém insere uma figura antes dele (docs/schema-tiptap.md
+// §2, e CLAUDE.md "Formato e dados").
+export interface NoFigura {
+  type: "figura";
+  // Existe para a numeração derivada ter por onde indexar a figura, e para
+  // a lista de ilustrações (passo 3.6.4) apontar de volta pra ela — mesmo
+  // papel de `Secao.id`.
+  id: string;
+  legenda: string;
+  fonte: string;
+  // Placeholder na v1: embutir o arquivo em `word/media/` é o passo 6.1.2.
+  // `null` é o estado real de toda figura criada hoje.
+  imagem: string | null;
+}
+
+// Célula de tabela (docs/schema-tiptap.md §4.7). `cabecalho` é atributo da
+// célula, não da linha, porque é assim que o nó `celula_tabela` do editor o
+// declara — e é o que permite uma linha de cabeçalho repetida quando a
+// tabela quebra página (padrão do exportador da PoC).
+export interface CelulaTabela {
+  cabecalho: boolean;
+  // Mesma forma inline de `NoParagrafo`: texto com `negrito`/`italico`.
+  content?: NoTexto[];
+}
+
+export interface LinhaTabela {
+  celulas: CelulaTabela[];
+}
+
+// Tabela (docs/schema-tiptap.md §4.7) — passo 3.6.3. Sem campo de número,
+// pelo mesmo motivo de `NoFigura`.
+export interface NoTabela {
+  type: "tabela";
+  id: string;
+  legenda: string;
+  fonte: string;
+  linhas: LinhaTabela[];
+}
+
+// O que figura e tabela têm em comum: uma legenda cujo número vem da ordem
+// de aparição, não de um campo. É o que `numerarFiguras()`/`numerarTabelas()`
+// consomem e o que a lista de ilustrações (3.6.4) vai percorrer.
+export type NoNumeravel = NoFigura | NoTabela;
+
 // Lista fechada de conteúdo de `Secao`/`ElementoPosTextual`. Cresce um membro
 // de cada vez, só quando o nó correspondente ganha código em
 // src/core/editor/nodes/ (ver docs/schema-tiptap.md §7) — por ora cobre
-// parágrafo e citação longa. `lista`, `figura`, `tabela` e `formula` entram
-// conforme cada um for implementado (Fase 3 em diante).
-export type NoConteudo = NoParagrafo | NoCitacaoLonga;
+// parágrafo, citação longa, figura e tabela. `lista` e `formula` entram
+// conforme cada um for implementado (3.6.5 e Fase 3 em diante).
+export type NoConteudo = NoParagrafo | NoCitacaoLonga | NoFigura | NoTabela;
 
 export interface Secao {
   id: string;
