@@ -5,6 +5,7 @@ import { numerarSecoes } from "../../document/numbering";
 import type {
   Documento,
   NoCitacaoLonga,
+  NoFormula,
   NoNumeravel,
   NoParagrafo,
   Secao,
@@ -22,9 +23,9 @@ import { comQuebrasEntreBlocos, montarPreTextuais } from "./preTextuais";
 // não foi ligado.
 //
 // `NoConteudo` cobre `paragraph` (desde 1.3.3), `citacao_longa` (desde
-// 3.4.1, estilo nomeado `CitacaoLonga` desde 3.4.2) e `figura`/`tabela`
-// (desde 3.6.3) — ver src/core/document/types.ts e docx/styles.ts. Lista e
-// fórmula entram aqui na mesma hora em que ganham nó no editor
+// 3.4.1, estilo nomeado `CitacaoLonga` desde 3.4.2), `figura`/`tabela`
+// (desde 3.6.3) e `formula` (desde 3.6.5) — ver src/core/document/types.ts e
+// docx/styles.ts. Lista entra aqui na mesma hora em que ganha nó no editor
 // (docs/schema-tiptap.md §7) — não antes.
 //
 // **Figura e tabela saem com legenda e fonte, não com o objeto.** A imagem
@@ -102,6 +103,29 @@ function avisoTabelaPendente(): Paragraph {
   });
 }
 
+// Fórmula (passo 3.6.5) — sai como a própria fonte LaTeX, em texto simples e
+// centralizada. **Não é um placeholder**: `texto` É o dado do nó
+// (docs/schema-tiptap.md §4.8 e §6, "OMML em `formula` (texto simples até o
+// passo 6.1.4)"), então o que a pessoa escreveu chega inteiro ao `.docx` em
+// vez de virar uma moldura vazia. Converter para OMML — a equação desenhada
+// de verdade, editável no Word — é o passo 6.1.4, e é reler este mesmo campo.
+//
+// Centralizada e destacada do parágrafo (sem recuo de primeira linha): é o
+// que a NBR 14724 pede de equação separada do texto corrido. **Não
+// verificado na fonte primária neste passo** — a auditoria do 3.1.1 não tem
+// linha para equação (ver `docs/auditoria-abnt.md`), mesmo status da posição
+// da legenda registrado em `document/elements/legenda.ts`.
+//
+// Sem número: a norma numera equação só "se necessário", e a v1 não numera
+// nenhuma (ver o cabeçalho de `src/core/editor/nodes/formula.ts`).
+function paragrafoFormula(no: NoFormula): Paragraph {
+  return new Paragraph({
+    children: [new TextRun(no.texto)],
+    alignment: AlignmentType.CENTER,
+    spacing: { line: ABNT.espacamento15, before: 120, after: 120 },
+  });
+}
+
 // Legenda ACIMA do objeto, tanto em figura quanto em tabela — é a convenção
 // corrente, mas **não** foi conferida na fonte primária: ver o cabeçalho de
 // `src/core/document/elements/legenda.ts`, que registra o que a auditoria do
@@ -148,6 +172,8 @@ export function fromDocumento(documento: Documento): Document {
     for (const no of secao.content) {
       if (no.type === "figura" || no.type === "tabela") {
         corpo.push(...paragrafosNumeravel(no));
+      } else if (no.type === "formula") {
+        corpo.push(paragrafoFormula(no));
       } else {
         corpo.push(paragrafoCorpo(no));
       }

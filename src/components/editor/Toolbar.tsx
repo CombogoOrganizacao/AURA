@@ -8,7 +8,7 @@ import { Icon } from "@/components/ui/Icon";
 import type { NomeIcone } from "@/components/ui/Icon";
 import { Select } from "@/components/ui/Select";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { novaFigura, novaTabela } from "@/core/document/factory";
+import { novaFigura, novaFormula, novaTabela } from "@/core/document/factory";
 import { deNoConteudo } from "@/core/document/serialize";
 import type { NivelSecao, NoConteudo } from "@/core/document/types";
 
@@ -40,7 +40,7 @@ interface BotaoToolbarProps {
   disabled?: boolean;
   onClick?: () => void;
   label: string;
-  /** Classes extras do botão — hoje só o `hidden md:flex` da tabela. */
+  /** Classes extras do botão — hoje só o `hidden md:flex` da tabela e da fórmula. */
   className?: string;
   children: ReactNode;
 }
@@ -112,13 +112,15 @@ interface ToolbarProps {
 // jeito de criar um `citacao_longa` pela interface (o nó existe desde 3.4.1,
 // sem UI própria até aqui).
 //
-// Figura e tabela (passo 3.6.3) também são de verdade: `insertContent()` com
-// o nó que `novaFigura()`/`novaTabela()` (src/core/document/factory.ts)
-// produzem, convertido pra JSON do TipTap pela mesma `deNoConteudo()` do
-// round-trip (`serialize.ts`) — não um literal montado aqui, que seria uma
-// segunda definição da forma do nó. Os dois ids saem de `crypto.randomUUID()`
-// na fábrica, nunca de um default do schema. A tabela é **só desktop**; ver o
-// comentário no botão.
+// Figura e tabela (passo 3.6.3) e fórmula (passo 3.6.5) também são de
+// verdade: `insertContent()` com o nó que `novaFigura()`/`novaTabela()`/
+// `novaFormula()` (src/core/document/factory.ts) produzem, convertido pra
+// JSON do TipTap pela mesma `deNoConteudo()` do round-trip (`serialize.ts`)
+// — não um literal montado aqui, que seria uma segunda definição da forma do
+// nó. Os ids de figura e tabela saem de `crypto.randomUUID()` na fábrica,
+// nunca de um default do schema (a fórmula não tem id: não é numerada nem
+// listada). Tabela e fórmula são **só desktop**; ver o comentário em cada
+// botão.
 //
 // Todo o resto — estilo de parágrafo, fonte do documento, corpo, sublinhado,
 // justificar, lista, nota de rodapé, "Aplicar formatação ABNT" — é
@@ -247,6 +249,21 @@ export function Toolbar({ editor }: ToolbarProps) {
         onClick={() => inserirBloco(novaTabela())}
       >
         <Icon name="table" size={16} />
+      </BotaoToolbar>
+      {/*
+        Fórmula **só no desktop** (critério do passo 3.6.5), pelo mesmo
+        `hidden md:flex` da tabela e pelo mesmo motivo: escrever LaTeX é
+        digitar `\`, `{`, `}`, `^` e `_` o tempo todo, e num teclado virtual
+        cada um deles está a duas camadas de distância. A fórmula já criada
+        continua visível e editável em qualquer largura — o que o breakpoint
+        tira é o botão de CRIAR uma.
+      */}
+      <BotaoToolbar
+        label="Fórmula (só no computador) — escrita em LaTeX, destacada e centralizada"
+        className="hidden md:flex"
+        onClick={() => inserirBloco(novaFormula())}
+      >
+        <Icon name="sigma" size={16} />
       </BotaoToolbar>
       {CONTROLES_FUTUROS.map((item) => (
         <BotaoToolbar key={item.nome} label={item.label} disabled>

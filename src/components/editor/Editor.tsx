@@ -17,6 +17,7 @@ import { Italico } from "@/core/editor/marks/italico";
 import { Negrito } from "@/core/editor/marks/negrito";
 import { Documento as DocumentoNode } from "@/core/editor/nodes/documento";
 import { Figura as FiguraNode } from "@/core/editor/nodes/figure";
+import { Formula as FormulaNode } from "@/core/editor/nodes/formula";
 import { CitacaoLonga } from "@/core/editor/nodes/longQuote";
 import { Secao as SecaoNode } from "@/core/editor/nodes/section";
 import { CelulaTabela, LinhaTabela, Tabela as TabelaNode } from "@/core/editor/nodes/table";
@@ -25,6 +26,7 @@ import { moverSecaoDeTopo } from "@/core/editor/reorder";
 
 import { AvisoPaginacao } from "./AvisoPaginacao";
 import { FiguraView } from "./nodes/FiguraView";
+import { FormulaView } from "./nodes/FormulaView";
 import { SectionView } from "./nodes/SectionView";
 import { TabelaView } from "./nodes/TabelaView";
 import { Toolbar } from "./Toolbar";
@@ -50,6 +52,16 @@ const FiguraComVisualizacao = FiguraNode.extend({
 const TabelaComVisualizacao = TabelaNode.extend({
   addNodeView() {
     return ReactNodeViewRenderer(TabelaView);
+  },
+});
+
+// E para a fórmula (passo 3.6.5), pelo mesmo motivo com um agravante: o
+// KaTeX é uma biblioteca de navegador, e é exatamente por isso que ele fica
+// deste lado da divisão — `src/core/editor/nodes/formula.ts` guarda a fonte
+// LaTeX e mais nada.
+const FormulaComVisualizacao = FormulaNode.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(FormulaView);
   },
 });
 
@@ -96,10 +108,11 @@ interface EditorProps {
 
 // Editor com seções (passo 1.3.7), formatação (passo 2.5: negrito, itálico,
 // nível de título — `Toolbar.tsx`), citação longa (passo 3.4.1) e
-// figura/tabela com legenda numerada (passo 3.6.3). A lista fechada completa
-// do editor está em docs/schema-tiptap.md; "listas" (`lista`/`item_lista`) e
-// "fórmula" ainda não têm nó aqui de propósito — 3.6.5 e Fase 3
-// (`NoConteudo` não os cobre até lá, ver src/core/document/types.ts).
+// figura/tabela com legenda numerada (passo 3.6.3) e fórmula em LaTeX
+// (passo 3.6.5). A lista fechada completa do editor está em
+// docs/schema-tiptap.md; "listas" (`lista`/`item_lista`) ainda não tem nó
+// aqui de propósito (`NoConteudo` não a cobre, ver
+// src/core/document/types.ts).
 //
 // Continua sem `@tiptap/starter-kit` de propósito — cada nó/marca entra por
 // decisão explícita, um passo do plano de cada vez.
@@ -137,6 +150,9 @@ export function Editor({ sections, onSectionsChange, onReorderReady }: EditorPro
       TabelaComVisualizacao,
       LinhaTabela,
       CelulaTabela,
+      // Fórmula (passo 3.6.5) — inserida pela toolbar, só no desktop, pelo
+      // mesmo motivo da tabela (ver o botão em `Toolbar.tsx`).
+      FormulaComVisualizacao,
       Negrito,
       Italico,
       // Desfazer/refazer (passo 2B.12) não vem de graça: as extensões

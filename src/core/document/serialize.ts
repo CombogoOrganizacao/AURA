@@ -137,6 +137,15 @@ function paraNoConteudo(no: JSONContent): NoConteudo {
       linhas: (no.content ?? []).map(paraLinhaTabela),
     };
   }
+  if (no.type === "formula") {
+    // Sem exigir id, ao contrário de figura/tabela: a fórmula não é numerada
+    // nem listada, então não há por que indexá-la (ver o cabeçalho de
+    // `src/core/editor/nodes/formula.ts`). Fórmula sem `texto` é um nó
+    // legítimo — é o estado de toda fórmula recém-inserida, antes de a
+    // pessoa digitar o LaTeX.
+    const { texto } = (no.attrs ?? {}) as { texto?: string };
+    return { type: "formula", texto: texto ?? "" };
+  }
   throw new Error(`Nó de conteúdo ainda não suportado: "${no.type}"`);
 }
 
@@ -226,10 +235,11 @@ function deConteudoInline(content: NoTexto[] | undefined): JSONContent[] | undef
   }));
 }
 
-// Exportada (passo 3.6.3) para a toolbar inserir uma figura/tabela nova sem
-// escrever um segundo literal com a forma do nó: `novaFigura()` produz o nó
-// canônico, esta função o converte pro JSON do TipTap, e é a MESMA conversão
-// que o round-trip usa — uma divergência entre as duas seria impossível.
+// Exportada (passo 3.6.3) para a toolbar inserir uma figura/tabela/fórmula
+// nova sem escrever um segundo literal com a forma do nó: `novaFigura()`
+// produz o nó canônico, esta função o converte pro JSON do TipTap, e é a
+// MESMA conversão que o round-trip usa — uma divergência entre as duas seria
+// impossível.
 export function deNoConteudo(no: NoConteudo): JSONContent {
   if (no.type === "figura") {
     // Atômico — `content` nenhum, nem vazio: o nó do editor é `atom: true`
@@ -246,6 +256,11 @@ export function deNoConteudo(no: NoConteudo): JSONContent {
       attrs: { id: no.id, legenda: no.legenda, fonte: no.fonte },
       content: no.linhas.map(deLinhaTabela),
     };
+  }
+
+  if (no.type === "formula") {
+    // Atômico como `figura`: um atributo só, nenhum `content`.
+    return { type: "formula", attrs: { texto: no.texto } };
   }
 
   const conteudo = deConteudoInline(no.content);

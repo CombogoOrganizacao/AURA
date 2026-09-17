@@ -443,6 +443,76 @@ h5 {
   font-weight: 700;
 }
 
+/* Fórmula (passo 3.6.5) — docs/schema-tiptap.md §4.8. "Destacada do
+   parágrafo e centralizada" é o que a NBR 14724 pede de equação separada do
+   texto corrido; como o resto das regras de ilustração, isso NÃO passou pela
+   auditoria do 3.1.1 (ver `docs/auditoria-abnt.md` e o cabeçalho de
+   `src/core/document/elements/legenda.ts`). O mesmo alinhamento sai no
+   `.docx`, em `export/docx/fromDocumento.ts`.
+
+   `text-indent: 0` porque a regra de `p` acima não alcança este bloco, mas o
+   `<input>` da fonte LaTeX herdaria o recuo — mesmo cuidado da legenda. */
+.ProseMirror .doc-formula {
+  margin-block: 0.5rem;
+  text-align: center;
+  text-indent: 0;
+}
+
+/* O desenho do KaTeX. `overflow-x: auto` porque uma equação larga não pode
+   estourar a largura da folha A4 nem ser cortada em silêncio: rola dentro do
+   próprio bloco, e quem escreveu vê que ela não cabe. O CSS do KaTeX (fonte,
+   espaçamento, altura dos radicais) vem do pacote, importado em
+   `FormulaView.tsx` — nada dele é redeclarado aqui. */
+.ProseMirror .doc-formula-render {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Fórmula que o KaTeX não conseguiu ler: o LaTeX cru fica à vista, em
+   monoespaçada, para a pessoa achar o erro — nunca um bloco vazio. */
+.ProseMirror .doc-formula-render[data-erro] {
+  font-family: var(--font-mono);
+  font-size: var(--doc-caption);
+  color: var(--color-danger);
+}
+
+/* Avisos (fórmula vazia, sintaxe inválida) — 10pt, como toda linha de apoio
+   dentro da folha. Não fazem parte do documento: são afordância de edição,
+   e por isso não saem no `.docx`. */
+.ProseMirror .doc-formula-aviso {
+  margin: 0;
+  font-size: var(--doc-caption);
+  line-height: var(--leading-doc-simples);
+  font-style: italic;
+  color: var(--color-subtle);
+  text-align: center;
+  text-indent: 0;
+}
+
+/* A linha de edição do LaTeX. Também não sai no `.docx` — o que é exportado
+   é a fórmula, não o campo onde ela foi escrita. Monoespaçada porque é
+   código: `rac{a}{b}` num tipo proporcional esconde a diferença entre
+   chave e parêntese. Mesma técnica de encolher o input até o conteúdo usada
+   na legenda de figura/tabela, pelo mesmo motivo (manter a linha
+   centralizada). */
+.ProseMirror .doc-formula-fonte {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: var(--doc-caption);
+  line-height: var(--leading-doc-simples);
+  color: var(--color-subtle);
+}
+
+.ProseMirror .doc-formula-fonte input {
+  field-sizing: content;
+  min-width: 16ch;
+  max-width: 100%;
+  font-family: inherit;
+  color: var(--doc-ink);
+}
+
 ::selection {
   background: var(--color-creme-200);
   color: var(--color-bordo-800);

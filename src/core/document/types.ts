@@ -99,12 +99,31 @@ export interface NoTabela {
 // consomem e o que a lista de ilustrações (3.6.4) vai percorrer.
 export type NoNumeravel = NoFigura | NoTabela;
 
+// Fórmula (docs/schema-tiptap.md §4.8) — passo 3.6.5. Atômico: um campo só.
+//
+// **`texto` é a fonte em LaTeX, nunca a renderização.** O que fica gravado é
+// `E = mc^2`; o desenho na tela vem do KaTeX no node view
+// (`src/components/editor/nodes/FormulaView.tsx`), refeito a cada render e
+// jogado fora. É o mesmo princípio de `Secao` não guardar "2.1": guarda-se o
+// dado do qual tudo o mais deriva. Converter para OMML no `.docx` (passo
+// 6.1.4) é reler `texto`, não desfazer HTML gravado.
+//
+// **Sem `id` e sem número**, ao contrário de `NoFigura`/`NoTabela`: a
+// fórmula não é numerada (a NBR 14724 numera equação só "se necessário", e a
+// v1 não numera nenhuma) nem entra em lista automática — não há quem indexe
+// um id nem quem leia um número. Ver o cabeçalho de
+// `src/core/editor/nodes/formula.ts`.
+export interface NoFormula {
+  type: "formula";
+  texto: string;
+}
+
 // Lista fechada de conteúdo de `Secao`/`ElementoPosTextual`. Cresce um membro
 // de cada vez, só quando o nó correspondente ganha código em
 // src/core/editor/nodes/ (ver docs/schema-tiptap.md §7) — por ora cobre
-// parágrafo, citação longa, figura e tabela. `lista` e `formula` entram
-// conforme cada um for implementado (3.6.5 e Fase 3 em diante).
-export type NoConteudo = NoParagrafo | NoCitacaoLonga | NoFigura | NoTabela;
+// parágrafo, citação longa, figura, tabela e fórmula. `lista` entra quando
+// for implementada.
+export type NoConteudo = NoParagrafo | NoCitacaoLonga | NoFigura | NoTabela | NoFormula;
 
 export interface Secao {
   id: string;

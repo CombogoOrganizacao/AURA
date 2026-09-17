@@ -37,6 +37,7 @@ import {
   Ruler,
   Search,
   Settings,
+  Sigma,
   Sparkles,
   SpellCheck2,
   Star,
@@ -121,6 +122,9 @@ const icones = {
   // de mesmo nome do DOM.
   image: ImageIcon,
   superscript: Superscript,
+  // Fórmula (passo 3.6.5) — o sigma é o glifo corrente para "equação" em
+  // editor de texto, e não colide com nenhum conceito já mapeado aqui.
+  sigma: Sigma,
 } satisfies Record<string, LucideIcon>;
 
 export type NomeIcone = keyof typeof icones;

@@ -247,6 +247,30 @@ describe("fromDocumento / toDocumento", () => {
     expect(toDocumento(fromDocumento(secoes))).toEqual(secoes);
   });
 
+  // Passo 3.6.5: a fórmula entra no union fechado, então o round-trip cobre
+  // também ela. O que precisa atravessar intacto é a FONTE em LaTeX — barra
+  // invertida, chave e espaço —, porque é dela que o passo 6.1.4 vai derivar
+  // o OMML do `.docx`.
+  it("faz o round-trip de uma fórmula preservando o LaTeX caractere a caractere", () => {
+    const secoes: Secao[] = [
+      {
+        id: "s1",
+        ordem: 0,
+        nivel: 1,
+        titulo: "Metodologia",
+        content: [
+          { type: "paragraph", content: [{ type: "text", text: "A raiz vem de:" }] },
+          { type: "formula", texto: "x = \\frac{-b \\pm \\sqrt{b^{2} - 4ac}}{2a}" },
+          // Fórmula recém-inserida, ainda sem LaTeX digitado: é um nó
+          // legítimo, não um erro — `toDocumento()` não exige `texto`.
+          { type: "formula", texto: "" },
+        ],
+      },
+    ];
+
+    expect(toDocumento(fromDocumento(secoes))).toEqual(secoes);
+  });
+
   it("recusa figura sem id", () => {
     const doc = {
       type: "doc",

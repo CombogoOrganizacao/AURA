@@ -113,6 +113,39 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
     expect(paragrafo).toContain('<w:pStyle w:val="CitacaoLonga"/>');
   });
 
+  // Passo 3.6.5. A fórmula sai como a fonte LaTeX em texto simples — é o que
+  // docs/schema-tiptap.md §6 registra até o passo 6.1.4 (OMML). O teste
+  // existe pra garantir que o que a pessoa escreveu CHEGA ao `.docx`: um nó
+  // novo no union `NoConteudo` que caísse no caminho de `paragrafoCorpo()`
+  // exportaria um parágrafo vazio, e a fórmula sumiria em silêncio.
+  it("fórmula exporta a fonte LaTeX, centralizada e sem recuo de parágrafo (passo 3.6.5)", async () => {
+    const latex = "x = \\frac{-b \\pm \\sqrt{b^{2} - 4ac}}{2a}";
+    const documento = novoDocumento();
+    documento.sections = [
+      {
+        id: "s1",
+        ordem: 0,
+        nivel: 1,
+        titulo: "Metodologia",
+        content: [{ type: "formula", texto: latex }],
+      },
+    ];
+
+    const buffer = await empacotar(documento);
+    const zip = await JSZip.loadAsync(buffer);
+    const xml = await zip.file("word/document.xml")!.async("string");
+
+    // O XML escapa `&` e `<`; a fórmula usada aqui não tem nenhum dos dois,
+    // então a busca literal vale.
+    const posTexto = xml.indexOf(latex);
+    expect(posTexto).toBeGreaterThan(-1);
+
+    const paragrafo = xml.slice(xml.lastIndexOf("<w:p>", posTexto), posTexto);
+    expect(paragrafo).toContain('w:val="center"');
+    // Equação destacada não leva o recuo de primeira linha do corpo.
+    expect(paragrafo).not.toContain("w:firstLine");
+  });
+
   // Passo 3.5.2: resumo/abstract exportam de verdade, a partir dos
   // metadados — não mais o placeholder fixo que `sections.ts` tinha antes.
   it("exporta resumo e abstract com palavras-chave/keywords separadas por ponto e vírgula", async () => {

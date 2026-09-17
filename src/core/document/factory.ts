@@ -1,4 +1,12 @@
-import type { Documento, Metadados, NivelSecao, NoFigura, NoTabela, Secao } from "./types";
+import type {
+  Documento,
+  Metadados,
+  NivelSecao,
+  NoFigura,
+  NoFormula,
+  NoTabela,
+  Secao,
+} from "./types";
 
 // Documento em branco: metadados com os campos zerados, para o formulário
 // mínimo (passo 1.3.4) preencher, e nenhuma seção, referência, apêndice ou
@@ -73,4 +81,14 @@ export function novaTabela(colunas = 2, linhas = 2): NoTabela {
       celulas: Array.from({ length: colunas }, () => ({ cabecalho: indiceLinha === 0 })),
     })),
   };
+}
+
+// Fórmula em branco (passo 3.6.5). Nasce com `texto` vazio de propósito: o
+// AURA não escreve o conteúdo do trabalho (CLAUDE.md, "Identidade e limite
+// de produto"), então não há fórmula de exemplo a sugerir — quem escreve o
+// LaTeX é a pessoa, no campo do node view. Sem id, ao contrário de
+// `novaFigura()`/`novaTabela()`: fórmula não é numerada nem listada, então
+// não há quem indexe um id (ver src/core/editor/nodes/formula.ts).
+export function novaFormula(texto = ""): NoFormula {
+  return { type: "formula", texto };
 }

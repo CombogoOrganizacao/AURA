@@ -137,6 +137,21 @@ describe("siglaAparece — busca determinística, sem IA", () => {
     expect(siglaAparece("IBGE", [naCelula])).toBe(true);
   });
 
+  // Passo 3.6.5: o `texto` de uma fórmula é código LaTeX, não prosa. "SI"
+  // dentro de `\sin` — ou qualquer nome de macro — não é uso da sigla no
+  // texto, e a NBR 14724 pede a relação das abreviaturas "utilizadas no
+  // texto".
+  it("não procura sigla dentro do LaTeX de uma fórmula", () => {
+    const comFormula: Secao = {
+      id: "s",
+      ordem: 0,
+      nivel: 1,
+      titulo: "",
+      content: [{ type: "formula", texto: "IBGE = \\frac{A}{B}" }],
+    };
+    expect(siglaAparece("IBGE", [comFormula])).toBe(false);
+  });
+
   it("sigla com ponto é procurada como literal, não como metacaractere", () => {
     expect(siglaAparece("p.ex.", [secaoCom("Ver p.ex. o anexo.")])).toBe(true);
     expect(siglaAparece("p.ex.", [secaoCom("Ver pXexY o anexo.")])).toBe(false);

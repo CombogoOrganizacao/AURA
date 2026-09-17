@@ -33,6 +33,11 @@ export const TITULO_LISTA_ABREVIATURAS = "LISTA DE ABREVIATURAS E SIGLAS";
 // Texto de um nó de conteúdo, incluindo legenda e fonte de figura/tabela e o
 // conteúdo das células: uma sigla usada só numa legenda está usada no texto.
 function textoDoNo(no: NoConteudo): string[] {
+  // Fórmula fica de fora (passo 3.6.5): `texto` é código LaTeX, não prosa.
+  // Procurar sigla ali acharia `\\SI`, `\\AA` e nome de macro como se fossem
+  // uso no texto — e uma sigla dentro de uma equação não é o que a NBR 14724
+  // chama de "utilizada no texto".
+  if (no.type === "formula") return [];
   if (no.type === "figura") return [no.legenda, no.fonte];
   if (no.type === "tabela") {
     return [
