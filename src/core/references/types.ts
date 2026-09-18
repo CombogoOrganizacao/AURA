@@ -22,11 +22,16 @@
 // terem que manter um dicionário de ida e volta. Os identificadores DO AURA
 // seguem em inglês e os comentários em pt-BR, como no resto do projeto.
 //
-// **A NBR 6023:2018 não foi lida integralmente** (docs/auditoria-abnt.md, nota
-// de escopo): a auditoria do 3.1.1 se apoiou em fontes secundárias para o
-// formato de referência. Isto pesa no 4.3, que decide pontuação e ordem; aqui
-// pesa menos — o risco de um campo a mais é ele ficar sem uso, e o de um campo
-// a menos é perder dado que a pessoa digitou. Na dúvida, o campo existe.
+// **A NBR 6023:2025 (3ª edição) foi lida na íntegra** — ver
+// docs/auditoria-abnt.md, seção "Auditoria da NBR 6023:2025". Ela cancela e
+// substitui a 6023:2018, em que a auditoria do 3.1.1 se apoiava por fonte
+// secundária. Cada campo abaixo tem item de norma atrás dele, e os que não
+// têm estão marcados.
+//
+// O mapa dos seis tipos para os modelos da norma (ela não tem um tipo "site"):
+// `book` = §7.1.1, `chapter` = §7.3, `article-journal` = §7.7.5,
+// `thesis` = §7.1.2 e §8.12, `paper-conference` = §7.8.4.1,
+// `webpage` = §7.20 mais §6.6.
 
 // --- Vocabulário CSL ---------------------------------------------------------
 
@@ -65,6 +70,59 @@ export type CSLType =
   | "thesis"
   | "paper-conference";
 
+// --- Extensões fora do vocabulário CSL --------------------------------------
+// Os três tipos abaixo não existem no CSL 1.0.2, e existem aqui pelo mesmo
+// motivo de `subtitle`: o CSL guardaria cada um como uma string já pronta
+// ("2. ed.", "Dissertação (Mestrado em X)"), e string pronta é exatamente o
+// que a Fase 4 existe para não fazer. Todos foram escritos DEPOIS da leitura
+// da NBR 6023:2025 na íntegra — ver docs/auditoria-abnt.md, seção "Auditoria
+// da NBR 6023:2025".
+
+// Edição (NBR 6023:2025 §8.3). **Não é um número.** A norma manda transcrever
+// "as abreviaturas do numeral ordinal e da palavra edição, AMBAS NO IDIOMA DO
+// DOCUMENTO" — "2. ed." num livro em português, "5th ed." num em inglês. E o
+// §8.3.1 admite emendas e acréscimos ("3. ed. rev. e aum."). Com um `number`,
+// o formatador teria que adivinhar o idioma e perderia os acréscimos.
+export interface Edicao {
+  // Ordinal da edição. Primeira edição não se declara na 6023 — por isso o
+  // campo `edicao` inteiro é opcional em vez de nascer com `numero: 1`:
+  // ausente significa "não declarada", não "é a primeira".
+  numero: number;
+  // "rev. e aum.", "rev. atual." — transcrito como consta no documento
+  // (§8.3.1), não montado por nós a partir de caixinhas.
+  acrescimos?: string;
+  // Idioma DO DOCUMENTO referenciado, que decide a grafia do ordinal e da
+  // palavra "edição" (§8.3) — não o idioma do trabalho em elaboração. Código
+  // ISO 639-1 ("pt", "en", "es"). Ausente: o formatador assume o do trabalho.
+  idioma?: string;
+}
+
+// Tipo de participação de quem responde pelo conjunto da obra (§8.1.1.4). A
+// norma manda indicar a abreviação "em letras minúsculas e no singular, do
+// tipo de participação... entre parênteses" — `(org.)`, `(coord.)`. Guardar só
+// os nomes descartaria QUAL era o papel, e o formatador não teria o que
+// escrever entre os parênteses.
+//
+// Lista fechada nos quatro que a norma nomeia. Ela diz "entre outros", então a
+// lista dela é aberta; a do AURA é fechada de propósito, para o formulário
+// (4.2) oferecer opções em vez de um campo livre onde cada pessoa inventa uma
+// abreviação. Cresce quando aparecer um caso real que nenhum dos quatro cobre.
+export type TipoParticipacao = "organizador" | "compilador" | "editor" | "coordenador";
+
+export interface Responsabilidade {
+  nomes: CSLName[];
+  tipo: TipoParticipacao;
+}
+
+// Extensão em unidades físicas (§8.7.2.1): "indica-se o número total de
+// páginas ou folhas, seguido da abreviatura p. ou f.". A unidade é dado, não
+// enfeite — trabalho acadêmico conta FOLHAS ("82 f."), livro conta páginas
+// ("204 p."), e guardar a string "82 f." embutiria a abreviatura no dado.
+export interface Extensao {
+  quantidade: number;
+  unidade: "pagina" | "folha";
+}
+
 // --- Campos comuns -----------------------------------------------------------
 
 interface ReferenciaBase {
@@ -86,10 +144,11 @@ interface ReferenciaBase {
   // dois na mesma string, o formatador teria que procurar um dois-pontos e
   // torcer para não ser o de um título que já contém um.
   //
-  // Juntar é irreversível; separar não custa nada. Se o destaque só no título
-  // não se confirmar quando a 6023 for lida na íntegra (pendência 1 de
-  // docs/auditoria-abnt.md), o formatador junta os dois — e o dado continua
-  // inteiro.
+  // **Confirmado na fonte primária** (§6.7): "o recurso tipográfico (negrito,
+  // itálico ou sublinhado) utilizado para destacar o ELEMENTO TÍTULO deve ser
+  // uniforme em todas as referências" — e em todos os exemplos da norma o
+  // destaque cobre o título e para no dois-pontos ("**Globalização**: as
+  // conseqüências humanas"). §3.26 e §3.28 os definem como termos distintos.
   subtitle?: string;
 
   issued?: CSLDate;
@@ -107,10 +166,9 @@ interface ReferenciaBase {
 
 export interface ReferenciaLivro extends ReferenciaBase {
   type: "book";
-  // "2. ed." — guardado como número, formatado pelo 4.3. Primeira edição não
-  // se declara na 6023, e é por isso que o campo é opcional em vez de ter
-  // `1` como padrão: ausente significa "não declarada", não "é a primeira".
-  edition?: number;
+  // §7.1.1 monografia no todo: autor, título, subtítulo, edição, local,
+  // editora e data de publicação.
+  edicao?: Edicao;
   publisher?: string;
   "publisher-place"?: string;
   translator?: CSLName[];
@@ -124,10 +182,10 @@ export interface ReferenciaCapitulo extends ReferenciaBase {
   "container-subtitle"?: string;
   // Autor do LIVRO, quando é outro que o do capítulo e não é organizador.
   "container-author"?: CSLName[];
-  // Organizador/coordenador do livro — a 6023 pede a indicação do tipo de
-  // responsabilidade ("(org.)", "(coord.)") junto do nome.
-  editor?: CSLName[];
-  edition?: number;
+  // Quem responde pelo conjunto do livro, com o papel junto (§8.1.1.4) — é o
+  // que vira "(org.)" ou "(coord.)" depois do último nome.
+  responsabilidade?: Responsabilidade;
+  edicao?: Edicao;
   publisher?: string;
   "publisher-place"?: string;
   // "p. 45-67" — intervalo como a fonte o traz, não dois números: a 6023
@@ -157,19 +215,45 @@ export interface ReferenciaSite extends ReferenciaBase {
   URL: string;
 }
 
+// §7.1.2 (e §8.12) enumera os elementos essenciais do trabalho acadêmico um a
+// um: "autor, título, subtítulo (se houver), ANO DE DEPÓSITO, TIPO DO TRABALHO
+// (tese, dissertação, trabalho de conclusão de curso e outros), GRAU
+// (especialização, doutorado, entre outros) E CURSO entre parênteses,
+// VINCULAÇÃO ACADÊMICA, local e DATA DE APRESENTAÇÃO OU DEFESA".
+//
+// São sete campos, não um. A primeira versão deste tipo (passo 4.1, escrito
+// antes de a norma ser lida) tinha um `genre: string` com
+// "Dissertação (Mestrado em Ciência da Computação)" dentro — uma string já
+// formatada, exatamente o que esta fase existe para impedir. Corrigido depois
+// da leitura; ver docs/auditoria-abnt.md, "Correções exigidas no passo 4.1".
 export interface ReferenciaTese extends ReferenciaBase {
   type: "thesis";
-  // "Dissertação (Mestrado em Ciência da Computação)" — a 6023 pede o tipo do
-  // trabalho e a área. Campo CSL padrão para isto, e obrigatório: é ele que
-  // distingue uma tese de doutorado de uma monografia de especialização, e
-  // sem ele a referência sai ambígua.
-  genre: string;
-  // Instituição onde foi defendida.
+  // "Tese", "Dissertação", "Trabalho de Conclusão de Curso". String livre, e
+  // não união: a norma diz "e outros", e há instituição que usa "Monografia"
+  // ou "Relatório de estágio". Obrigatório porque é ele que distingue um
+  // doutorado de uma especialização — sem ele a referência sai ambígua.
+  tipoTrabalho: string;
+  // "Doutorado", "Mestrado", "Bacharelado", "Especialização" — o que abre os
+  // parênteses.
+  grau?: string;
+  // "Cardiologia", "Engenharia Industrial Mecânica" — o que fecha os
+  // parênteses, depois de "em". Separado de `grau` porque a norma os enumera
+  // separados, e porque a lista de graus é curta e a de cursos não é.
+  curso?: string;
+  // Vinculação acadêmica: "Faculdade de Medicina, Universidade de São Paulo".
+  // Reaproveita `publisher`, que é o campo CSL de instituição responsável.
   publisher?: string;
   "publisher-place"?: string;
-  // Número de folhas ("120 f."), que a 6023 pede para tese e dissertação e
-  // não pede para livro.
-  "number-of-pages"?: string;
+  // **`issued` (na base) é o ANO DE DEPÓSITO**, que vem logo depois do título.
+  // `defesa` é a data de apresentação, que fecha a referência. No exemplo da
+  // própria norma os dois são 2009, mas são elementos distintos e podem
+  // divergir — juntá-los perderia a distinção sem ganhar nada.
+  defesa?: CSLDate;
+  // §8.1.1.6: orientador é "outro tipo de responsabilidade", acrescentado
+  // depois do título. Elemento complementar, não essencial.
+  orientador?: CSLName[];
+  // "82 f." — folhas, não páginas (§8.7.2.1). Complementar.
+  extensao?: Extensao;
 }
 
 export interface ReferenciaEvento extends ReferenciaBase {

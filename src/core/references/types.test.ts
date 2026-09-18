@@ -5,6 +5,7 @@ import type {
   CSLType,
   Referencia,
   ReferenciaArtigo,
+  ReferenciaCapitulo,
   ReferenciaEvento,
   ReferenciaLivro,
 } from "./types";
@@ -28,7 +29,7 @@ describe("a união recusa campo que não pertence ao tipo", () => {
       title: "A formatação de trabalhos acadêmicos",
       subtitle: "um manual",
       author: [{ family: "Silva", given: "Maria" }],
-      edition: 2,
+      edicao: { numero: 2, acrescimos: "rev. e aum.", idioma: "pt" },
       publisher: "Editora Exemplo",
       "publisher-place": "Recife",
       issued: { "date-parts": [[2023]] },
@@ -46,7 +47,7 @@ describe("a união recusa campo que não pertence ao tipo", () => {
       genre: "Dissertação (Mestrado em X)",
     };
 
-    expect(livro.edition).toBe(2);
+    expect(livro.edicao?.numero).toBe(2);
     expect(comEvento.title).toBe(livro.title);
     expect(comGenero.title).toBe(livro.title);
   });
@@ -66,7 +67,7 @@ describe("a união recusa campo que não pertence ao tipo", () => {
     const comEdicao: ReferenciaArtigo = {
       ...artigo,
       // @ts-expect-error — edição é de livro/capítulo, não de artigo
-      edition: 2,
+      edicao: { numero: 2 },
     };
 
     expect(comEdicao.volume).toBe("12");
@@ -77,27 +78,37 @@ describe("a união recusa campo que não pertence ao tipo", () => {
       id: "r3",
       type: "thesis",
       title: "Sobre a formatação",
-      genre: "Dissertação (Mestrado em Ciência da Computação)",
+      tipoTrabalho: "Dissertação",
+      grau: "Mestrado",
+      curso: "Ciência da Computação",
       publisher: "Universidade Católica de Pernambuco",
       "publisher-place": "Recife",
-      "number-of-pages": "120 f.",
+      extensao: { quantidade: 120, unidade: "folha" },
+      // Ano de DEPÓSITO (§7.1.2), que vem logo depois do título.
       issued: { "date-parts": [[2024]] },
+      // Data de DEFESA, que fecha a referência. Aqui divergem de propósito:
+      // são elementos distintos na norma, e o teste prova que o tipo os
+      // mantém distintos.
+      defesa: { "date-parts": [[2025, 3]] },
     };
 
     // Sem estreitar, `genre` não existe na união — só o tipo `thesis` o tem.
     // Vai por uma função porque o TypeScript ESTREITA um `const` anotado com
     // união a partir do literal que o inicializa: dentro deste teste, `tese`
     // já nasceria estreitada, e o erro que se quer provar não apareceria.
-    function generoDe(referencia: Referencia): unknown {
+    function grauDe(referencia: Referencia): unknown {
       // @ts-expect-error — campo de um membro só da união, antes de estreitar
-      return referencia.genre;
+      return referencia.grau;
     }
 
-    expect(generoDe(tese)).toContain("Mestrado");
+    expect(grauDe(tese)).toBe("Mestrado");
 
     if (tese.type === "thesis") {
-      expect(tese.genre).toContain("Mestrado");
-      expect(tese["number-of-pages"]).toBe("120 f.");
+      expect(tese.tipoTrabalho).toBe("Dissertação");
+      expect(tese.extensao).toEqual({ quantidade: 120, unidade: "folha" });
+      // Depósito e defesa são campos diferentes, e não coincidem aqui.
+      expect(tese.issued?.["date-parts"]?.[0][0]).toBe(2024);
+      expect(tese.defesa?.["date-parts"]?.[0][0]).toBe(2025);
     }
   });
 
@@ -116,6 +127,70 @@ describe("a união recusa campo que não pertence ao tipo", () => {
     };
 
     expect(trabalho["event-title"]).not.toBe(trabalho["container-title"]);
+  });
+});
+
+// Os três casos abaixo são a correção feita depois de a NBR 6023:2025 ser lida
+// na íntegra (docs/auditoria-abnt.md, "Correções exigidas no passo 4.1"). Cada
+// um prende um campo que, na primeira versão do 4.1, guardava string pronta.
+describe("os campos corrigidos pela leitura da norma (§8.3, §8.1.1.4, §7.1.2)", () => {
+  // §8.3: "ambas no idioma do documento" — "2. ed." mas "5th ed.". Um `number`
+  // obrigaria o formatador a adivinhar o idioma.
+  it("edição carrega idioma e acréscimos, não só o ordinal", () => {
+    const emIngles: ReferenciaLivro = {
+      id: "r10",
+      type: "book",
+      title: "Schaum outline of theory and problems",
+      edicao: { numero: 5, idioma: "en" },
+    };
+    const comAcrescimos: ReferenciaLivro = {
+      id: "r11",
+      type: "book",
+      title: "Manual para normalização",
+      edicao: { numero: 3, acrescimos: "rev. e aum." },
+    };
+
+    expect(emIngles.edicao?.idioma).toBe("en");
+    expect(comAcrescimos.edicao?.acrescimos).toBe("rev. e aum.");
+  });
+
+  // §8.1.1.4: a abreviação do tipo de participação vai entre parênteses depois
+  // do último nome. Sem o papel guardado, não há o que escrever lá.
+  it("o organizador do livro guarda o papel junto dos nomes", () => {
+    const capitulo: ReferenciaCapitulo = {
+      id: "r12",
+      type: "chapter",
+      title: "Imagens da juventude na era moderna",
+      "container-title": "História dos jovens 2",
+      "container-subtitle": "a época contemporânea",
+      responsabilidade: {
+        nomes: [
+          { family: "Levi", given: "G." },
+          { family: "Schmidt", given: "J." },
+        ],
+        tipo: "organizador",
+      },
+      page: "7-16",
+    };
+
+    expect(capitulo.responsabilidade?.tipo).toBe("organizador");
+    expect(capitulo.responsabilidade?.nomes).toHaveLength(2);
+  });
+
+  it("o tipo de participação é lista fechada, não texto livre", () => {
+    const capitulo: ReferenciaCapitulo = {
+      id: "r13",
+      type: "chapter",
+      title: "T",
+      "container-title": "C",
+      responsabilidade: {
+        nomes: [{ family: "Ferreira" }],
+        // @ts-expect-error — "autor" não é tipo de participação da §8.1.1.4
+        tipo: "autor",
+      },
+    };
+
+    expect(capitulo.responsabilidade?.nomes).toHaveLength(1);
   });
 });
 
