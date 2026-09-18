@@ -73,6 +73,26 @@ export const ESTILOS_DOCUMENTO: IStylesOptions = {
     // Corpo/Referencia/Legenda mais adiante). `recuoCitacao` (4 cm) só à
     // esquerda, mesma decisão da PoC e do CSS do editor (globals.css,
     // `--doc-indent-citacao`, passo 3.4.1) — nunca as duas margens.
+    // NBR 14724 — legenda e fonte de ilustração/tabela (passo 3.6.3, estilo
+    // nomeado ao corrigir a lista de tabelas). **O estilo existe para que o
+    // tamanho menor venha do PARÁGRAFO, não de cada run.** O número da
+    // legenda é um campo (`SEQ`) com resultado em cache, e o run desse cache
+    // é montado pela biblioteca `docx`, sem como receber `size` — com o
+    // tamanho preso em cada run, o número sairia em 12 pt no meio de uma
+    // legenda de 10 pt. É também como o Word trata legenda desde sempre
+    // (estilo "Legenda"/"Caption"), e adianta uma linha do 6.1.1.
+    {
+      id: "Legenda",
+      name: "Legenda",
+      basedOn: "Normal",
+      next: "Normal",
+      quickFormat: true,
+      run: { font: ABNT.fonte, size: ABNT.tamanhoMenor, color: "000000" },
+      paragraph: {
+        alignment: AlignmentType.CENTER,
+        spacing: { line: ABNT.espacamento1 },
+      },
+    },
     {
       id: "CitacaoLonga",
       name: "Citacao Longa",

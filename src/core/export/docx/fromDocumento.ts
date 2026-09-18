@@ -1,7 +1,7 @@
 import { AlignmentType, HeadingLevel, type Document, Paragraph, TextRun } from "docx";
 
 import { textoItemSumario } from "../../document/elements/sumario";
-import { numerarSecoes } from "../../document/numbering";
+import { numerarFiguras, numerarSecoes, numerarTabelas } from "../../document/numbering";
 import type {
   Documento,
   NoCitacaoLonga,
@@ -130,9 +130,15 @@ function paragrafoFormula(no: NoFormula): Paragraph {
 // corrente, mas **não** foi conferida na fonte primária: ver o cabeçalho de
 // `src/core/document/elements/legenda.ts`, que registra o que a auditoria do
 // 3.1.1 cobriu e o que ficou pendente.
-function paragrafosNumeravel(no: NoNumeravel): Paragraph[] {
+//
+// `numero` vem de `numerarFiguras()`/`numerarTabelas()` (3.6.3) — a mesma
+// dupla que a tela usa. Ele não é escrito como texto: entra como resultado em
+// cache do campo `SEQ` (ver `docx/legenda.ts`), que é o que faz a lista de
+// figuras/tabelas sair com o número na primeira atualização de campos do
+// Word.
+function paragrafosNumeravel(no: NoNumeravel, numero: number): Paragraph[] {
   return [
-    paragrafoLegenda(no),
+    paragrafoLegenda(no, numero),
     no.type === "figura" ? molduraFigura() : avisoTabelaPendente(),
     ...paragrafoFonte(no),
   ];
@@ -163,6 +169,12 @@ export function fromDocumento(documento: Documento): Document {
   const secoesEmOrdem = [...documento.sections].sort((a, b) => a.ordem - b.ordem);
   const numeracao = numerarSecoes(documento.sections);
 
+  // Contagem contínua no documento inteiro, derivada da ordem de leitura —
+  // as MESMAS funções que o editor usa na tela (3.6.3), para o número da
+  // legenda no `.docx` não poder divergir do que a pessoa viu ao escrever.
+  const figuras = numerarFiguras(documento.sections);
+  const tabelas = numerarTabelas(documento.sections);
+
   const corpo: Paragraph[] = [];
   for (const secao of secoesEmOrdem) {
     // `?? null` pelo mesmo motivo de `gerarSumario()`: o `Map` é indexado
@@ -171,7 +183,12 @@ export function fromDocumento(documento: Documento): Document {
     corpo.push(paragrafoTitulo(secao, numeracao.get(secao.id) ?? null));
     for (const no of secao.content) {
       if (no.type === "figura" || no.type === "tabela") {
-        corpo.push(...paragrafosNumeravel(no));
+        // `?? 0` nunca acontece com um documento consistente: os dois `Map`
+        // são construídos percorrendo estas mesmas seções. Um nó ausente
+        // deles significaria id repetido — e o número sai errado, não
+        // `undefined` no meio da legenda.
+        const numero = (no.type === "figura" ? figuras : tabelas).get(no.id) ?? 0;
+        corpo.push(...paragrafosNumeravel(no, numero));
       } else if (no.type === "formula") {
         corpo.push(paragrafoFormula(no));
       } else {

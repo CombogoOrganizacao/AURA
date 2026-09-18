@@ -25,12 +25,51 @@ describe("legenda de figura/tabela no .docx (passo 3.6.3)", () => {
   it("o número é um campo SEQ, não um número escrito pelo exportador", async () => {
     const xml = await documentXmlDe([figura("f1", "Fluxo do processo")]);
 
-    expect(xml).toMatch(/<w:instrText[^>]*>\s*SEQ Figura[^<]*<\/w:instrText>/);
+    expect(xml).toMatch(/<w:fldSimple w:instr="SEQ Figura \\\* ARABIC">/);
     expect(xml).toContain("Fluxo do processo");
-    // O "1" não aparece escrito em lugar nenhum da legenda — se aparecesse,
-    // seria um número gravado, exatamente o que docs/schema-tiptap.md §2
-    // proíbe.
+    // O "1" não é texto da legenda: fica DENTRO do campo, como resultado em
+    // cache. "Figura 1" como string contígua continua não existindo no XML —
+    // se existisse, seria um número gravado, o que docs/schema-tiptap.md §2
+    // proíbe, e o Word não teria o que renumerar.
     expect(xml).not.toContain("Figura 1");
+  });
+
+  // O motivo de o cache existir (ver o cabeçalho de `legenda.ts`): sem ele, o
+  // campo é gravado vazio e o `TOC \c "Tabela"` da lista — que vem ANTES do
+  // corpo — monta a entrada sem o número, porque o Word atualiza os campos em
+  // ordem de documento.
+  it("o campo SEQ guarda o número derivado como resultado em cache", async () => {
+    const xml = await documentXmlDe([figura("f1", "Primeira"), figura("f2", "Segunda")]);
+
+    expect(xml).toMatch(/<w:fldSimple w:instr="SEQ Figura[^"]*"><w:r><w:t[^>]*>1<\/w:t>/);
+    expect(xml).toMatch(/<w:fldSimple w:instr="SEQ Figura[^"]*"><w:r><w:t[^>]*>2<\/w:t>/);
+    // Nunca `<w:fldChar separate/>` seguido direto de `<w:fldChar end/>`, que
+    // é o campo sem resultado nenhum que causava o defeito.
+    expect(xml).not.toMatch(/fldCharType="separate"\/><w:fldChar w:fldCharType="end"/);
+  });
+
+  // O número da legenda no `.docx` e o número na tela vêm da MESMA função
+  // (`numerarFiguras()`), e é isso que impede os dois de divergirem.
+  it("a contagem do cache é a contagem derivada, contínua no documento", async () => {
+    const xml = await documentXmlDe([
+      figura("f1"),
+      { type: "tabela", id: "t1", legenda: "", fonte: "", linhas: [] },
+      figura("f2"),
+    ]);
+
+    // A tabela no meio não avança a contagem das figuras: sequências
+    // separadas, como `numerarFiguras()`/`numerarTabelas()` já garantiam.
+    expect(xml).toMatch(/<w:fldSimple w:instr="SEQ Figura[^"]*"><w:r><w:t[^>]*>2<\/w:t>/);
+    expect(xml).toMatch(/<w:fldSimple w:instr="SEQ Tabela[^"]*"><w:r><w:t[^>]*>1<\/w:t>/);
+  });
+
+  it("legenda e fonte usam o estilo nomeado Legenda, não tamanho solto no run", async () => {
+    const xml = await documentXmlDe([figura("f1", "Fluxo", "IBGE (2024)")]);
+
+    // Duas ocorrências: a legenda e a linha "Fonte:". O tamanho menor vem do
+    // estilo (`styles.ts`) — é o que faz o número dentro do campo sair no
+    // mesmo corpo do resto da legenda.
+    expect(xml.match(/<w:pStyle w:val="Legenda"\/>/g)).toHaveLength(2);
   });
 
   it("figura e tabela usam sequências SEQ distintas", async () => {

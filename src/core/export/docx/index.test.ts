@@ -57,7 +57,11 @@ function idsDeEstilo(xmlEstilos: string): string[] {
 // estilo que a AURA nomeia e a PoC nunca nomeou — a paridade abaixo passa a
 // ser "referência + isto", não mais igualdade estrita; 6.1.1 (Corpo,
 // Referencia, Legenda) vai crescer esta lista do mesmo jeito, um de cada vez.
-const ESTILOS_ALEM_DA_POC = ["CitacaoLonga"];
+// `Legenda` chegou junto com a correção da lista de figuras/tabelas (o número
+// da legenda é um campo com resultado em cache, e o run desse cache só herda
+// o corpo 10 da norma se o tamanho vier do parágrafo — ver `styles.ts`), o
+// que adianta uma das três linhas que o 6.1.1 ainda vai acrescentar.
+const ESTILOS_ALEM_DA_POC = ["CitacaoLonga", "Legenda"];
 
 describe("montarDocumento — esqueleto das três seções OOXML (passo 1.4.1)", () => {
   it("word/document.xml tem os mesmos três <w:sectPr> da PoC, só o segundo com w:pgNumType/w:start", async () => {
