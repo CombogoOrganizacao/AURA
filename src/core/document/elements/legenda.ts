@@ -11,18 +11,31 @@ import type { NoNumeravel } from "../types";
 // `numerarFiguras()`/`numerarTabelas()` (src/core/document/numbering.ts), a
 // partir da ordem de aparição — ver docs/schema-tiptap.md §2.
 //
-// **As regras de ilustração/tabela da NBR 14724 não passaram pela auditoria
-// do passo 3.1.1.** O que ela cobriu e vale aqui: legenda em fonte menor e
-// espaçamento simples (achado do 3.1.1, item 5.1/5.2 da 14724:2011 — e a
-// própria auditoria registra que a 4ª edição, de 2024, **muda a regra de
-// fonte de ilustração/tabela** e não foi lida). O que NÃO foi conferido na
-// fonte primária: legenda acima do objeto, "Fonte:" obrigatória abaixo, e o
-// travessão entre número e título. São as regras incontroversas repetidas
-// por toda fonte secundária, e por isso **nenhum item desta norma é citado
-// por número de seção aqui** — mesmo tratamento dado à NBR 6027 em
-// `sumario.ts`. Auditar antes de a Fase 5 transformar qualquer coisa daqui
-// em regra de conformidade (CLAUDE.md, "Auditar os valores da ABNT contra as
-// NBRs").
+// **Auditado contra a fonte primária em 18/09/2026** (NBR 14724:2024 §5.8,
+// lido na íntegra). As três regras que este arquivo carregava como "não
+// conferido" têm item de norma agora, na mesma frase:
+//
+//   "Qualquer tipo de ilustração deve ser PRECEDIDO por sua palavra
+//   designativa..., seguida de seu número de ordem de ocorrência no texto, em
+//   algarismos arábicos, DE TRAVESSÃO e do respectivo título. IMEDIATAMENTE
+//   APÓS A ILUSTRAÇÃO, deve ser indicada a fonte consultada."
+//
+// — ou seja: legenda acima do objeto, travessão entre número e título, e
+// "Fonte:" abaixo. A palavra designativa é livre ("desenho, esquema,
+// fluxograma, fotografia, gráfico, mapa, organograma, planta, quadro, retrato,
+// FIGURA, imagem, entre outros"); a v1 usa "Figura" para toda ilustração, o
+// que é uma das opções da lista, não a única.
+//
+// Tamanho e espaçamento vêm de outros dois itens: §5.1 pede "tamanho menor e
+// uniforme" para fontes e legendas de ilustrações e tabelas, e §5.2 as lista
+// entre as exceções ao 1,5. **Nenhum dos dois dá o número** — o corpo 10 do
+// estilo `Legenda` continua sendo convenção (docs/auditoria-abnt.md).
+//
+// Tabela segue outra norma para a GRADE: o §5.9 remete às normas de
+// apresentação tabular do IBGE, documento externo à ABNT que o AURA ainda não
+// tem. Pesa no passo 6.1.3, não aqui — a legenda da tabela é a mesma do
+// §4.2.1.10 ("precedido da palavra Tabela, seguida de seu número de ordem de
+// ocorrência no texto e travessão").
 
 export const ROTULO_FIGURA = "Figura";
 export const ROTULO_TABELA = "Tabela";

@@ -102,10 +102,18 @@ export function numerarTabelas(sections: Secao[]): Map<string, number> {
 // pendência está registrada). A diferença só aparece do 11º elemento em
 // diante ("K" aqui, "L" lá), e trocar é editar esta constante: é por isso que
 // ela existe separada de `letraDeIndice()`.
+// **26 letras, A-Z, confirmado na fonte primária em 18/09/2026.** A NBR
+// 14724:2024 §4.2.3.3 diz "letras maiúsculas consecutivas" e "quando esgotadas
+// as letras do alfabeto, devem ser utilizadas letras maiúsculas dobradas" — e
+// nada mais. **A regra das 23 letras (A-Z sem K, W e Y), repetida em fonte
+// secundária e registrada como pendência 4 da auditoria, não existe no texto
+// da norma.** A pendência está fechada; a constante fica separada da função
+// porque continua sendo o lugar certo para um preset de instituição que peça
+// outra coisa (docs/auditoria-abnt.md).
 export const ALFABETO_POSTEXTUAL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 // 0 → "A", 25 → "Z", 26 → "AA", 27 → "AB". **Letra dobrada depois de
-// esgotado o alfabeto**, como a norma pede — e nunca `undefined`: uma função
+// esgotado o alfabeto**, literal no §4.2.3.3 — e nunca `undefined`: uma função
 // de numeração que devolve vazio no 27º elemento produz "APÊNDICE  — Título"
 // no documento exportado, e ninguém repara até a impressão.
 export function letraDeIndice(indice: number): string {

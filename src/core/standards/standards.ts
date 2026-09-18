@@ -2,8 +2,9 @@
 // docs/legado.md e docs/aura-decisoes-e-pendencias.md §2.1 para o
 // recorte de porte.
 //
-// **Só `abnt` foi auditada** contra a NBR 14724/6023/10520
-// (docs/auditoria-abnt.md, passo 3.1.1) e é a única exposta na interface da
+// **Só `abnt` foi auditada** contra as NBR 14724:2024, 6023:2025, 10520:2023,
+// 6027:2012 e 6028:2021, todas lidas na íntegra (docs/auditoria-abnt.md,
+// passo 3.1.1 e a revisão de 18/09/2026) e é a única exposta na interface da
 // v1 (CLAUDE.md, "Escopo da v1"). `apa`/`ieee`/`vancouver`/`chicago`/`mla`
 // são porte 1:1 dos valores do legado, sem conferência contra o manual de
 // cada uma — ficam na tabela para o motor de regras de Fase 5+ ter a forma
@@ -12,10 +13,11 @@
 // motivou o passo 3.1.1 para a ABNT.
 //
 // Dois valores da ABNT abaixo não têm citação de norma no comentário
-// (`recuoParagrafo`, `alinhamento`) de propósito: a auditoria não achou o
-// número/regra no texto da NBR 14724 — são convenção de mercado consolidada,
-// mantida por decisão do usuário, não por exigência normativa. Ver
-// docs/auditoria-abnt.md para o raciocínio completo de cada campo.
+// (`recuoParagrafo`, `alinhamento`) de propósito: **nem o número 1,25 cm nem a
+// palavra "justificado" aparecem na NBR 14724**, e isso foi reconferido item a
+// item na 4ª edição (2024), não só na 3ª. São convenção de mercado
+// consolidada, mantida por decisão do usuário, não por exigência normativa.
+// Ver docs/auditoria-abnt.md para o raciocínio completo de cada campo.
 
 import type { IdNorma, Norma } from "./types";
 
@@ -23,35 +25,45 @@ const abnt: Norma = {
   id: "abnt",
   nome: "ABNT (NBR 14724 / 6023 / 10520)",
   descricao: "Normas brasileiras para trabalhos acadêmicos, teses, dissertações e artigos.",
-  margens: { top: 3, left: 3, bottom: 2, right: 2, unidade: "cm" }, // NBR 14724:2011 §5.1/§5.2
+  margens: { top: 3, left: 3, bottom: 2, right: 2, unidade: "cm" }, // NBR 14724:2024 §5.1
   fonte: {
     familia: "Times New Roman / Arial", // convenção — a norma não fixa família, só tamanho
-    tamanho: 12, // NBR 14724:2011 §5.1
+    tamanho: 12, // NBR 14724:2024 §5.1
     tamanhoNotaRodape: 10, // convenção — a norma só pede "tamanho menor e uniforme", sem número
     tamanhoCitacao: 10, // idem
   },
-  espacamentoLinhas: 1.5, // NBR 14724:2011 §5.2
+  espacamentoLinhas: 1.5, // NBR 14724:2024 §5.2
   recuoParagrafo: 1.25, // convenção de mercado — sem citação literal na NBR 14724 (docs/auditoria-abnt.md)
   alinhamento: "justify", // idem — sem citação literal na NBR 14724
-  paginacao: { posicao: "top-right", contarDoTextual: true, formato: "arabic" }, // NBR 14724:2011 §5.3
+  paginacao: { posicao: "top-right", contarDoTextual: true, formato: "arabic" }, // NBR 14724:2024 §5.3
   titulos: {
-    // NBR 6024 exige gradação e consistência sumário↔texto, não esta
-    // combinação específica — escolha de estilo do AURA (docs/auditoria-abnt.md).
+    // A NBR 14724:2024 §5.4 exige gradação e consistência sumário↔texto
+    // ("destacam-se gradativamente... de forma idêntica, no texto") e remete à
+    // NBR 6024 — nenhuma das duas impõe esta combinação específica, que é
+    // escolha de estilo do AURA (docs/auditoria-abnt.md).
     h1: { caixaAlta: true, negrito: true, tamanho: 12 },
     h2: { negrito: true, tamanho: 12 },
     h3: { italico: true, tamanho: 12 },
   },
   citacaoLonga: {
-    // ">3 linhas" = a partir da 4ª. Recuo de 4cm era obrigatório até a NBR
-    // 10520:2023, que o rebaixou a recomendação — mantido por decisão do
-    // usuário (docs/auditoria-abnt.md).
+    // NBR 10520:2023 §7.1.1, lida na íntegra: ">3 linhas" = a partir da 4ª,
+    // e os quatro atributos abaixo saem do mesmo item — recuo, letra menor,
+    // espaço simples, sem aspas. **O que obriga é o recuo padronizado; os 4 cm
+    // são recomendação** ("Recomenda-se o recuo de 4 cm"). Mantido fixo por
+    // decisão do usuário (docs/auditoria-abnt.md).
     minLinhas: 4,
     recuo: 4,
     espacamento: 1,
     tamanhoFonte: 10,
   },
-  estiloCitacao: "AUTOR_DATA", // NBR 10520 — um dos dois sistemas previstos, dominante no TCC brasileiro
-  estiloReferencia: "ALFABETICA_MAIUSCULA", // NBR 6023:2018 — SOBRENOME, Nome + ordenação alfabética
+  estiloCitacao: "AUTOR_DATA", // NBR 10520:2023 §6 — um dos dois sistemas previstos, dominante no TCC brasileiro
+  // NBR 6023:2025 §8.1.1 e §9.1 — SOBRENOME, Nome + ordenação alfabética.
+  // **Vale para a LISTA de referências, não para a chamada no texto**: a NBR
+  // 10520:2023 §6.1.1.1 manda o sobrenome da chamada "em letras maiúsculas e
+  // minúsculas" — `(Silva, 2019)`, não `(SILVA, 2019)`, ao contrário do que a
+  // edição de 2002 pedia e do que quase toda fonte secundária ainda ensina.
+  // Armadilha registrada para os passos 4.8-4.10 (docs/auditoria-abnt.md).
+  estiloReferencia: "ALFABETICA_MAIUSCULA",
   elementos: {
     preTextuais: ["Capa", "Folha de Rosto", "Resumo", "Abstract", "Sumário"],
     textuais: [

@@ -2,8 +2,8 @@ import type { Metadados } from "../types";
 
 import { type LinhaPreTextual, linhaCentro } from "./linhaPreTextual";
 
-// Capa e folha de rosto (NBR 14724 §5.1/5.2) não são texto corrido nem nós do
-// editor (docs/schema-tiptap.md §1) — são derivadas de `Metadados` toda vez
+// Capa (NBR 14724:2024 §4.1.1) e folha de rosto (§4.2.1.1.1) não são texto
+// corrido nem nós do editor (docs/schema-tiptap.md §1) — são derivadas de `Metadados` toda vez
 // que alguém precisa exibi-las (tela ou exportador), nunca editadas
 // diretamente. Esta função só monta a lista ordenada de linhas; quem
 // consome decide a tipografia real (tamanho, negrito, caixa alta) — aqui só
@@ -14,15 +14,18 @@ import { type LinhaPreTextual, linhaCentro } from "./linhaPreTextual";
 // `linhaPreTextual.ts` — exatamente a condição que o 3.5.1 registrou para
 // essa extração acontecer, nem antes nem depois.
 
-// "Subtítulo, se houver, deve ser precedido de dois-pontos, evidenciando a
-// sua subordinação ao título" (NBR 14724 §5.1-d/§5.2-c) — por isso uma linha
+// "Subtítulo: se houver, deve ser precedido de dois-pontos, evidenciando a
+// sua subordinação ao título" (NBR 14724:2024 §4.1.1-d, e §4.2.1.1.1-c para a
+// folha de rosto — as duas com a mesma redação) — por isso uma linha
 // só, não duas: o dois-pontos É a subordinação, não um separador entre duas
 // linhas independentes.
 export function tituloComSubtitulo(metadados: Metadados): string {
   return metadados.subtitulo ? `${metadados.titulo}: ${metadados.subtitulo}` : metadados.titulo;
 }
 
-// NBR 14724 §5.1 — elementos da capa, nesta ordem:
+// NBR 14724:2024 §4.1.1 — elementos da capa, nesta ordem (lido na fonte
+// primária em 18/09/2026; a citação anterior, "§5.1", vinha de fonte
+// secundária e apontava para "Formato"):
 // a) nome da instituição (opcional — só a instituição, o resto da lista é
 //    obrigatório se a capa existir);
 // b) nome do autor (um por linha, quando houver mais de um);

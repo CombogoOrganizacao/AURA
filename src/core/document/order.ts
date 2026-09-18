@@ -12,17 +12,23 @@
 // `[]` sem apêndice. Duplicar aqui a pergunta "existe?" criaria duas
 // respostas capazes de divergir.
 //
-// **A NBR 14724 não passou pela auditoria do passo 3.1.1 nesta parte.** O que
-// a auditoria cobriu foi QUAIS elementos existem (`elements.preTextual` e
-// `elements.postTextual`, ver docs/auditoria-abnt.md), não a sequência entre
-// eles. A ordem abaixo é a que o §4.1 enumera e que toda fonte secundária
-// repete — e por isso, como em `sumario.ts` e `legenda.ts`, **nenhum item da
-// norma é citado aqui por número de seção**.
+// **Auditada contra a fonte primária em 18/09/2026** (NBR 14724:2024, lida na
+// íntegra — docs/auditoria-abnt.md). A ordem abaixo bate item a item com o
+// Esquema 1 e com os itens §4.1.1 a §4.2.3.5: capa (§4.1.1), folha de rosto
+// (§4.2.1.1), dedicatória (§4.2.1.4), agradecimentos (§4.2.1.5), epígrafe
+// (§4.2.1.6), resumo vernáculo (§4.2.1.7), resumo estrangeiro (§4.2.1.8), as
+// três listas (§4.2.1.9 a §4.2.1.11), sumário (§4.2.1.13), corpo (§4.2.2),
+// referências (§4.2.3.1), apêndice (§4.2.3.3) e anexo (§4.2.3.4). Este passo
+// foi escrito antes da leitura e registrava a ressalva; ela caiu.
 //
-// Fora da v1, registrados para ninguém supor que foram esquecidos: errata,
-// folha de aprovação, lista de símbolos, glossário e índice. Os cinco são
-// elementos reais da norma sem tela que os alimente (o mesmo motivo pelo qual
-// a auditoria classificou a lista do legado como "incompleta, não errada").
+// Fora da v1, registrados para ninguém supor que foram esquecidos: errata
+// (§4.2.1.2), folha de aprovação (§4.2.1.3), lista de símbolos (§4.2.1.12),
+// glossário (§4.2.3.2) e índice (§4.2.3.5). Quatro deles são opcionais na
+// norma. **A folha de aprovação não é** — é elemento obrigatório, e está fora
+// porque não há tela que a alimente: ela leva nome, titulação e assinatura dos
+// membros da banca, preenchidos depois da defesa. A diferença entre "opcional
+// e ausente" e "obrigatório e ausente" está registrada em
+// docs/auditoria-abnt.md, achado 2, para não se perder aqui no meio da lista.
 
 export type ElementoDocumento =
   | "capa"
@@ -53,7 +59,8 @@ export const ORDEM_CANONICA: readonly ElementoDocumento[] = [
   "listaDeFiguras",
   "listaDeTabelas",
   "listaDeAbreviaturas",
-  // Último pré-textual (NBR 6027) — ver `elements/sumario.ts`.
+  // Último pré-textual (NBR 6027:2012 §4.1-a, literal) — ver
+  // `elements/sumario.ts`.
   "sumario",
   "corpo",
   "referencias",
@@ -68,8 +75,11 @@ export const ORDEM_CANONICA: readonly ElementoDocumento[] = [
 // - `capa`: fora da contagem de páginas;
 // - `preTextual`: contado a partir de 1, número NÃO exibido — a contagem
 //   começa na folha de rosto, não na capa;
-// - `textual`: contagem contínua, número exibido (NBR 14724 §5.3);
-// - `posTextual`: segue o textual, mesma paginação.
+// - `textual`: contagem contínua, número exibido (NBR 14724:2024 §5.3);
+// - `posTextual`: segue o textual, mesma paginação — literal no §5.3: "se
+//   houver apêndice e anexo, as suas folhas ou páginas devem ser numeradas de
+//   maneira contínua, e sua paginação deve dar seguimento à do texto
+//   principal".
 export type ParteDocumento = "capa" | "preTextual" | "textual" | "posTextual";
 
 const PARTES: Record<ElementoDocumento, ParteDocumento> = {

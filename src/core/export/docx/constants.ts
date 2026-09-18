@@ -24,9 +24,12 @@ export const ABNT = {
   recuoCitacao: cm(4),
   paginaA4: { width: cm(21), height: cm(29.7) },
   larguraUtil: cm(16), // 21 - 3 (margem esquerda) - 2 (margem direita)
-  // A NBR 14724 manda espaço simples em citação longa, notas, referências,
-  // legendas e natureza do trabalho. Para o resumo a norma é omissa e cada
-  // instituição decide; mantido 1,5 e exposto aqui como escolha explícita
-  // (mesma decisão e mesmo comentário da PoC).
+  // A NBR 14724:2024 §5.2 manda espaço simples em citação longa, notas,
+  // referências, legendas e natureza do trabalho — e **não** lista o resumo.
+  // A NBR 6028:2021 §3.2 fecha a questão do outro lado: "a apresentação
+  // gráfica deve seguir o padrão do documento no qual está inserido", ou seja,
+  // o 1,5 do corpo. Era escolha explícita por omissão das normas até
+  // 18/09/2026; agora tem base nas duas. O `false` continua certo — a
+  // constante fica porque virá preset de instituição que peça o contrário.
   resumoEspacoSimples: false,
 } as const;

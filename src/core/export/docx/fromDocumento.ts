@@ -147,14 +147,18 @@ function avisoTabelaPendente(): Paragraph {
 // vez de virar uma moldura vazia. Converter para OMML — a equação desenhada
 // de verdade, editável no Word — é o passo 6.1.4, e é reler este mesmo campo.
 //
-// Centralizada e destacada do parágrafo (sem recuo de primeira linha): é o
-// que a NBR 14724 pede de equação separada do texto corrido. **Não
-// verificado na fonte primária neste passo** — a auditoria do 3.1.1 não tem
-// linha para equação (ver `docs/auditoria-abnt.md`), mesmo status da posição
-// da legenda registrado em `document/elements/legenda.ts`.
+// **Corrigido em 18/09/2026, com a NBR 14724:2024 §5.7 na mão.** Este
+// comentário creditava a centralização à norma. Ela não manda centralizar:
+// "recomenda-se que as equações e fórmulas sejam DESTACADAS no texto e, se
+// necessário, numeradas com algarismos arábicos entre parênteses, ALINHADOS À
+// DIREITA". Destacar é a exigência (e centralizar é uma das formas de
+// destacar); centralizar é convenção, como o recuo de parágrafo e o
+// justificado — ver docs/auditoria-abnt.md.
 //
-// Sem número: a norma numera equação só "se necessário", e a v1 não numera
-// nenhuma (ver o cabeçalho de `src/core/editor/nodes/formula.ts`).
+// Sem número: aqui o texto confirma o que já se supunha — a norma numera
+// equação só "se necessário", e a v1 não numera nenhuma (ver o cabeçalho de
+// `src/core/editor/nodes/formula.ts`). Quando numerar, o número vai entre
+// parênteses e alinhado à direita, não junto da fórmula.
 function paragrafoFormula(no: NoFormula): Paragraph {
   return new Paragraph({
     children: [new TextRun(no.texto)],
@@ -163,10 +167,11 @@ function paragrafoFormula(no: NoFormula): Paragraph {
   });
 }
 
-// Legenda ACIMA do objeto, tanto em figura quanto em tabela — é a convenção
-// corrente, mas **não** foi conferida na fonte primária: ver o cabeçalho de
-// `src/core/document/elements/legenda.ts`, que registra o que a auditoria do
-// 3.1.1 cobriu e o que ficou pendente.
+// Legenda ACIMA do objeto e "Fonte:" abaixo, tanto em figura quanto em
+// tabela — literal na NBR 14724:2024 §5.8 ("deve ser PRECEDIDO por sua palavra
+// designativa... IMEDIATAMENTE APÓS a ilustração, deve ser indicada a fonte
+// consultada"). Era convenção não conferida até 18/09/2026; ver o cabeçalho de
+// `src/core/document/elements/legenda.ts`.
 //
 // `numero` vem de `numerarFiguras()`/`numerarTabelas()` (3.6.3) — a mesma
 // dupla que a tela usa. Ele não é escrito como texto: entra como resultado em
