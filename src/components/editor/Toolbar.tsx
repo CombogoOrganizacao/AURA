@@ -9,6 +9,7 @@ import type { NomeIcone } from "@/components/ui/Icon";
 import { Select } from "@/components/ui/Select";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { novaFigura, novaFormula, novaTabela } from "@/core/document/factory";
+import { cursorDepoisDoBloco, fimDoBlocoAtual } from "@/core/editor/caret";
 import { deNoConteudo } from "@/core/document/serialize";
 import type { NivelSecao, NoConteudo } from "@/core/document/types";
 
@@ -146,8 +147,23 @@ export function Toolbar({ editor }: ToolbarProps) {
   // Clicar em "figura" e depois em "tabela" apagava a figura recém-criada.
   // Achado olhando a tela, não pelo Vitest: é comportamento de seleção do
   // ProseMirror, que só existe com um editor de verdade montado.
+  // Depois de inserir, abre (ou reaproveita) uma linha logo abaixo do bloco e
+  // deixa o cursor nela — `cursorDepoisDoBloco()`, src/core/editor/caret.ts.
+  // Sem isto, inserir uma tabela no fim do documento era um beco sem saída:
+  // não existe posição de texto entre o fim da tabela e o fim da seção, então
+  // não havia onde clicar para continuar escrevendo (e, por tabela, nem como
+  // inserir a figura seguinte).
   const inserirBloco = (no: NoConteudo) =>
-    editor.chain().focus().insertContentAt(editor.state.selection.to, deNoConteudo(no)).run();
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(editor.state.selection.to, deNoConteudo(no))
+      .command(({ tr }) => {
+        const fim = fimDoBlocoAtual(tr.selection);
+        if (fim !== null) cursorDepoisDoBloco(tr, fim);
+        return true;
+      })
+      .run();
 
   return (
     <div

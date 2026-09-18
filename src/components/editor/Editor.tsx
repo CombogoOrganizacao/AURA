@@ -13,6 +13,8 @@ import { PaperSheet } from "@/components/ui/PaperSheet";
 import { novaSecao } from "@/core/document/factory";
 import { fromDocumento, toDocumento } from "@/core/document/serialize";
 import type { Secao } from "@/core/document/types";
+import { cursorNaUltimaLinha } from "@/core/editor/caret";
+import { CursorDeIntervalo } from "@/core/editor/gapcursor";
 import { Italico } from "@/core/editor/marks/italico";
 import { Negrito } from "@/core/editor/marks/negrito";
 import { Documento as DocumentoNode } from "@/core/editor/nodes/documento";
@@ -161,6 +163,11 @@ export function Editor({ sections, onSectionsChange, onReorderReady }: EditorPro
       // `@tiptap/extension-history`. Sem isto, `editor.commands.undo()`
       // simplesmente não existe.
       TiptapHistory,
+      // Cursor de intervalo (src/core/editor/gapcursor.ts): é o que dá ao
+      // cursor um lugar ENTRE dois blocos — depois de uma tabela no fim da
+      // seção, entre duas figuras, antes do primeiro bloco. Sem ele, seta
+      // para baixo e clique não tinham para onde ir nesses pontos.
+      CursorDeIntervalo,
     ],
     content: conteudoInicial,
     // Evita o nó ser renderizado no primeiro render do lado do servidor e
@@ -245,7 +252,33 @@ export function Editor({ sections, onSectionsChange, onReorderReady }: EditorPro
       */}
       <div className="flex flex-1 flex-col items-center gap-6 overflow-auto bg-ink-100 p-8">
         <PaperSheet>
-          <EditorContent editor={editor} />
+          {/*
+            Clicar no vazio da folha, abaixo do texto, põe o cursor na última
+            linha — criando-a se o documento terminar em tabela, figura ou
+            fórmula (`cursorNaUltimaLinha()`, src/core/editor/caret.ts). É o
+            gesto que se faz em qualquer editor, e aqui ele não chegava ao
+            ProseMirror: abaixo do último bloco não há nó nenhum sob o
+            ponteiro.
+
+            `h-full` para que a área clicável seja a folha inteira, e não só a
+            altura do texto já escrito. `target !== currentTarget` deixa
+            passar o clique que caiu no conteúdo de verdade — esse o
+            ProseMirror trata sozinho, e roubá-lo moveria o cursor para o fim
+            a cada clique no meio do texto.
+          */}
+          <div
+            className="h-full cursor-text"
+            onMouseDown={(evento) => {
+              if (evento.target !== evento.currentTarget) return;
+              evento.preventDefault();
+              const tr = editor.state.tr;
+              cursorNaUltimaLinha(tr);
+              editor.view.dispatch(tr);
+              editor.view.focus();
+            }}
+          >
+            <EditorContent editor={editor} />
+          </div>
         </PaperSheet>
       </div>
     </div>

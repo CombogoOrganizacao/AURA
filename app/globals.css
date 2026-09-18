@@ -513,6 +513,44 @@ h5 {
   color: var(--doc-ink);
 }
 
+/* Cursor de intervalo (`prosemirror-gapcursor`, ligado por
+   `src/core/editor/gapcursor.ts`): o traço piscando que aparece ENTRE dois
+   blocos, onde não há texto para o cursor normal ocupar — depois de uma
+   tabela no fim da seção, entre duas figuras, antes do primeiro bloco. O
+   plugin só desenha o elemento; a aparência é toda daqui, e sem estas regras
+   ele fica invisível (o padrão é `display: none` até o editor ter foco).
+
+   Tinta do documento, não da marca: o cursor vive dentro da folha A4, ao lado
+   do texto em `--doc-ink`. Largura em `em` para acompanhar o corpo da fonte.
+   A piscada respeita `prefers-reduced-motion` pela regra global no fim deste
+   arquivo. */
+.ProseMirror-gapcursor {
+  display: none;
+  pointer-events: none;
+  position: relative;
+}
+
+.ProseMirror-gapcursor::after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: -0.1em;
+  width: 1.5em;
+  border-top: 2px solid var(--doc-ink);
+  animation: aura-gapcursor-blink 1.1s steps(2, start) infinite;
+}
+
+.ProseMirror-focused .ProseMirror-gapcursor,
+.ProseMirror-gapcursor:focus {
+  display: block;
+}
+
+@keyframes aura-gapcursor-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
 ::selection {
   background: var(--color-creme-200);
   color: var(--color-bordo-800);
