@@ -133,11 +133,21 @@ export interface Secao {
   content: NoConteudo[];
 }
 
-// Apêndice ou anexo (NBR 14724): mesma forma de conteúdo de uma seção, mas
-// identificado por letra, não por nível/ordem numérica.
+// Apêndice ou anexo (NBR 14724) — passo 3.7.1. Mesma forma de conteúdo de uma
+// seção, mas identificado por letra, não por nível/ordem numérica.
+//
+// **Sem campo de letra**, pelo mesmo motivo que `Secao` não guarda "2.1" e
+// `NoFigura` não guarda "Figura 3" (docs/schema-tiptap.md §2, e CLAUDE.md
+// "Formato e dados"): "APÊNDICE B" é DERIVADO da posição na lista
+// (`letrarPorOrdem()`, ./numbering.ts). Uma letra gravada fica errada no
+// instante em que alguém insere um apêndice antes dele — e um apêndice
+// trocado de letra é uma referência cruzada quebrada no meio do texto.
+//
+// **Sem campo `ordem`**, ao contrário de `Secao`: a ordem é a posição no
+// array, e um segundo campo só existiria para poder divergir dela (ver o
+// cabeçalho da seção de apêndices em ./numbering.ts).
 export interface ElementoPosTextual {
   id: string;
-  letra: string;
   titulo: string;
   content: NoConteudo[];
 }

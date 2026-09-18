@@ -81,3 +81,48 @@ export function numerarFiguras(sections: Secao[]): Map<string, number> {
 export function numerarTabelas(sections: Secao[]): Map<string, number> {
   return numerarPorOrdem(idsEmOrdemDeLeitura(sections, "tabela"));
 }
+
+// --- Apêndices e anexos (passo 3.7.1) ---------------------------------------
+// Terceiro eixo derivado, mesma regra dos dois de cima: "APÊNDICE B" vem da
+// POSIÇÃO do elemento na sua lista, nunca de um campo gravado. Inserir um
+// apêndice no meio reletra todos os seguintes sozinho, porque o resultado
+// inteiro é recalculado a cada chamada.
+//
+// **A ordem é a do array**, não um campo `ordem` como em `Secao`: apêndice e
+// anexo não têm hierarquia nem numeração progressiva para reconciliar, e um
+// segundo campo só existiria para poder divergir da posição. Quando houver UI
+// de reordenar, ela move o item no array — é o mesmo dado.
+
+// Alfabeto das letras de apêndice/anexo, num lugar só.
+//
+// **26 letras é uma ESCOLHA, não um achado de auditoria.** Repete-se que a
+// NBR 14724 fala em "23 letras do alfabeto" (A–Z sem K, W e Y) antes de
+// dobrar, e isso NÃO foi conferido na fonte primária — a auditoria do 3.1.1
+// não tem linha para a letra do apêndice (ver docs/auditoria-abnt.md, onde a
+// pendência está registrada). A diferença só aparece do 11º elemento em
+// diante ("K" aqui, "L" lá), e trocar é editar esta constante: é por isso que
+// ela existe separada de `letraDeIndice()`.
+export const ALFABETO_POSTEXTUAL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+// 0 → "A", 25 → "Z", 26 → "AA", 27 → "AB". **Letra dobrada depois de
+// esgotado o alfabeto**, como a norma pede — e nunca `undefined`: uma função
+// de numeração que devolve vazio no 27º elemento produz "APÊNDICE  — Título"
+// no documento exportado, e ninguém repara até a impressão.
+export function letraDeIndice(indice: number): string {
+  if (!Number.isInteger(indice) || indice < 0) {
+    throw new Error(`Índice de apêndice/anexo inválido: ${indice} (esperava inteiro >= 0)`);
+  }
+
+  const base = ALFABETO_POSTEXTUAL.length;
+  let restante = indice;
+  let letra = "";
+
+  // Base 26 bijetiva: não existe "dígito zero", então cada volta desconta um
+  // do quociente — é o que faz 26 virar "AA" e não "BA".
+  do {
+    letra = ALFABETO_POSTEXTUAL[restante % base] + letra;
+    restante = Math.floor(restante / base) - 1;
+  } while (restante >= 0);
+
+  return letra;
+}

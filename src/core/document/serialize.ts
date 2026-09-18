@@ -27,8 +27,9 @@ function ehTipoMarca(valor: string): valor is TipoMarca {
 // Escopo: só `sections` (o corpo). Metadados nunca passam por aqui — são
 // campos de formulário, não nós do editor (docs/schema-tiptap.md §1).
 // Apêndices e anexos (`ElementoPosTextual`) usam a mesma forma de conteúdo,
-// mas são identificados por letra, não por nível/ordem; ficam para quando a
-// UI que os edita existir, não fazem parte deste passo.
+// mas são identificados por letra derivada da posição (passo 3.7.1), não por
+// nível/ordem; ficam para quando a UI que os edita existir, não fazem parte
+// deste passo.
 
 // --- TipTap → canônico -------------------------------------------------------
 
