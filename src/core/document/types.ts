@@ -7,6 +7,8 @@
 // - referências são objetos CSL-JSON, nunca texto já formatado numa norma;
 // - elementos pré-textuais são campos de `Metadados`, não nós do editor.
 
+import type { Referencia } from "../references/types";
+
 export type NivelSecao = 1 | 2 | 3;
 
 // Lista fechada de marcas (docs/schema-tiptap.md §5) — cresce um membro de
@@ -152,45 +154,26 @@ export interface ElementoPosTextual {
   content: NoConteudo[];
 }
 
-// --- Referências: CSL-JSON --------------------------------------------------
-// Campos separados (autor, título, ano...), nunca uma string já formatada.
-// Um formatador por norma (NBR 6023 na v1) monta o texto na hora de exibir
-// ou exportar. Nomes de campo seguem o padrão CSL-JSON, não traduzidos.
+// --- Referências -------------------------------------------------------------
+// Os tipos moraram aqui até o passo 4.1, quando a Fase 4 lhes deu módulo
+// próprio (`src/core/references/types.ts`): seis formas de documento, cada uma
+// com os seus campos, é assunto grande demais para viver de carona no formato
+// do documento. O reexport mantém `Documento.references` legível de um lugar
+// só — e continua valendo a invariante: campos separados, nunca string já
+// formatada numa norma (CLAUDE.md, "Formato e dados").
 
-export interface CSLName {
-  family?: string;
-  given?: string;
-  // Nome que não se divide em sobrenome/nome próprio — ex.: uma instituição
-  // como autora ("ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS").
-  literal?: string;
-}
-
-export interface CSLDate {
-  "date-parts"?: Array<[number, number?, number?]>;
-  raw?: string;
-}
-
-// Subconjunto de tipos CSL cobertos na v1 (livro, artigo de periódico,
-// página web, capítulo, tese/dissertação). Ampliar só quando a NBR 6023
-// exigir um tipo que nenhum destes cobre.
-export type CSLType = "book" | "article-journal" | "webpage" | "chapter" | "thesis";
-
-export interface Referencia {
-  id: string;
-  type: CSLType;
-  title: string;
-  author?: CSLName[];
-  issued?: CSLDate;
-  publisher?: string;
-  "publisher-place"?: string;
-  // Nome do periódico, quando type === "article-journal".
-  "container-title"?: string;
-  volume?: string;
-  issue?: string;
-  page?: string;
-  URL?: string;
-  accessed?: CSLDate;
-}
+export type {
+  CSLDate,
+  CSLName,
+  CSLType,
+  Referencia,
+  ReferenciaArtigo,
+  ReferenciaCapitulo,
+  ReferenciaEvento,
+  ReferenciaLivro,
+  ReferenciaSite,
+  ReferenciaTese,
+} from "../references/types";
 
 // --- Metadados ---------------------------------------------------------------
 // Elementos pré-textuais (capa, folha de rosto, resumo/abstract) vêm daqui,
