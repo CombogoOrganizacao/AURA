@@ -1,7 +1,16 @@
 import { AlignmentType, PageBreak, Paragraph, TextRun, type FileChild } from "docx";
 
-import type { LinhaPreTextual } from "../../document/elements/linhaPreTextual";
-import { gerarOpcionaisPreTextuais } from "../../document/elements/opcionaisPreTextuais";
+import { gerarCapa } from "../../document/elements/capa";
+import { gerarFolhaDeRosto } from "../../document/elements/folhaDeRosto";
+import type {
+  LinhaPreTextual,
+  PapelLinhaPreTextual,
+} from "../../document/elements/linhaPreTextual";
+import {
+  gerarAgradecimentos,
+  gerarDedicatoria,
+  gerarEpigrafe,
+} from "../../document/elements/opcionaisPreTextuais";
 import type { Metadados } from "../../document/types";
 import { ABNT } from "./constants";
 
@@ -101,22 +110,108 @@ export function paragrafosAbstract(metadados: Metadados): Paragraph[] {
 // `ABNT.larguraUtil` em vez de repetido como número solto.
 const RECUO_METADE = Math.round(ABNT.larguraUtil / 2);
 
+// Tipografia por papel da linha — a metade que `elements/` deixa de propósito
+// para quem exporta (ver `linhaPreTextual.ts`). **Porte de `poc/docx/gerar.js`**
+// (`linhaCentral(..., { bold: true })` e os `toUpperCase()` da capa e da folha
+// de rosto), congelada e conferida no Word.
+//
+// **Nada disso é norma.** A NBR 14724 enumera os elementos da capa e da folha
+// de rosto e diz que são centralizados; não manda caixa alta nem negrito em
+// lugar nenhum. É a convenção que toda banca espera, e está aqui como
+// convenção — mesma disciplina de `docs/auditoria-abnt.md`, que separa
+// "conforme" de "convenção sem base normativa literal".
+const ENFASE: Partial<Record<PapelLinhaPreTextual, { bold?: boolean; caixaAlta?: boolean }>> = {
+  instituicao: { bold: true },
+  autor: { caixaAlta: true },
+  tituloDoTrabalho: { bold: true, caixaAlta: true },
+};
+
 function paragrafoDeLinha(linha: LinhaPreTextual): Paragraph {
   if (linha.titulo) return paragrafoTituloPreTextual(linha.texto);
 
   if (linha.alinhamento === "recuada-a-direita") {
     return new Paragraph({
-      children: [new TextRun(linha.texto)],
+      children: [
+        // A nota de natureza sai em corpo menor, como na PoC. Convenção, não
+        // norma: o §5.2 manda recuar, não diminuir. Vale só para ela — o
+        // nome do orientador segue centralizado e em corpo normal, que é o
+        // que o passo 3.5.1 decidiu (e onde a PoC diverge: lá ele é recuado
+        // junto com a natureza).
+        new TextRun(
+          linha.papel === "natureza"
+            ? { text: linha.texto, size: ABNT.tamanhoMenor }
+            : { text: linha.texto },
+        ),
+      ],
       alignment: AlignmentType.JUSTIFIED,
-      spacing: { line: ABNT.espacamento15 },
+      spacing: { line: linha.papel === "natureza" ? ABNT.espacamento1 : ABNT.espacamento15 },
       indent: { left: RECUO_METADE },
     });
   }
 
+  const enfase = linha.papel ? ENFASE[linha.papel] : undefined;
+
   return new Paragraph({
-    children: [new TextRun(linha.texto)],
+    children: [
+      new TextRun({
+        text: enfase?.caixaAlta ? linha.texto.toLocaleUpperCase("pt-BR") : linha.texto,
+        bold: enfase?.bold,
+      }),
+    ],
     alignment: linha.alinhamento === "centro" ? AlignmentType.CENTER : AlignmentType.JUSTIFIED,
     spacing: { line: ABNT.espacamento15 },
+  });
+}
+
+// Espaço vertical ANTES da primeira linha de cada papel — é o que distribui a
+// capa na folha em vez de amontoar tudo no topo. Porte dos parágrafos vazios
+// com `after` de `poc/docx/gerar.js`: a PoC não usa `spacing` na linha de
+// cima, usa uma linha vazia entre os grupos, e é assim que o arquivo foi
+// conferido no Word.
+//
+// Distribuição vertical de capa e folha de rosto é convenção; a norma só
+// enumera e centraliza.
+function comEspacosPorPapel(
+  linhas: readonly LinhaPreTextual[],
+  espacos: Partial<Record<PapelLinhaPreTextual, number>>,
+): Paragraph[] {
+  const vistos = new Set<PapelLinhaPreTextual>();
+  const paragrafos: Paragraph[] = [];
+
+  for (const linha of linhas) {
+    const espaco = linha.papel && !vistos.has(linha.papel) ? espacos[linha.papel] : undefined;
+    if (linha.papel) vistos.add(linha.papel);
+    if (espaco) paragrafos.push(new Paragraph({ text: "", spacing: { after: espaco } }));
+    paragrafos.push(paragrafoDeLinha(linha));
+  }
+
+  return paragrafos;
+}
+
+// Capa (NBR 14724 §5.1) — passo 3.7.2. A ordem vem de `gerarCapa()` (3.5.1),
+// que é quem leu a norma; aqui só a tipografia e a distribuição na folha.
+//
+// **Sem o curso**, que `poc/docx/gerar.js` põe logo abaixo da instituição: o
+// §5.1 não o lista, e `gerarCapa()` segue a enumeração da norma. É divergência
+// consciente da PoC, não esquecimento.
+export function montarCapa(metadados: Metadados): Paragraph[] {
+  return comEspacosPorPapel(gerarCapa(metadados), {
+    autor: 3000,
+    tituloDoTrabalho: 3000,
+    local: 4000,
+  });
+}
+
+// Folha de rosto (NBR 14724 §5.2) — passo 3.7.2. **Primeiro elemento da seção
+// dos pré-textuais**, e não da capa: é nela que a contagem de páginas começa
+// (a capa fica fora da contagem), ainda que o número só passe a ser exibido no
+// textual. Ver `sections.ts`.
+export function montarFolhaDeRosto(metadados: Metadados): Paragraph[] {
+  return comEspacosPorPapel(gerarFolhaDeRosto(metadados), {
+    tituloDoTrabalho: 2400,
+    natureza: 1200,
+    orientador: 600,
+    local: 2400,
   });
 }
 
@@ -140,19 +235,19 @@ export function comQuebrasEntreBlocos(blocos: readonly FileChild[][]): FileChild
     );
 }
 
-// Ordem canônica até onde os metadados alcançam (docs/to-do.md 3.7.2):
-// dedicatória, agradecimentos, epígrafe, resumo, abstract. As listas vêm
-// logo depois, emendadas por `fromDocumento.ts` (3.6.4), e o sumário fecha a
-// seção (`sections.ts`). Capa e folha de rosto continuam fora —
-// `sections.ts` mantém o placeholder da capa.
-export function montarPreTextuais(metadados: Metadados): FileChild[] {
-  const opcionais = gerarOpcionaisPreTextuais(metadados).map((bloco) =>
-    bloco.map(paragrafoDeLinha),
-  );
+// Dedicatória, agradecimentos e epígrafe (3.5.3), um por função. Separados, e
+// não um `montarPreTextuais()` que os junta com resumo e abstract, porque
+// quem conhece a ORDEM é `src/core/document/order.ts` (3.7.2) — aqui cada
+// elemento só sabe virar OOXML. Cada um devolve `[]` quando está desligado ou
+// vazio, e a decisão continua sendo de `gerarDedicatoria()` e companhia.
+export function paragrafosDedicatoria(metadados: Metadados): Paragraph[] {
+  return gerarDedicatoria(metadados).map(paragrafoDeLinha);
+}
 
-  return comQuebrasEntreBlocos([
-    ...opcionais,
-    paragrafosResumo(metadados),
-    paragrafosAbstract(metadados),
-  ]);
+export function paragrafosAgradecimentos(metadados: Metadados): Paragraph[] {
+  return gerarAgradecimentos(metadados).map(paragrafoDeLinha);
+}
+
+export function paragrafosEpigrafe(metadados: Metadados): Paragraph[] {
+  return gerarEpigrafe(metadados).map(paragrafoDeLinha);
 }

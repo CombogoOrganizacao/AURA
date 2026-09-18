@@ -121,7 +121,7 @@ describe("listas de figuras, tabelas e abreviaturas no .docx (passo 3.6.4)", () 
     expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b));
   });
 
-  it("cada lista abre em página própria, sem quebra sobrando antes da primeira", async () => {
+  it("cada lista abre em página própria", async () => {
     const documento = documentoCom(
       [figura("f1", "Fluxo"), { type: "tabela", id: "t1", legenda: "F", fonte: "", linhas: [] }],
       [],
@@ -129,15 +129,17 @@ describe("listas de figuras, tabelas e abreviaturas no .docx (passo 3.6.4)", () 
 
     const xml = await xmlDe(documento);
 
-    // Duas quebras: entre a lista de figuras e a de tabelas, e antes do
-    // sumário (esta última é de `sections.ts`, desde 3.5.2).
-    expect(xml.match(/<w:br w:type="page"\s*\/>/g) ?? []).toHaveLength(2);
-
-    // Nenhuma ANTES da primeira lista: a seção OOXML já começa em página
-    // nova, e uma quebra à frente dela deixaria uma folha em branco abrindo
-    // os pré-textuais.
-    expect(xml.search(/<w:br w:type="page"\s*\/>/)).toBeGreaterThan(
+    // Uma quebra entre a lista de figuras e a de tabelas, outra entre a de
+    // tabelas e o sumário. Contar o total não serve desde o passo 3.7.2: a
+    // folha de rosto abre a seção e também é seguida de quebra.
+    const entreAsListas = xml.slice(
       xml.indexOf("LISTA DE FIGURAS"),
+      xml.indexOf("LISTA DE TABELAS"),
     );
+    const antesDoSumario = xml.slice(xml.indexOf("LISTA DE TABELAS"), xml.indexOf("SUMÁRIO"));
+
+    expect(entreAsListas).toMatch(/<w:br w:type="page"\s*\/>/);
+    expect(antesDoSumario).toMatch(/<w:br w:type="page"\s*\/>/);
   });
+
 });

@@ -2,8 +2,10 @@ import { Document, Packer, type FileChild } from "docx";
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 
-import type { Metadados } from "../../document/types";
-import { montarPreTextuais, paragrafosAbstract, paragrafosResumo } from "./preTextuais";
+import { novoDocumento } from "../../document/factory";
+import type { Documento, Metadados } from "../../document/types";
+import { fromDocumento } from "./fromDocumento";
+import { paragrafosAbstract, paragrafosResumo } from "./preTextuais";
 
 function criarMetadados(overrides: Partial<Metadados> = {}): Metadados {
   return {
@@ -112,7 +114,26 @@ describe("paragrafosAbstract", () => {
   });
 });
 
-describe("montarPreTextuais", () => {
+// Os pré-textuais deixaram de ter um `montarPreTextuais()` próprio no passo
+// 3.7.2: a composição passou a ser dirigida por `ORDEM_CANONICA`
+// (src/core/document/order.ts), dentro de `fromDocumento()`. Estes testes
+// passaram a ir por lá — testam a montagem de verdade, não uma segunda
+// montagem que só existe no teste.
+//
+// Por isso as asserções são de ORDEM RELATIVA, e não de contagem de quebras:
+// a seção pré-textual agora tem também a folha de rosto abrindo e o sumário
+// fechando, e contar quebras amarraria o teste a quantos elementos existem
+// em vez de à ordem entre eles, que é o que o passo promete.
+function documentoCom(metadados: Metadados): Documento {
+  return { ...novoDocumento(), metadados };
+}
+
+async function xmlDoDocumento(metadados: Metadados): Promise<string> {
+  const zip = await JSZip.loadAsync(await Packer.toBuffer(fromDocumento(documentoCom(metadados))));
+  return zip.file("word/document.xml")!.async("string");
+}
+
+describe("ordem canônica dos pré-textuais (passo 3.7.2)", () => {
   const comOsDois = criarMetadados({
     resumo: "Este trabalho investiga X.",
     abstract: "This work investigates X.",
@@ -120,45 +141,49 @@ describe("montarPreTextuais", () => {
 
   // `docx` serializa sem espaço antes do `/>`, mas o regex tolera os dois —
   // é detalhe de formatação da lib, não algo que este teste queira fixar.
-  const QUEBRA_DE_PAGINA = /<w:br w:type="page"\s*\/>/g;
+  const QUEBRA_DE_PAGINA = /<w:br w:type="page"\s*\/>/;
 
-  it("separa resumo e abstract com quebra de página, sem quebra antes do primeiro", async () => {
-    const xml = await documentXmlDe(montarPreTextuais(comOsDois));
+  it("resumo vem antes do abstract, com quebra de página entre os dois", async () => {
+    const xml = await xmlDoDocumento(comOsDois);
 
-    // Uma quebra só: entre os dois blocos. Uma antes do "RESUMO" deixaria
-    // uma página em branco abrindo a seção.
-    expect(xml.match(QUEBRA_DE_PAGINA) ?? []).toHaveLength(1);
+    const posResumo = xml.indexOf("RESUMO");
+    const posAbstract = xml.indexOf("ABSTRACT");
+    expect(posResumo).toBeLessThan(posAbstract);
 
-    const posQuebra = xml.search(/<w:br w:type="page"\s*\/>/);
-    expect(xml.indexOf("RESUMO")).toBeLessThan(posQuebra);
-    expect(posQuebra).toBeLessThan(xml.indexOf("ABSTRACT"));
+    const entre = xml.slice(posResumo, posAbstract);
+    expect(entre).toMatch(QUEBRA_DE_PAGINA);
   });
 
-  it("não abre com quebra de página quando só o abstract está preenchido", async () => {
-    const xml = await documentXmlDe(
-      montarPreTextuais(criarMetadados({ abstract: "This work investigates X." }))
-    );
+  it("a seção pré-textual não abre com quebra de página", async () => {
+    const xml = await xmlDoDocumento(comOsDois);
 
-    expect(xml).toContain("ABSTRACT");
-    expect(xml.match(QUEBRA_DE_PAGINA)).toBeNull();
+    // A folha de rosto é o primeiro elemento da seção, e a seção OOXML já
+    // começa numa página nova: uma quebra antes dela deixaria uma folha em
+    // branco. `naturezaTrabalho` é o texto que só existe na folha de rosto.
+    const posFolhaDeRosto = xml.indexOf(comOsDois.naturezaTrabalho || comOsDois.orientador);
+    const posPrimeiraQuebra = xml.search(QUEBRA_DE_PAGINA);
+
+    expect(posFolhaDeRosto).toBeGreaterThan(-1);
+    expect(posPrimeiraQuebra).toBeGreaterThan(posFolhaDeRosto);
   });
 
-  it("devolve lista vazia quando não há resumo nem abstract", () => {
-    expect(montarPreTextuais(criarMetadados())).toEqual([]);
+  it("documento sem resumo nem abstract não fabrica os títulos", async () => {
+    const xml = await xmlDoDocumento(criarMetadados());
+
+    expect(xml).not.toContain("RESUMO");
+    expect(xml).not.toContain("ABSTRACT");
   });
 
   // Passo 3.5.3 — os opcionais entram antes do resumo, na ordem da norma.
   it("põe dedicatória, agradecimentos e epígrafe antes do resumo e do abstract", async () => {
-    const xml = await documentXmlDe(
-      montarPreTextuais(
-        criarMetadados({
-          dedicatoria: { ativo: true, texto: "À minha família." },
-          agradecimentos: { ativo: true, texto: "Ao meu orientador." },
-          epigrafe: { ativo: true, texto: "Uma citação." },
-          resumo: "Este trabalho investiga X.",
-          abstract: "This work investigates X.",
-        })
-      )
+    const xml = await xmlDoDocumento(
+      criarMetadados({
+        dedicatoria: { ativo: true, texto: "À minha família." },
+        agradecimentos: { ativo: true, texto: "Ao meu orientador." },
+        epigrafe: { ativo: true, texto: "Uma citação." },
+        resumo: "Este trabalho investiga X.",
+        abstract: "This work investigates X.",
+      }),
     );
 
     const posicoes = [
@@ -167,23 +192,19 @@ describe("montarPreTextuais", () => {
       "Uma citação.",
       "RESUMO",
       "ABSTRACT",
+      "SUMÁRIO",
     ].map((trecho) => xml.indexOf(trecho));
 
     for (const posicao of posicoes) expect(posicao).toBeGreaterThan(-1);
     expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b));
-
-    // Cinco blocos, quatro quebras entre eles — nenhuma abrindo a seção.
-    expect(xml.match(QUEBRA_DE_PAGINA) ?? []).toHaveLength(4);
   });
 
   it("recua dedicatória e epígrafe a partir do meio da mancha; agradecimentos não", async () => {
-    const xml = await documentXmlDe(
-      montarPreTextuais(
-        criarMetadados({
-          dedicatoria: { ativo: true, texto: "À minha família." },
-          agradecimentos: { ativo: true, texto: "Ao meu orientador." },
-        })
-      )
+    const xml = await xmlDoDocumento(
+      criarMetadados({
+        dedicatoria: { ativo: true, texto: "À minha família." },
+        agradecimentos: { ativo: true, texto: "Ao meu orientador." },
+      }),
     );
 
     // `larguraUtil` (16 cm) / 2 = 4535 twips — o mesmo número que `CM(8)`
@@ -192,14 +213,14 @@ describe("montarPreTextuais", () => {
     // ligados se a margem mudar.
     const paragrafoDedicatoria = xml.slice(
       xml.lastIndexOf("<w:p>", xml.indexOf("À minha família.")),
-      xml.indexOf("À minha família.")
+      xml.indexOf("À minha família."),
     );
     expect(paragrafoDedicatoria).toContain('w:left="4535"');
 
     const paragrafoAgradecimento = xml.slice(
       xml.lastIndexOf("<w:p>", xml.indexOf("Ao meu orientador.")),
-      xml.indexOf("Ao meu orientador.")
+      xml.indexOf("Ao meu orientador."),
     );
-    expect(paragrafoAgradecimento).not.toContain("w:ind");
+    expect(paragrafoAgradecimento).not.toContain('w:left="4535"');
   });
 });

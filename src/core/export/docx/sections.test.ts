@@ -54,23 +54,21 @@ describe("montarSecoes — as três seções OOXML (passo 1.4.3)", () => {
     expect(secoes[2].headers?.default).toBeDefined();
   });
 
-  it("põe `preTextuais` antes de SUMÁRIO na segunda seção (passo 3.5.2)", async () => {
+  it("põe `preTextuais` na segunda seção, na ordem em que vieram", async () => {
     const xml = await documentXmlDe([], [new Paragraph("Resumo de teste")]);
 
-    const posResumo = xml.indexOf("Resumo de teste");
-    const posSumario = xml.indexOf("SUMÁRIO");
-
-    expect(posResumo).toBeGreaterThan(-1);
-    expect(posSumario).toBeGreaterThan(-1);
-    expect(posResumo).toBeLessThan(posSumario);
+    expect(xml.indexOf("Resumo de teste")).toBeGreaterThan(-1);
   });
 
-  // Sem `preTextuais` não há quebra de página nenhuma na abertura da seção —
-  // sobram exatamente os dois nós do sumário (título + campo `TOC`,
-  // `toc.ts`, passo 3.6.2), que antes eram só o parágrafo-placeholder.
-  it("sem `preTextuais`, a segunda seção fica só com o sumário, sem quebra antes", () => {
+  // O sumário saiu daqui no passo 3.7.2: ele virou mais um elemento da ordem
+  // canônica (`src/core/document/order.ts`) e chega dentro de `preTextuais`.
+  // `montarSecoes()` não emenda mais elemento nenhum — só distribui o que
+  // recebe pelas três seções OOXML, com as regras de paginação de cada uma.
+  // Sem `preTextuais`, sobra a folha em branco que mantém a seção válida:
+  // uma seção OOXML sem filho nenhum não é arquivo legível.
+  it("sem `preTextuais`, a segunda seção fica com uma folha em branco válida", () => {
     const secoes = montarSecoes([]);
 
-    expect(secoes[1].children).toHaveLength(2);
+    expect(secoes[1].children).toHaveLength(1);
   });
 });

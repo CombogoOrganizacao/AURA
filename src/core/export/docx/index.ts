@@ -1,4 +1,4 @@
-import { Document, Paragraph, type FileChild } from "docx";
+import { Document, type FileChild } from "docx";
 
 import { montarSecoes } from "./sections";
 import { ESTILOS_DOCUMENTO } from "./styles";
@@ -17,16 +17,23 @@ import { ESTILOS_DOCUMENTO } from "./styles";
 // Corpo real desde o passo 1.4.2 (`fromDocumento.ts` converte `Documento`
 // canônico pra `ConteudoExportacao`). Resumo/abstract reais desde o passo
 // 3.5.2 (`preTextuais`, ver `docx/preTextuais.ts`); sumário como campo `TOC`
-// desde o 3.6.2 (`docx/toc.ts`). Capa continua placeholder (ver
-// `sections.ts`): depende de layout próprio que ninguém ligou ainda. Os
+// desde o 3.6.2 (`docx/toc.ts`); capa, folha de rosto e pós-textuais desde o
+// 3.7.2, com a ordem inteira vinda de `src/core/document/order.ts`. Os
 // geradores dos demais blocos (lista, figura, tabela, fórmula), referências
 // e notas chegam um de cada vez, nos passos da Fase 3/4 que os implementam
 // de verdade no editor primeiro.
 
 export interface ConteudoExportacao {
   // Corpo já convertido para nós do `docx` — quem faz essa conversão a
-  // partir do `Documento` canônico é `fromDocumento.ts` (passo 1.4.2).
-  corpo: Paragraph[];
+  // partir do `Documento` canônico é `fromDocumento.ts` (passo 1.4.2). Desde
+  // o 3.7.2 traz também os pós-textuais (referências, apêndices, anexos), que
+  // dividem a seção OOXML do corpo por terem a mesma paginação.
+  corpo: FileChild[];
+  // Capa (3.7.2). Opcional porque quem só testa o corpo (`index.test.ts`) não
+  // precisa passar nada aqui — sem ela, a seção da capa sai com uma folha em
+  // branco, que é o que um documento sem metadado nenhum produz de qualquer
+  // forma.
+  capa?: FileChild[];
   // Pré-textuais já convertidos: resumo/abstract e opcionais (3.5.2/3.5.3,
   // `docx/preTextuais.ts`) mais as listas de figuras, tabelas e abreviaturas
   // (3.6.4, `docx/listas.ts`) — `fromDocumento.ts` compõe os dois na ordem
@@ -43,7 +50,11 @@ export interface ConteudoExportacao {
 // `BotaoExportar.tsx`, passo 1.4.4). `toBuffer()` depende do `Buffer` do
 // Node, que não existe no navegador sem polyfill — mesmo cuidado que já
 // vale pra `fs.readFileSync` (docs/porte-poc.md).
-export function montarDocumento({ corpo, preTextuais = [] }: ConteudoExportacao): Document {
+export function montarDocumento({
+  corpo,
+  capa = [],
+  preTextuais = [],
+}: ConteudoExportacao): Document {
   return new Document({
     // `<w:updateFields/>` em `word/settings.xml` — porte do mesmo `features`
     // de `poc/docx/gerar.js` (passo 3.6.2), que só passou a ter efeito agora
@@ -53,6 +64,6 @@ export function montarDocumento({ corpo, preTextuais = [] }: ConteudoExportacao)
     // marcado `w:dirty="true"`; isto é o outro lado do mesmo par.
     features: { updateFields: true },
     styles: ESTILOS_DOCUMENTO,
-    sections: montarSecoes(corpo, preTextuais),
+    sections: montarSecoes(corpo, preTextuais, capa),
   });
 }

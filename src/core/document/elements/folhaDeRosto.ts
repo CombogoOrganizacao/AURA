@@ -25,14 +25,18 @@ import { type LinhaPreTextual, linhaCentro } from "./linhaPreTextual";
 export function gerarFolhaDeRosto(metadados: Metadados): LinhaPreTextual[] {
   const linhas: LinhaPreTextual[] = [];
 
-  for (const autor of metadados.autores) linhas.push(linhaCentro(autor));
-  linhas.push(linhaCentro(tituloComSubtitulo(metadados)));
+  for (const autor of metadados.autores) linhas.push(linhaCentro(autor, "autor"));
+  linhas.push(linhaCentro(tituloComSubtitulo(metadados), "tituloDoTrabalho"));
   if (metadados.naturezaTrabalho) {
-    linhas.push({ texto: metadados.naturezaTrabalho, alinhamento: "recuada-a-direita" });
+    linhas.push({
+      texto: metadados.naturezaTrabalho,
+      alinhamento: "recuada-a-direita",
+      papel: "natureza",
+    });
   }
-  linhas.push(linhaCentro(`Orientador: ${metadados.orientador}`));
-  linhas.push(linhaCentro(metadados.local));
-  linhas.push(linhaCentro(String(metadados.ano)));
+  linhas.push(linhaCentro(`Orientador: ${metadados.orientador}`, "orientador"));
+  linhas.push(linhaCentro(metadados.local, "local"));
+  linhas.push(linhaCentro(String(metadados.ano), "ano"));
 
   return linhas;
 }

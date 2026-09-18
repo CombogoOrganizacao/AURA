@@ -33,11 +33,11 @@ export function tituloComSubtitulo(metadados: Metadados): string {
 export function gerarCapa(metadados: Metadados): LinhaPreTextual[] {
   const linhas: LinhaPreTextual[] = [];
 
-  if (metadados.instituicao) linhas.push(linhaCentro(metadados.instituicao));
-  for (const autor of metadados.autores) linhas.push(linhaCentro(autor));
-  linhas.push(linhaCentro(tituloComSubtitulo(metadados)));
-  linhas.push(linhaCentro(metadados.local));
-  linhas.push(linhaCentro(String(metadados.ano)));
+  if (metadados.instituicao) linhas.push(linhaCentro(metadados.instituicao, "instituicao"));
+  for (const autor of metadados.autores) linhas.push(linhaCentro(autor, "autor"));
+  linhas.push(linhaCentro(tituloComSubtitulo(metadados), "tituloDoTrabalho"));
+  linhas.push(linhaCentro(metadados.local, "local"));
+  linhas.push(linhaCentro(String(metadados.ano), "ano"));
 
   return linhas;
 }

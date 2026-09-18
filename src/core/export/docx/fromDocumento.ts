@@ -1,7 +1,25 @@
-import { AlignmentType, HeadingLevel, type Document, Paragraph, TextRun } from "docx";
+import {
+  AlignmentType,
+  HeadingLevel,
+  type Document,
+  type FileChild,
+  PageBreak,
+  Paragraph,
+  TextRun,
+} from "docx";
 
+import { gerarListaDeAbreviaturas } from "../../document/elements/abreviaturas";
+import {
+  gerarListaDeFiguras,
+  gerarListaDeTabelas,
+} from "../../document/elements/listas";
 import { textoItemSumario } from "../../document/elements/sumario";
 import { numerarFiguras, numerarSecoes, numerarTabelas } from "../../document/numbering";
+import {
+  elementosDaParte,
+  type ElementoDocumento,
+  type ParteDocumento,
+} from "../../document/order";
 import type {
   Documento,
   NoCitacaoLonga,
@@ -13,8 +31,27 @@ import type {
 import { ABNT } from "./constants";
 import { paragrafoFonte, paragrafoLegenda } from "./legenda";
 import { montarDocumento } from "./index";
-import { blocosDeListas } from "./listas";
-import { comQuebrasEntreBlocos, montarPreTextuais } from "./preTextuais";
+import {
+  blocoListaDeAbreviaturas,
+  blocoListaDeFiguras,
+  blocoListaDeTabelas,
+} from "./listas";
+import {
+  blocosDeAnexos,
+  blocosDeApendices,
+  blocosDeReferencias,
+} from "./posTextuais";
+import {
+  comQuebrasEntreBlocos,
+  montarCapa,
+  montarFolhaDeRosto,
+  paragrafosAbstract,
+  paragrafosAgradecimentos,
+  paragrafosDedicatoria,
+  paragrafosEpigrafe,
+  paragrafosResumo,
+} from "./preTextuais";
+import { blocoSumario } from "./toc";
 
 // Liga o exportador ao `Documento` canônico de verdade (passo 1.4.2) — não
 // mais ao JSON de teste da PoC. Corpo desde 1.4.2, resumo/abstract desde
@@ -165,7 +202,22 @@ function paragrafoCorpo(no: NoParagrafo | NoCitacaoLonga): Paragraph {
   });
 }
 
-export function fromDocumento(documento: Documento): Document {
+// Um gerador por elemento da ordem canônica (src/core/document/order.ts).
+// **A ordem do `.docx` sai da constante, não daqui**: este `Record` diz COMO
+// montar cada elemento, nunca QUANDO — quem percorre é `blocosDaParte()`,
+// seguindo `ORDEM_CANONICA`. Trocar duas linhas de lugar aqui não muda o
+// arquivo gerado; trocar em `order.ts` muda.
+//
+// Cada gerador devolve blocos (`FileChild[][]`), não um array achatado: é
+// quem compõe a parte que decide a quebra de página entre um bloco e o
+// seguinte. Bloco vazio significa "este elemento não sai" — a decisão fica
+// com o gerador do elemento (resumo sem texto, dedicatória desligada,
+// nenhum apêndice cadastrado), nunca duplicada aqui.
+// O corpo: títulos numerados e o conteúdo de cada seção, na ordem de
+// `Secao.ordem`. Era o miolo de `fromDocumento()` até este passo; virou função
+// própria para entrar no `Record` abaixo como mais um elemento da ordem
+// canônica, em vez de ser o caso especial que todos os outros contornam.
+function paragrafosDoCorpo(documento: Documento): Paragraph[] {
   const secoesEmOrdem = [...documento.sections].sort((a, b) => a.ordem - b.ordem);
   const numeracao = numerarSecoes(documento.sections);
 
@@ -197,16 +249,63 @@ export function fromDocumento(documento: Documento): Document {
     }
   }
 
-  // Ordem canônica dos pré-textuais (docs/to-do.md 3.7.2): opcionais,
-  // resumo e abstract (`montarPreTextuais`), depois as listas de figuras,
-  // tabelas e abreviaturas (3.6.4) — o sumário fecha a seção, em
-  // `sections.ts`. `comQuebrasEntreBlocos` trata o que já veio de
-  // `montarPreTextuais()` como um bloco só, então a quebra de página cai
-  // entre ele e a primeira lista, e entre uma lista e a seguinte.
-  const preTextuais = comQuebrasEntreBlocos([
-    montarPreTextuais(documento.metadados),
-    ...blocosDeListas(documento),
+  return corpo;
+}
+
+type GeradorDeBlocos = (documento: Documento) => FileChild[][];
+
+function blocoUnico(paragrafos: FileChild[]): FileChild[][] {
+  return paragrafos.length > 0 ? [paragrafos] : [];
+}
+
+const GERADORES: Record<ElementoDocumento, GeradorDeBlocos> = {
+  capa: (documento) => blocoUnico(montarCapa(documento.metadados)),
+  folhaDeRosto: (documento) => blocoUnico(montarFolhaDeRosto(documento.metadados)),
+  dedicatoria: (documento) => blocoUnico(paragrafosDedicatoria(documento.metadados)),
+  agradecimentos: (documento) => blocoUnico(paragrafosAgradecimentos(documento.metadados)),
+  epigrafe: (documento) => blocoUnico(paragrafosEpigrafe(documento.metadados)),
+  resumo: (documento) => blocoUnico(paragrafosResumo(documento.metadados)),
+  abstract: (documento) => blocoUnico(paragrafosAbstract(documento.metadados)),
+  listaDeFiguras: (documento) =>
+    blocoUnico(blocoListaDeFiguras(gerarListaDeFiguras(documento.sections).length > 0)),
+  listaDeTabelas: (documento) =>
+    blocoUnico(blocoListaDeTabelas(gerarListaDeTabelas(documento.sections).length > 0)),
+  listaDeAbreviaturas: (documento) =>
+    blocoUnico(
+      blocoListaDeAbreviaturas(
+        gerarListaDeAbreviaturas(documento.metadados, documento.sections),
+      ),
+    ),
+  sumario: () => blocoUnico(blocoSumario()),
+  corpo: (documento) => blocoUnico(paragrafosDoCorpo(documento)),
+  referencias: blocosDeReferencias,
+  apendices: blocosDeApendices,
+  anexos: blocosDeAnexos,
+};
+
+function blocosDaParte(documento: Documento, parte: ParteDocumento): FileChild[][] {
+  return elementosDaParte(parte).flatMap((elemento) => GERADORES[elemento](documento));
+}
+
+export function fromDocumento(documento: Documento): Document {
+  // Capa: um elemento só, numa seção OOXML só — sem quebra a compor.
+  const capa = blocosDaParte(documento, "capa").flat();
+
+  // Pré-textuais: cada elemento em página própria (NBR 14724), com a quebra
+  // ENTRE os blocos e nunca antes do primeiro — a seção OOXML já começa numa
+  // página nova.
+  const preTextuais = comQuebrasEntreBlocos(blocosDaParte(documento, "preTextual"));
+
+  // Textual e pós-textual dividem a mesma seção OOXML (mesma paginação,
+  // contínua e exibida), mas o pós-textual começa em página nova: a quebra vem
+  // ANTES de cada bloco, inclusive do primeiro, porque ele segue o corpo
+  // dentro da mesma seção em vez de abrir uma.
+  const posTextuais = blocosDaParte(documento, "posTextual").flatMap((bloco) => [
+    new Paragraph({ children: [new PageBreak()] }),
+    ...bloco,
   ]);
 
-  return montarDocumento({ corpo, preTextuais });
+  const corpo = [...blocosDaParte(documento, "textual").flat(), ...posTextuais];
+
+  return montarDocumento({ capa, corpo, preTextuais });
 }

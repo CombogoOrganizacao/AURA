@@ -7,18 +7,12 @@ import {
   type FileChild,
 } from "docx";
 
-import {
-  TITULO_LISTA_ABREVIATURAS,
-  gerarListaDeAbreviaturas,
-} from "../../document/elements/abreviaturas";
+import { TITULO_LISTA_ABREVIATURAS } from "../../document/elements/abreviaturas";
 import { ROTULO_FIGURA, ROTULO_TABELA } from "../../document/elements/legenda";
 import {
   TITULO_LISTA_FIGURAS,
   TITULO_LISTA_TABELAS,
-  gerarListaDeFiguras,
-  gerarListaDeTabelas,
 } from "../../document/elements/listas";
-import type { Documento } from "../../document/types";
 import { ABNT } from "./constants";
 import { paragrafoTituloPreTextual } from "./preTextuais";
 
@@ -58,8 +52,21 @@ function blocoListaDeLegendas(titulo: string, rotulo: string, temItens: boolean)
   ];
 }
 
-function blocoListaDeAbreviaturas(documento: Documento): FileChild[] {
-  const itens = gerarListaDeAbreviaturas(documento.metadados, documento.sections);
+// Um bloco por lista, exportados um a um: quem conhece a ORDEM entre eles é
+// `src/core/document/order.ts` (3.7.2), e quem decide a quebra de página é
+// quem compõe a parte (`fromDocumento.ts`). Aqui cada lista só sabe virar
+// OOXML — e devolver `[]` quando não há o que listar.
+export function blocoListaDeFiguras(temFiguras: boolean): FileChild[] {
+  return blocoListaDeLegendas(TITULO_LISTA_FIGURAS, ROTULO_FIGURA, temFiguras);
+}
+
+export function blocoListaDeTabelas(temTabelas: boolean): FileChild[] {
+  return blocoListaDeLegendas(TITULO_LISTA_TABELAS, ROTULO_TABELA, temTabelas);
+}
+
+export function blocoListaDeAbreviaturas(
+  itens: readonly { sigla: string; significado: string }[],
+): FileChild[] {
   if (itens.length === 0) return [];
 
   return [
@@ -69,7 +76,7 @@ function blocoListaDeAbreviaturas(documento: Documento): FileChild[] {
         new Paragraph({
           children: [
             new TextRun(item.sigla),
-            new TextRun({ children: ["\t"] }),
+            new TextRun({ children: ["	"] }),
             new TextRun(item.significado),
           ],
           alignment: AlignmentType.LEFT,
@@ -78,24 +85,4 @@ function blocoListaDeAbreviaturas(documento: Documento): FileChild[] {
         }),
     ),
   ];
-}
-
-// Um bloco por elemento, na ordem canônica (docs/to-do.md 3.7.2: as listas
-// ficam entre o abstract e o sumário). Blocos, e não um array achatado, porque
-// quem compõe é que põe a quebra de página entre eles — mesma divisão que
-// `montarPreTextuais()` já usa.
-export function blocosDeListas(documento: Documento): FileChild[][] {
-  return [
-    blocoListaDeLegendas(
-      TITULO_LISTA_FIGURAS,
-      ROTULO_FIGURA,
-      gerarListaDeFiguras(documento.sections).length > 0,
-    ),
-    blocoListaDeLegendas(
-      TITULO_LISTA_TABELAS,
-      ROTULO_TABELA,
-      gerarListaDeTabelas(documento.sections).length > 0,
-    ),
-    blocoListaDeAbreviaturas(documento),
-  ].filter((bloco) => bloco.length > 0);
 }
