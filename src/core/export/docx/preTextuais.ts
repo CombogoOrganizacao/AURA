@@ -44,6 +44,14 @@ export function paragrafoTituloPreTextual(texto: string): Paragraph {
   return new Paragraph({ text: texto, style: "TituloPreTextual", keepNext: true });
 }
 
+// Mesmo título centralizado (NBR 14724:2024 §5.2.3), estilo separado — e a
+// separação existe por causa da NBR 6027, não da aparência: pré-textual não
+// entra no sumário (§6.3), pós-textual entra (§5.2), e o campo `TOC` só sabe
+// distinguir os dois por nome de estilo. Ver `styles.ts` e `toc.ts`.
+export function paragrafoTituloPosTextual(texto: string): Paragraph {
+  return new Paragraph({ text: texto, style: "TituloPosTextual", keepNext: true });
+}
+
 function paragrafoJustificado(texto: string): Paragraph {
   return new Paragraph({
     children: [new TextRun(texto)],

@@ -61,7 +61,11 @@ function idsDeEstilo(xmlEstilos: string): string[] {
 // da legenda é um campo com resultado em cache, e o run desse cache só herda
 // o corpo 10 da norma se o tamanho vier do parágrafo — ver `styles.ts`), o
 // que adianta uma das três linhas que o 6.1.1 ainda vai acrescentar.
-const ESTILOS_ALEM_DA_POC = ["CitacaoLonga", "Legenda"];
+// `TituloPosTextual` entrou em 18/09/2026: é gêmeo visual do
+// `TituloPreTextual` (NBR 14724:2024 §5.2.3) e existe separado só para o campo
+// `TOC` conseguir recolher os pós-textuais sem arrastar os pré-textuais junto
+// (NBR 6027 §5.2 contra §6.3) — ver `styles.ts` e `toc.ts`.
+const ESTILOS_ALEM_DA_POC = ["CitacaoLonga", "Legenda", "TituloPosTextual"];
 
 describe("montarDocumento — esqueleto das três seções OOXML (passo 1.4.1)", () => {
   it("word/document.xml tem os mesmos três <w:sectPr> da PoC, só o segundo com w:pgNumType/w:start", async () => {

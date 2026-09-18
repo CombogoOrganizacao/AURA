@@ -9,9 +9,12 @@ import { ABNT } from "./constants";
 // o restante (Título 1-3 completo, Corpo, Referência, Legenda) em 6.1.1.
 // Nunca de volta pra `index.ts`, que fica só com a montagem do `Document`.
 //
-// NBR 6024 exige gradação visível entre níveis de título e consistência
-// entre sumário e texto — não impõe esta combinação específica (caixa
-// alta+negrito / negrito / itálico): é escolha de estilo do AURA
+// A NBR 14724:2024 §5.4 exige gradação visível entre níveis de título e
+// consistência entre sumário e texto ("destacam-se gradativamente, no sumário
+// e, de forma idêntica, no texto... utilizando-se os recursos de negrito,
+// itálico ou sublinhado e outros"), e remete à NBR 6024 — nenhuma das duas
+// impõe esta combinação específica (caixa alta+negrito / negrito / itálico):
+// é escolha de estilo do AURA
 // (docs/auditoria-abnt.md, achado do passo 3.1.1, mesmos valores que
 // `NORMAS.abnt.titulos` em `src/core/standards/standards.ts`). O Vitest
 // de 3.2.5 (`styles.test.ts`) confere que os três níveis se distinguem no
@@ -53,6 +56,13 @@ export const ESTILOS_DOCUMENTO: IStylesOptions = {
     },
   },
   paragraphStyles: [
+    // Título de elemento sem indicativo numérico — NBR 14724:2024 §5.2.3,
+    // que trata NUMA LISTA SÓ os treze: errata, agradecimentos, as quatro
+    // listas, os dois resumos, sumário, referências, glossário, apêndice(s),
+    // anexo(s) e índice(s). "Devem ser centralizados", e nada mais. Usar um
+    // estilo só para pré e pós-textual não é atalho: é o agrupamento da norma.
+    // (O nome ficou preso ao lugar onde apareceu primeiro; renomear quebraria
+    // a paridade com `poc/docx/saida.docx` — registrado para o 6.1.1.)
     {
       id: "TituloPreTextual",
       name: "Titulo Pre-Textual",
@@ -64,6 +74,24 @@ export const ESTILOS_DOCUMENTO: IStylesOptions = {
         alignment: AlignmentType.CENTER,
         spacing: { after: 360, line: ABNT.espacamento15 },
       },
+    },
+    // **Mesma formatação do `TituloPreTextual`, estilo separado.** A NBR
+    // 14724:2024 §5.2.3 põe os treze títulos sem indicativo numérico numa lista
+    // só, e eles saem idênticos no papel — o que separa os dois estilos não é
+    // aparência, é a NBR 6027: o §6.3 proíbe pré-textual no sumário e o §5.2
+    // manda pós-textual entrar nele. Um campo `TOC` só sabe distinguir os dois
+    // grupos se eles tiverem nomes de estilo diferentes (`toc.ts` mapeia este
+    // por `\t`, ver lá).
+    //
+    // `basedOn: "TituloPreTextual"` em vez de repetir as propriedades: mudar o
+    // título centralizado da norma num lugar muda nos dois, que é o que o
+    // §5.2.3 quer dizer ao tratá-los num grupo só.
+    {
+      id: "TituloPosTextual",
+      name: "Titulo Pos-Textual",
+      basedOn: "TituloPreTextual",
+      next: "Normal",
+      quickFormat: true,
     },
     // NBR 10520 — citação direta com mais de três linhas (passo 3.4.2, nó
     // `citacao_longa` desde 3.4.1). Nomeado, ao contrário do que

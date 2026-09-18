@@ -1,4 +1,4 @@
-import { TableOfContents, type FileChild } from "docx";
+import { StyleLevel, TableOfContents, type FileChild } from "docx";
 
 import { TITULO_SUMARIO } from "../../document/elements/sumario";
 import { paragrafoTituloPreTextual } from "./preTextuais";
@@ -32,21 +32,46 @@ import { paragrafoTituloPreTextual } from "./preTextuais";
 // `<w:style>` com a PoC. Pedir "1-5" recolheria níveis que não existem.
 const NIVEIS_DE_TITULO = "1-3";
 
+// `\t "Titulo Pos-Textual,1"` no campo: o Word recolhe também os parágrafos
+// com esse estilo nomeado, no primeiro nível do sumário. É a NBR 6027 §5.2,
+// que manda alinhar os títulos "inclusive os elementos pós-textuais" e cujo
+// EXEMPLO lista `REFERÊNCIAS`, `APÊNDICE A` e `ANEXO A` dentro do sumário.
+//
+// **Um switch separado, e não um nível de estrutura no estilo.** Dar
+// `outlineLevel` ao estilo o faria entrar pelo `\o`, que é o mesmo caminho dos
+// Heading — e aí qualquer mudança no `\o` arrastaria os pós-textuais junto. Com
+// `\t`, o que entra por estilo nomeado está escrito aqui, numa linha só.
+//
+// O `TituloPreTextual` fica de fora deste mapa de propósito: §6.3, "os
+// elementos pré-textuais não podem constar no sumário". Os dois estilos são
+// visualmente idênticos (§5.2.3 da 14724) e existem separados só por causa
+// desta linha — ver `styles.ts`.
+//
+// Nível 1 porque são títulos **sem indicativo numérico**: a 6027 §5.2 os
+// alinha "pela margem do título do indicativo mais extenso", ao lado das
+// seções primárias, não recuados sob elas.
+const ESTILO_POSTEXTUAL_NO_SUMARIO = new StyleLevel("Titulo Pos-Textual", 1);
+
 // Título + campo, juntos: o par é o elemento pré-textual "sumário" inteiro, e
 // separá-los só daria a `sections.ts` a chance de montar um sem o outro.
 //
-// O título usa `TituloPreTextual`, que **não** é estilo de título — é o que o
-// mantém fora do próprio sumário, sem regra especial (NBR 6027: o sumário não
-// se lista). Mesma razão pela qual resumo e abstract também não aparecem lá.
+// O título usa `TituloPreTextual`, que **não** é estilo de título nem está no
+// mapa de `\t` — é o que o mantém fora do próprio sumário, sem regra especial
+// (NBR 6027 §6.3, "os elementos pré-textuais não podem constar no sumário", e
+// o sumário é o último deles). Mesma razão pela qual resumo, abstract e as
+// listas também não aparecem lá.
 export function blocoSumario(): FileChild[] {
   return [
     paragrafoTituloPreTextual(TITULO_SUMARIO),
     // `hyperlink: true` (`\h`): cada entrada vira link para o título no
-    // corpo. Não muda o impresso — a norma não pede nem proíbe —, e é o que
-    // torna o `.docx` navegável na tela de quem vai ler.
+    // corpo. Não muda o impresso, e a NBR 6027 §5.7 o **recomenda**
+    // expressamente ("para documentos em meio eletrônico, recomenda-se a
+    // utilização de hyperlink para cada item elencado") — deixou de ser só
+    // conveniência com a leitura da norma em 18/09/2026.
     new TableOfContents(TITULO_SUMARIO, {
       hyperlink: true,
       headingStyleRange: NIVEIS_DE_TITULO,
+      stylesWithLevels: [ESTILO_POSTEXTUAL_NO_SUMARIO],
     }),
   ];
 }

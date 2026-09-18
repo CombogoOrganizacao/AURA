@@ -2,24 +2,29 @@ import { AlignmentType, Paragraph, TextRun, type FileChild } from "docx";
 
 import { gerarAnexos } from "../../document/elements/anexos";
 import { gerarApendices } from "../../document/elements/apendices";
-import { textoTituloPosTextual, type ItemPosTextual } from "../../document/elements/posTextual";
+import {
+  TITULO_REFERENCIAS,
+  textoTituloPosTextual,
+  type ItemPosTextual,
+} from "../../document/elements/posTextual";
 import type { Documento, ElementoPosTextual, NoConteudo } from "../../document/types";
 import { ABNT } from "./constants";
-import { paragrafoTituloPreTextual } from "./preTextuais";
+import { paragrafoTituloPosTextual } from "./preTextuais";
 
 // Pós-textuais no `.docx` — passo 3.7.2: referências, apêndices e anexos. A
 // letra e o título de apêndice/anexo vêm de `gerarApendices()`/`gerarAnexos()`
 // (3.7.1), que é quem conhece a regra; aqui só vira OOXML. As duas sequências
 // continuam independentes porque cada função recebe a sua lista e nada mais.
 //
-// **O título usa `TituloPreTextual`**, apesar do nome. A NBR 14724 §5.4 trata
-// numa lista só todos os "títulos sem indicativo numérico, centralizados" — e
-// APÊNDICE e ANEXO estão nessa lista, junto de resumo, sumário e referências.
-// É o mesmo estilo, não um parecido. O nome ficou preso ao lugar onde ele
-// apareceu primeiro (os pré-textuais), e renomeá-lo hoje quebraria a paridade
-// com `poc/docx/saida.docx`, que é teste de regressão congelado
-// (`index.test.ts`) — fica registrado para o 6.1.1, que já mexe na lista de
-// estilos nomeados.
+// **O título usa `TituloPosTextual`** — estilo separado desde 18/09/2026, e
+// não por aparência: ele é idêntico ao `TituloPreTextual` (a NBR 14724:2024
+// §5.2.3 trata os treze títulos sem indicativo numérico numa lista só, e
+// APÊNDICE, ANEXO e REFERÊNCIAS estão nela junto de resumo e sumário). O que
+// separa os dois é a NBR 6027, lida na mesma data: o §6.3 proíbe pré-textual
+// no sumário, o §5.2 manda pós-textual entrar nele, e o campo `TOC` só
+// distingue os dois grupos por nome de estilo. Até aqui os pós-textuais
+// usavam o estilo dos pré-textuais e, por isso, **não apareciam no sumário** —
+// é o achado 1 de docs/auditoria-abnt.md.
 //
 // **Cada apêndice/anexo em página própria** é convenção, não texto normativo
 // conferido: a norma não diz onde cada um começa. Mesma ressalva da posição da
@@ -68,7 +73,7 @@ function paragrafoDeConteudo(no: NoConteudo): Paragraph {
 
 function blocoDeElemento(item: ItemPosTextual, elemento: ElementoPosTextual): FileChild[] {
   return [
-    paragrafoTituloPreTextual(textoTituloPosTextual(item)),
+    paragrafoTituloPosTextual(textoTituloPosTextual(item)),
     ...elemento.content.map(paragrafoDeConteudo),
   ];
 }
@@ -88,8 +93,6 @@ export function blocosDeAnexos(documento: Documento): FileChild[][] {
   return blocos(documento.anexos, gerarAnexos);
 }
 
-export const TITULO_REFERENCIAS = "REFERÊNCIAS";
-
 // Referências (NBR 6023) — o LUGAR na ordem canônica é deste passo, o
 // CONTEÚDO é da Fase 4. Não existe formatador ABNT (4.3) nem UI que escreva em
 // `Documento.references` (sempre `[]`, ver `types.ts`).
@@ -107,7 +110,7 @@ export function blocosDeReferencias(documento: Documento): FileChild[][] {
 
   return [
     [
-      paragrafoTituloPreTextual(TITULO_REFERENCIAS),
+      paragrafoTituloPosTextual(TITULO_REFERENCIAS),
       new Paragraph({
         children: [
           new TextRun({

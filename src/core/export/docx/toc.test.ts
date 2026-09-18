@@ -45,8 +45,37 @@ describe("sumário no .docx como campo TOC (passo 3.6.2)", () => {
 
     // `\o "1-3"` é a ligação com os estilos nomeados de `styles.ts`; `\h`
     // faz cada entrada virar link para o título no corpo.
-    expect(instrucao).toContain("\o &quot;1-3&quot;");
-    expect(instrucao).toContain("\h");
+    expect(instrucao).toContain('\\o &quot;1-3&quot;');
+    expect(instrucao).toContain('\\h');
+  });
+
+  // NBR 6027 §5.2 contra §6.3: pós-textual entra no sumário, pré-textual não.
+  // O campo distingue os dois por nome de estilo — `\t "Titulo Pos-Textual,1"`
+  // recolhe REFERÊNCIAS, APÊNDICE e ANEXO; `TituloPreTextual` fica fora do
+  // mapa e por isso RESUMO, ABSTRACT e SUMÁRIO continuam ausentes.
+  it('recolhe também os pós-textuais, pelo estilo nomeado (\\t), sem arrastar os pré-textuais', async () => {
+    const instrucao = (await xmlDe(documentoComTresNiveis())).match(
+      /<w:instrText[^>]*>(TOC [^<]*)<\/w:instrText>/,
+    )![1];
+
+    expect(instrucao).toContain('\\t &quot;Titulo Pos-Textual,1&quot;');
+    expect(instrucao).not.toContain("TituloPreTextual");
+    expect(instrucao).not.toContain("Titulo Pre-Textual");
+  });
+
+  it("os títulos pós-textuais usam TituloPosTextual, que é o estilo do mapa \\t", async () => {
+    const documento = documentoComTresNiveis();
+    documento.apendices = [{ id: "ap1", titulo: "Questionário aplicado", content: [] }];
+    documento.anexos = [{ id: "an1", titulo: "Parecer do comitê", content: [] }];
+
+    const xml = await xmlDe(documento);
+
+    for (const titulo of ["APÊNDICE A", "ANEXO A"]) {
+      const posicao = xml.indexOf(titulo);
+      expect(posicao).toBeGreaterThan(-1);
+      const paragrafo = xml.slice(xml.lastIndexOf("<w:p>", posicao), posicao);
+      expect(paragrafo).toContain('<w:pStyle w:val="TituloPosTextual"/>');
+    }
   });
 
   it("word/settings.xml traz <w:updateFields/>, para o Word preencher as páginas ao abrir", async () => {

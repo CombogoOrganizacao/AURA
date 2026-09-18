@@ -14,16 +14,24 @@ import type { ElementoPosTextual } from "../types";
 // anexo é "ANEXO A" mesmo que existam cinco apêndices antes dele, porque
 // `gerarApendices()` nunca vê a lista de anexos e vice-versa.
 //
-// **A NBR 14724 não passou pela auditoria do passo 3.1.1 nesta parte.** O que
-// a auditoria cobriu foi a presença dos elementos pós-textuais
-// (`elements.postTextual`, docs/auditoria-abnt.md), não a regra da letra.
-// As regras usadas aqui — letra maiúscula consecutiva, travessão entre a
-// letra e o título, título em caixa alta — são as incontroversas repetidas
-// por toda fonte secundária, e por isso **nenhum item desta norma é citado
-// por número de seção aqui**, mesmo tratamento dado à NBR 6027 em `sumario.ts`
-// e às ilustrações em `legenda.ts`. O alfabeto de 23 vs. 26 letras está
-// registrado como pendência em docs/auditoria-abnt.md. Auditar antes de a
-// Fase 5 transformar qualquer coisa daqui em regra de conformidade.
+// **Auditado contra a fonte primária em 18/09/2026** (NBR 14724:2024
+// §4.2.3.3 e §4.2.3.4, lidos na íntegra). A norma trata apêndice e anexo com
+// a mesma frase, trocando só a palavra: o texto "deve ser precedido da palavra
+// APÊNDICE, identificado por letras maiúsculas consecutivas, travessão e pelo
+// respectivo título". Confirma os três elementos montados aqui — rótulo, letra
+// derivada da posição e travessão.
+//
+// A norma acrescenta uma regra de tipografia que **não** é deste arquivo: "o
+// destaque tipográfico (negrito, itálico ou sublinhado) deve ser o mesmo da
+// seção primária". Quem a cumpre é o estilo do exportador — este módulo só
+// monta a string, como `textoLegenda()` e `textoItemSumario()`.
+
+// Título do elemento "referências" (NBR 14724:2024 §4.2.3.1). Mora aqui, e
+// não no exportador, pelo mesmo motivo de `TITULO_SUMARIO` e
+// `TITULO_LISTA_FIGURAS`: é grafia de documento, não detalhe de OOXML, e três
+// consumidores precisam dela idêntica — o `.docx`, o sumário (§5.2 da 6027) e
+// a tela, quando existir.
+export const TITULO_REFERENCIAS = "REFERÊNCIAS";
 
 export interface ItemPosTextual {
   // Mesmo `id` do `ElementoPosTextual` de origem, como em `ItemSumario`: é

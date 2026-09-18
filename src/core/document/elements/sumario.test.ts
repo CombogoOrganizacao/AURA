@@ -2,7 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import type { NivelSecao, Secao } from "../types";
 
-import { TITULO_SUMARIO, type ItemSumario, gerarSumario, textoItemSumario } from "./sumario";
+import { gerarAnexos } from "./anexos";
+import { gerarApendices } from "./apendices";
+import { TITULO_REFERENCIAS, textoTituloPosTextual } from "./posTextual";
+import {
+  ID_SUMARIO_REFERENCIAS,
+  TITULO_SUMARIO,
+  type ItemSumario,
+  gerarSumario,
+  gerarSumarioCompleto,
+  textoItemSumario,
+} from "./sumario";
 
 function secao(id: string, ordem: number, nivel: NivelSecao, titulo: string): Secao {
   return { id, ordem, nivel, titulo, content: [] };
@@ -144,5 +154,105 @@ describe("textoItemSumario — indicativo e título na mesma grafia do corpo", (
 
   it("o título do próprio sumário é uma constante compartilhada", () => {
     expect(TITULO_SUMARIO).toBe("SUMÁRIO");
+  });
+});
+
+// NBR 6027:2012 §5.2 — "recomenda-se que sejam alinhados pela margem do título
+// do indicativo mais extenso, **inclusive os elementos pós-textuais**", e o
+// EXEMPLO da norma lista REFERÊNCIAS, APÊNDICE A e ANEXO A dentro do sumário.
+// O 3.6.1 registrou a lacuna e a leitura da fonte primária (18/09/2026) a
+// fechou — docs/auditoria-abnt.md, achado 1.
+describe("gerarSumarioCompleto — pós-textuais no sumário (NBR 6027 §5.2)", () => {
+  const VAZIO = { temReferencias: false, apendices: [], anexos: [] } as const;
+
+  const doisApendices = () =>
+    gerarApendices([
+      { id: "ap1", titulo: "Questionário aplicado", content: [] },
+      { id: "ap2", titulo: "Roteiro de entrevista", content: [] },
+    ]);
+
+  const umAnexo = () => gerarAnexos([{ id: "an1", titulo: "Parecer do comitê", content: [] }]);
+
+  it("acrescenta referências, apêndices e anexos DEPOIS das seções, nessa ordem", () => {
+    const itens = gerarSumarioCompleto(arvoreDeTresNiveis(), {
+      temReferencias: true,
+      apendices: doisApendices(),
+      anexos: umAnexo(),
+    });
+
+    expect(itens.map((item) => item.titulo)).toEqual([
+      "Introdução",
+      "Contexto",
+      "Recorte",
+      "Metodologia",
+      "Coleta",
+      "REFERÊNCIAS",
+      "APÊNDICE A — Questionário aplicado",
+      "APÊNDICE B — Roteiro de entrevista",
+      "ANEXO A — Parecer do comitê",
+    ]);
+  });
+
+  // São títulos sem indicativo numérico (NBR 14724:2024 §5.2.3) que a 6027
+  // alinha ao lado das seções primárias — nível 1, `numero` nulo.
+  it("entram sem indicativo numérico e no primeiro nível", () => {
+    const itens = gerarSumarioCompleto([], {
+      temReferencias: true,
+      apendices: doisApendices(),
+      anexos: umAnexo(),
+    });
+
+    expect(itens.every((item) => item.numero === null)).toBe(true);
+    expect(itens.every((item) => item.nivel === 1)).toBe(true);
+  });
+
+  // Mesma regra de `blocosDeReferencias()`: o exportador não fabrica um
+  // elemento vazio só para ter aparência de conformidade.
+  it("não fabrica entrada para elemento que não existe", () => {
+    expect(gerarSumarioCompleto(arvoreDeTresNiveis(), VAZIO)).toEqual(
+      gerarSumario(arvoreDeTresNiveis()),
+    );
+  });
+
+  it("um documento sem nada devolve lista vazia, não uma linha de REFERÊNCIAS solta", () => {
+    expect(gerarSumarioCompleto([], VAZIO)).toEqual([]);
+  });
+
+  // A 6027 §3.4 define sumário como enumeração "na mesma ordem e GRAFIA em que
+  // a matéria nele se sucede": a entrada tem de sair da mesma função que monta
+  // o título no corpo, não de uma segunda concatenação.
+  it("a grafia vem de textoTituloPosTextual, a mesma do título no corpo", () => {
+    const apendices = doisApendices();
+    const itens = gerarSumarioCompleto([], { temReferencias: false, apendices, anexos: [] });
+
+    expect(itens.map((item) => item.titulo)).toEqual(
+      apendices.map((item) => textoTituloPosTextual(item)),
+    );
+  });
+
+  // `id` é por onde a tela liga a linha ao elemento. O das seções vem de
+  // `crypto.randomUUID()`; os pós-textuais trazem o próprio, e as referências
+  // usam uma constante — que não pode colidir com um UUID.
+  it("cada entrada carrega o id do elemento de origem", () => {
+    const itens = gerarSumarioCompleto([], {
+      temReferencias: true,
+      apendices: doisApendices(),
+      anexos: umAnexo(),
+    });
+
+    expect(itens.map((item) => item.id)).toEqual([ID_SUMARIO_REFERENCIAS, "ap1", "ap2", "an1"]);
+  });
+
+  // O que mantém os pré-textuais fora (§6.3) é a assinatura: não há `Metadados`
+  // aqui, e `PosTextuaisDoSumario` só aceita os três elementos que entram.
+  it("o título do próprio sumário não entra no sumário", () => {
+    const itens = gerarSumarioCompleto(arvoreDeTresNiveis(), {
+      temReferencias: true,
+      apendices: [],
+      anexos: [],
+    });
+
+    expect(itens.map((item) => item.titulo)).not.toContain(TITULO_SUMARIO);
+    expect(itens.map((item) => item.titulo)).toContain(TITULO_REFERENCIAS);
   });
 });
