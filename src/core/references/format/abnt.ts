@@ -257,7 +257,11 @@ function site(referencia: ReferenciaSite): TrechoReferencia[][] {
 
 // --- Autoria (§8.1) ----------------------------------------------------------
 
-function temAutoria(nomes: readonly CSLName[] | undefined): boolean {
+// Exportada porque a ORDENAÇÃO (4.4) precisa da mesma resposta: é esta função
+// que decide se a obra entra pelo autor ou pelo título (§8.1.4), e duas
+// implementações da mesma pergunta acabariam discordando num caso de borda —
+// a referência sairia formatada por título e ordenada por autor.
+export function temAutoria(nomes: readonly CSLName[] | undefined): boolean {
   return !!nomes && nomes.some((nome) => presente(nome.literal ?? nome.family ?? nome.given));
 }
 
