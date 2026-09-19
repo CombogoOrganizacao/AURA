@@ -2,6 +2,13 @@
 // (passos 2.2 a 2.4). Não é tela da v1 — é a referência viva do que está em
 // app/globals.css, src/components/ui/ e docs/design.md. Deve continuar
 // batendo com os três sempre que um token ou componente mudar.
+//
+// Desde o passo 4.2 ela hospeda também um componente de FUNCIONALIDADE, e não
+// só primitivo de `ui/`: o formulário de referência, que é controlado e ainda
+// não tem dono — quem vai segurá-lo é o painel de gerenciamento do passo 4.5.
+// O Vitest deste projeto só roda sobre `src/core/`, então a metade visual de
+// um passo como esse precisa de uma página para o Playwright dirigir. Sai
+// daqui quando o 4.5 lhe der lugar próprio.
 
 import { AppTopBar } from "@/components/app/AppTopBar";
 import { Brand } from "@/components/app/Brand";
@@ -22,6 +29,7 @@ import { Tabs } from "@/components/ui/Tabs";
 import { Tooltip } from "@/components/ui/Tooltip";
 
 import { DialogDemo } from "./DialogDemo";
+import { FormReferenciaDemo } from "./FormReferenciaDemo";
 import { AlertDismissDemo, CheckboxDemo, RadioDemo, SwitchDemo, TextareaDemo } from "./FormsDemo";
 import { TagDemo } from "./TagDemo";
 import { ToastDemo } from "./ToastDemo";
@@ -833,6 +841,15 @@ export default function DesignPage() {
             </div>
           </LayoutEdicao>
         </div>
+      </Secao>
+
+      <Secao titulo="Formulário de referência (passo 4.2)">
+        <p className="max-w-2xl font-sans text-xs text-muted">
+          Os campos e a ordem saem de <code>src/core/references/campos.ts</code>, que segue os
+          modelos da NBR 6023:2025 — este componente só desenha o que a tabela manda. Troque o tipo:
+          os campos trocam e o que os dois tipos têm em comum fica.
+        </p>
+        <FormReferenciaDemo />
       </Secao>
     </div>
   );

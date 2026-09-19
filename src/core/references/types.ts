@@ -297,3 +297,15 @@ export const ROTULO_TIPO: Record<CSLType, string> = {
   thesis: "Dissertação ou tese",
   "paper-conference": "Trabalho em evento",
 };
+
+// Rótulos dos quatro tipos de participação da §8.1.1.4, na mesma lógica de
+// `ROTULO_TIPO`: o formulário (4.2) oferece opções em vez de um campo livre,
+// e o formatador (4.3) escolhe a abreviação correspondente — "(org.)",
+// "(comp.)", "(ed.)", "(coord.)". A abreviação não fica aqui de propósito: ela
+// é decisão de formatação, e a norma a manda em minúsculas e no singular.
+export const ROTULO_PARTICIPACAO: Record<TipoParticipacao, string> = {
+  organizador: "Organização",
+  compilador: "Compilação",
+  editor: "Edição",
+  coordenador: "Coordenação",
+};
