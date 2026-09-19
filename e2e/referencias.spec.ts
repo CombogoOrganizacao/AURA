@@ -175,3 +175,130 @@ test.describe("formulário de referência — nada guarda texto já formatado", 
     expect(json.issued).toEqual({ "date-parts": [[1960]] });
   });
 });
+
+// --- Painel de gerenciamento (passo 4.5) ------------------------------------
+// Aqui a tela é o editor de verdade, não `/design`: o critério do passo é
+// "cria, edita e exclui", e isso só existe com o painel ligado ao documento e
+// ao autosave. É também o passo em que o `FormReferencia` ganha dono.
+
+// O documento tem um campo "Título" e a referência tem outro, os dois na mesma
+// coluna. Não é ambiguidade de acessibilidade: cada formulário é um grupo com
+// nome próprio (`aria-label`), e é por ele que se diz de qual "Título" se
+// fala — como `getByLabel("Metadados do trabalho")` já faz do outro lado.
+function formulario(page: Page) {
+  return page.getByLabel("Dados da referência");
+}
+
+async function novoDocumento(page: Page) {
+  await page.goto("/documentos");
+  await page.getByRole("button", { name: "Novo documento" }).click();
+  await page.waitForURL(/\/documento\//);
+  await page.getByText("Referências", { exact: true }).click();
+}
+
+test.describe("painel de referências — listar, criar, editar, excluir (passo 4.5)", () => {
+  test("começa vazio, e o vazio explica o que entra ali", async ({ page }) => {
+    await novoDocumento(page);
+
+    await expect(page.getByText("Nenhuma referência cadastrada")).toBeVisible();
+  });
+
+  test("cria uma referência e a prévia mostra como ela vai sair impressa", async ({ page }) => {
+    await novoDocumento(page);
+    await page.getByRole("button", { name: "Nova referência" }).click();
+
+    // Recém-criada não tem o que formatar — dizer "Livro sem título" é melhor
+    // que mostrar a imprenta ausente, que pareceria defeito.
+    await expect(page.getByText("Livro sem título")).toBeVisible();
+
+    await formulario(page).getByLabel("Título", { exact: true }).fill("Globalização");
+    await page.getByRole("button", { name: "+ Adicionar autoria" }).click();
+    await formulario(page).getByLabel("Autoria 1 — sobrenome").fill("Bauman");
+    await formulario(page).getByLabel("Autoria 1 — prenome").fill("Zygmunt");
+    await formulario(page).getByLabel("Local", { exact: true }).fill("Rio de Janeiro");
+    await formulario(page).getByLabel("Editora", { exact: true }).fill("Zahar");
+    await formulario(page).getByLabel("Ano de publicação — ano").fill("1999");
+
+    // A prévia é o formatador do 4.3 na tela: sobrenome em caixa alta,
+    // imprenta pontuada, ponto final.
+    await expect(
+      page.getByText("BAUMAN, Zygmunt. Globalização. Rio de Janeiro: Zahar, 1999."),
+    ).toBeVisible();
+  });
+
+  test("a referência sobrevive ao recarregar a página", async ({ page }) => {
+    await novoDocumento(page);
+    await page.getByRole("button", { name: "Nova referência" }).click();
+    await formulario(page).getByLabel("Título", { exact: true }).fill("Vigiar e punir");
+
+    await expect(page.locator('span[role="status"]')).toHaveText("Salvo", { timeout: 15_000 });
+    await page.reload();
+    await page.getByText("Referências", { exact: true }).click();
+
+    await expect(page.getByText("Vigiar e punir")).toBeVisible();
+  });
+
+  test("editar abre uma por vez", async ({ page }) => {
+    await novoDocumento(page);
+
+    await page.getByRole("button", { name: "Nova referência" }).click();
+    await formulario(page).getByLabel("Título", { exact: true }).fill("Primeira obra");
+    await page.getByRole("button", { name: "Fechar Primeira obra" }).click();
+
+    await page.getByRole("button", { name: "Nova referência" }).click();
+    await formulario(page).getByLabel("Título", { exact: true }).fill("Segunda obra");
+
+    // A segunda está aberta; a primeira, fechada — o botão dela voltou a
+    // "Editar".
+    await expect(page.getByRole("button", { name: "Editar Primeira obra" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Fechar Segunda obra" })).toBeVisible();
+  });
+
+  test("excluir avisa e dá para desfazer", async ({ page }) => {
+    await novoDocumento(page);
+    await page.getByRole("button", { name: "Nova referência" }).click();
+    await formulario(page).getByLabel("Título", { exact: true }).fill("Obra que será excluída");
+
+    await page.getByRole("button", { name: "Excluir Obra que será excluída" }).click();
+
+    await expect(page.getByText("Nenhuma referência cadastrada")).toBeVisible();
+    await expect(page.getByText("Referência excluída")).toBeVisible();
+
+    // Uma dúzia de campos digitados à mão não pode sumir por um clique errado.
+    await page.getByRole("button", { name: "Desfazer exclusão da referência" }).click();
+
+    await expect(page.getByText("Obra que será excluída")).toBeVisible();
+    await expect(page.getByText("Nenhuma referência cadastrada")).toHaveCount(0);
+  });
+
+  test("excluir de vez: dispensado o aviso, a referência não volta", async ({ page }) => {
+    await novoDocumento(page);
+    await page.getByRole("button", { name: "Nova referência" }).click();
+    await formulario(page).getByLabel("Título", { exact: true }).fill("Obra descartada");
+    await page.getByRole("button", { name: "Excluir Obra descartada" }).click();
+
+    await expect(page.locator('span[role="status"]')).toHaveText("Salvo", { timeout: 15_000 });
+    await page.reload();
+    await page.getByText("Referências", { exact: true }).click();
+
+    await expect(page.getByText("Obra descartada")).toHaveCount(0);
+  });
+
+  // Critério do passo: "restrito ao desktop". Mesmo `hidden md:` da tabela e
+  // da fórmula (3.6.3/3.6.5) — o que o breakpoint tira é o CADASTRO.
+  test("o cadastro é restrito ao desktop", async ({ page }) => {
+    await novoDocumento(page);
+    await page.getByRole("button", { name: "Nova referência" }).click();
+    await formulario(page).getByLabel("Título", { exact: true }).fill("Obra do desktop");
+    await expect(page.locator('span[role="status"]')).toHaveText("Salvo", { timeout: 15_000 });
+
+    await page.setViewportSize({ width: 375, height: 800 });
+
+    await expect(page.getByRole("button", { name: "Nova referência" })).toHaveCount(0);
+
+    // A referência já cadastrada continua no documento — some o cadastro, não
+    // o dado.
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await expect(page.getByText("Obra do desktop")).toBeVisible();
+  });
+});

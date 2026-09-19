@@ -8,11 +8,13 @@ import { Editor, type MoverSecao } from "@/components/editor/Editor";
 import { LayoutEdicao } from "@/components/editor/LayoutEdicao";
 import { PainelInspetor } from "@/components/editor/PainelInspetor";
 import { PainelSecoes } from "@/components/editor/PainelSecoes";
+import { PainelReferencias } from "@/components/referencias/PainelReferencias";
 import { Button } from "@/components/ui/Button";
 import { EstadoCarregando, EstadoErro } from "@/components/ui/Estados";
 import { novoDocumento } from "@/core/document/factory";
 import type { Documento, Metadados, Secao } from "@/core/document/types";
 import type { AdaptadorPersistencia } from "@/core/persistence/types";
+import type { Referencia } from "@/core/references/types";
 import { usePersistencia } from "@/lib/persistence-provider";
 import { useAutosave, type StatusAutosave } from "@/lib/useAutosave";
 
@@ -138,6 +140,10 @@ function Carregado({
     setDocumento((atual) => ({ ...atual, sections: secoes }));
   }
 
+  function atualizarReferencias(atualizador: (atual: Referencia[]) => Referencia[]) {
+    setDocumento((atual) => ({ ...atual, references: atualizador(atual.references) }));
+  }
+
   // `PainelSecoes` (irmão de `Editor`, sem acesso à instância do TipTap)
   // reordena através desta ref — passo 3.2.4. `useCallback` com deps vazias
   // dá pro `onReorderReady` de `Editor.tsx` uma identidade estável, então o
@@ -216,6 +222,30 @@ function Carregado({
                   metadados={documento.metadados}
                   sections={documento.sections}
                   onChange={atualizarMetadados}
+                />
+              </div>
+            </details>
+            {/*
+              Referências **só no desktop** (critério do passo 4.5), com o
+              mesmo `hidden md:block` da tabela e da fórmula na `Toolbar`
+              (3.6.3/3.6.5). Cadastrar uma referência é preencher de seis a
+              doze campos separados — autoria, título, imprenta, paginação —, e
+              num teclado virtual isso deixa de ser tarefa e vira provação. O
+              que o breakpoint tira é o CADASTRO: as referências já cadastradas
+              continuam saindo no `.docx` exportado de qualquer largura.
+
+              O 6.4.5 troca este `hidden` por "desabilitado com explicação",
+              junto com os outros três — sumir sem aviso é pior que impedir
+              com motivo, e a troca vale a pena fazer de uma vez só.
+            */}
+            <details className="hidden shrink-0 border-b border-[var(--border-subtle)] md:block">
+              <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                Referências
+              </summary>
+              <div className="px-4 pb-4">
+                <PainelReferencias
+                  references={documento.references}
+                  onChange={atualizarReferencias}
                 />
               </div>
             </details>

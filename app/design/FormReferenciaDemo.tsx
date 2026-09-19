@@ -8,9 +8,9 @@ import type { Referencia } from "@/core/references/types";
 
 // `FormReferencia` (passo 4.2) é controlado — recebe a referência e devolve a
 // próxima, sem ser dono da persistência, como `FormMetadados` e
-// `PainelAbreviaturas`. Quem o segura de verdade é o painel de gerenciamento,
-// que é o passo 4.5; até lá, o estado local aqui é o que o faz existir na
-// tela, mesma razão de `CheckboxDemo` e `TagDemo`.
+// `PainelAbreviaturas`. Quem o segura no produto é `PainelReferencias` (4.5);
+// aqui o estado local é o que o faz existir na tela, mesma razão de
+// `CheckboxDemo` e `TagDemo`.
 //
 // **A amostra não é enfeite: é onde este passo se confere.** O critério de
 // aceite do 4.2 — "trocar o tipo troca os campos e preserva os

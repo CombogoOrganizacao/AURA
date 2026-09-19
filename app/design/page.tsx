@@ -4,11 +4,15 @@
 // batendo com os três sempre que um token ou componente mudar.
 //
 // Desde o passo 4.2 ela hospeda também um componente de FUNCIONALIDADE, e não
-// só primitivo de `ui/`: o formulário de referência, que é controlado e ainda
-// não tem dono — quem vai segurá-lo é o painel de gerenciamento do passo 4.5.
-// O Vitest deste projeto só roda sobre `src/core/`, então a metade visual de
-// um passo como esse precisa de uma página para o Playwright dirigir. Sai
-// daqui quando o 4.5 lhe der lugar próprio.
+// só primitivo de `ui/`: o formulário de referência. Ele entrou aqui por não
+// ter dono, e o 4.5 lhe deu um (`PainelReferencias`, na coluna do editor).
+//
+// **Mesmo assim ficou**, ao contrário do que o 4.2 previu, e por um motivo que
+// só apareceu depois: esta é a única tela que mostra o CSL-JSON guardado. É
+// ela que prova, de ponta a ponta, que o que a pessoa digita vira campo
+// separado e não string pronta — a invariante inteira da Fase 4. O painel
+// mostra a referência FORMATADA, e texto formatado não distingue "guardado em
+// campos" de "guardado já pronto". As duas telas provam coisas diferentes.
 
 import { AppTopBar } from "@/components/app/AppTopBar";
 import { Brand } from "@/components/app/Brand";
