@@ -55,13 +55,9 @@ function documentoCompleto(): Documento {
     },
   ];
 
-  documento.references = [
-    { id: "r1", type: "book", title: "Um livro qualquer" },
-  ];
+  documento.references = [{ id: "r1", type: "book", title: "Um livro qualquer" }];
 
-  documento.apendices = [
-    { id: "ap1", titulo: "Questionário aplicado", content: [] },
-  ];
+  documento.apendices = [{ id: "ap1", titulo: "Questionário aplicado", content: [] }];
   documento.anexos = [{ id: "an1", titulo: "Parecer do comitê", content: [] }];
 
   return documento;
@@ -168,11 +164,16 @@ describe("ordem canônica no .docx (passo 3.7.2)", () => {
     expect(xml).toContain("SUMÁRIO");
   });
 
-  it("referências cadastradas não somem em silêncio antes do passo 4.11", async () => {
+  // Até o 4.11 saía um aviso no lugar da lista; agora sai a referência
+  // formatada — e o aviso não pode sobrar.
+  it("as referências cadastradas saem formatadas, sem aviso provisório (4.11)", async () => {
     const documento = documentoCompleto();
     const xml = await documentXml(documento);
 
     expect(xml).toContain("REFERÊNCIAS");
-    expect(xml).toContain("formatação ABNT ainda não exportada");
+    // Sem autoria, entra pelo título com a primeira palavra em maiúsculas
+    // (NBR 6023:2025 §6.7).
+    expect(xml).toContain("UM LIVRO qualquer");
+    expect(xml).not.toContain("formatação ABNT ainda não exportada");
   });
 });

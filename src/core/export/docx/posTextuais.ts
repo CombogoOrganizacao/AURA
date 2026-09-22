@@ -3,15 +3,16 @@ import { AlignmentType, Paragraph, TextRun, type FileChild } from "docx";
 import { gerarAnexos } from "../../document/elements/anexos";
 import { gerarApendices } from "../../document/elements/apendices";
 import {
-  TITULO_REFERENCIAS,
-  textoTituloPosTextual,
-  type ItemPosTextual,
-} from "../../document/elements/posTextual";
+  gerarListaReferencias,
+  type EntradaListaReferencias,
+} from "../../document/elements/referencias";
+import { textoTituloPosTextual, type ItemPosTextual } from "../../document/elements/posTextual";
 import type { Documento, ElementoPosTextual, NoConteudo } from "../../document/types";
 import { ABNT } from "./constants";
 import { paragrafoTituloPosTextual } from "./preTextuais";
 
-// Pós-textuais no `.docx` — passo 3.7.2: referências, apêndices e anexos. A
+// Pós-textuais no `.docx` — passo 3.7.2 (lugar e títulos) e 4.11 (a lista de
+// referências): referências, apêndices e anexos. A
 // letra e o título de apêndice/anexo vêm de `gerarApendices()`/`gerarAnexos()`
 // (3.7.1), que é quem conhece a regra; aqui só vira OOXML. As duas sequências
 // continuam independentes porque cada função recebe a sua lista e nada mais.
@@ -93,34 +94,56 @@ export function blocosDeAnexos(documento: Documento): FileChild[][] {
   return blocos(documento.anexos, gerarAnexos);
 }
 
-// Referências (NBR 6023) — o LUGAR na ordem canônica é deste passo, o
-// CONTEÚDO é da Fase 4. Não existe formatador ABNT (4.3) nem UI que escreva em
-// `Documento.references` (sempre `[]`, ver `types.ts`).
+// Referências — passo 4.11. O conteúdo e a ordem vêm de
+// `gerarListaReferencias()` (`document/elements/referencias.ts`); aqui é só a
+// disposição na página, conferida no texto integral das normas:
+// - NBR 6023:2025 §6.3: "elaboradas em espaço simples, alinhadas à margem
+//   esquerda do texto e separadas entre si por uma linha em branco de espaço
+//   simples";
+// - NBR 14724:2024 §5.2: as referências são exceção ao 1,5 e "devem ser
+//   separadas entre si por um espaço simples em branco";
+// - §5.1: fonte 12 — as referências não estão entre os elementos de "tamanho
+//   menor", então saem no corpo do texto (o estilo padrão).
 //
-// Documento sem referência nenhuma não ganha seção de referências: é a mesma
-// regra de `paragrafosResumo()` — o exportador não fabrica um "REFERÊNCIAS"
-// vazio só para ter aparência de conformidade.
+// **A linha em branco é um parágrafo vazio, e não espaçamento depois.** É o
+// que a norma descreve ("uma linha em branco de espaço simples"), e é a única
+// forma de ela medir exatamente uma linha da mesma fonte: `spacing.after` em
+// pontos fixos erraria a altura da linha simples da Times, que o Word calcula
+// pela métrica da fonte.
 //
-// Havendo referência antes do 4.11, sai o título e um aviso no lugar da lista,
-// nunca a referência jogada crua nem o silêncio: é o mesmo desfecho que a
-// grade da tabela e a moldura da figura já têm em `fromDocumento.ts`. Guardar
-// uma referência e não imprimi-la seria a pior das três saídas.
-export function blocosDeReferencias(documento: Documento): FileChild[][] {
-  if (documento.references.length === 0) return [];
+// **O destaque é negrito**, o mesmo recurso que o painel (4.5) usa na tela.
+// A §6.7 deixa escolher negrito, itálico ou sublinhado, mas exige o MESMO em
+// todas as referências — e o aluno não pode ver um na tela e receber outro no
+// arquivo.
+//
+// Sem referência nenhuma, nada sai: o exportador não fabrica um "REFERÊNCIAS"
+// vazio (ver `gerarListaReferencias()`).
+const ESPACO_SIMPLES = { line: ABNT.espacamento1, before: 0, after: 0 };
 
-  return [
-    [
-      paragrafoTituloPosTextual(TITULO_REFERENCIAS),
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `[ ${documento.references.length} referência(s) cadastrada(s) — formatação ABNT ainda não exportada, ver passo 4.11 ]`,
-            italics: true,
-          }),
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: { line: ABNT.espacamento1 },
-      }),
-    ],
-  ];
+function paragrafoReferencia(trechos: EntradaListaReferencias["trechos"]): Paragraph {
+  return new Paragraph({
+    children: trechos.map(
+      (trecho) =>
+        new TextRun({ text: trecho.texto, ...(trecho.papel === "titulo" ? { bold: true } : {}) }),
+    ),
+    alignment: AlignmentType.LEFT,
+    spacing: ESPACO_SIMPLES,
+    indent: { left: 0, firstLine: 0 },
+  });
+}
+
+function linhaEmBranco(): Paragraph {
+  return new Paragraph({ children: [], spacing: ESPACO_SIMPLES });
+}
+
+export function blocosDeReferencias(documento: Documento): FileChild[][] {
+  const lista = gerarListaReferencias(documento.references);
+  if (!lista) return [];
+
+  const corpo = lista.entradas.flatMap((entrada, indice) =>
+    indice === 0
+      ? [paragrafoReferencia(entrada.trechos)]
+      : [linhaEmBranco(), paragrafoReferencia(entrada.trechos)],
+  );
+  return [[paragrafoTituloPosTextual(lista.titulo), ...corpo]];
 }
