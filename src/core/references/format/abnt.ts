@@ -39,6 +39,7 @@ import type {
   Responsabilidade,
   TipoParticipacao,
 } from "../types";
+import { palavrasIniciais } from "./primeiraPalavra";
 
 // --- A saída -----------------------------------------------------------------
 
@@ -356,34 +357,20 @@ function tituloSimples(
   return presente(subtitulo) ? [principal, texto(`: ${subtitulo}`)] : [principal];
 }
 
-// Artigos definidos e indefinidos do português. §6.7 manda a caixa alta cobrir
-// "a primeira palavra, incluindo artigo e monossílabo iniciais" — quando o
-// título abre com artigo, ele não conta sozinho como a primeira palavra.
-// Exportada para a chamada no texto (`inText.ts`, 4.9), que entra pelo título
-// com a mesma "primeira palavra" — duas listas de artigo acabariam
-// discordando sobre onde a primeira palavra termina.
-export const ARTIGOS_INICIAIS: ReadonlySet<string> = new Set([
-  "o",
-  "a",
-  "os",
-  "as",
-  "um",
-  "uma",
-  "uns",
-  "umas",
-]);
-
-// LIMITAÇÃO conhecida: a regra da §6.7 fala em "artigo E MONOSSÍLABO
-// iniciais", e monossílabo não se detecta sem contar sílabas. Fica só o
-// artigo, que é o caso comum e verificável; um título aberto por monossílabo
-// que não seja artigo sai com uma palavra a menos em caixa alta.
+// §6.7: sem autoria, a primeira palavra em maiúsculas, "incluindo artigo e
+// monossílabo iniciais". Onde a primeira palavra termina é decidido em
+// `primeiraPalavra.ts`, a mesma regra que a chamada no texto usa (10520
+// §6.1.1.4) — a entrada da lista e a chamada precisam coincidir.
 function primeirasPalavrasEmCaixaAlta(titulo: string): string {
   const palavras = titulo.split(" ");
-  if (palavras.length === 0) return titulo;
-
-  const quantas = ARTIGOS_INICIAIS.has(palavras[0].toLocaleLowerCase("pt-BR")) ? 2 : 1;
+  const quantas = palavrasIniciais(palavras.filter(Boolean));
+  let vistas = 0;
   return palavras
-    .map((palavra, indice) => (indice < quantas ? maiusculas(palavra) : palavra))
+    .map((palavra) => {
+      if (!palavra) return palavra;
+      vistas++;
+      return vistas <= quantas ? maiusculas(palavra) : palavra;
+    })
     .join(" ");
 }
 

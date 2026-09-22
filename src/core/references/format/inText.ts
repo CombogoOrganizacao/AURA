@@ -5,9 +5,9 @@
 // referência. Nada disto é gravado; a chamada muda sozinha quando a referência
 // é corrigida.
 //
-// Fonte: docs/auditoria-abnt.md, seção "Auditoria da NBR 10520:2023", lida na
-// íntegra em 18/09/2026. O PDF não está no repositório; o que abaixo não está
-// literal naquele resumo vai marcado `CONVENÇÃO` ou `CONFERIR`.
+// Fonte: o texto integral da NBR 10520:2023 (docs/auditoria-abnt.md, seção
+// própria), conferido item a item neste arquivo. O que a norma não fixa vai
+// marcado `CONVENÇÃO`.
 //
 // **Maiúsculas e minúsculas, não caixa alta** (§6.1.1.1). A edição de 2002
 // mandava `(SILVA, 2019)`; a de 2023 manda `(Silva, 2019)`. A caixa alta é da
@@ -16,7 +16,8 @@
 
 import type { FonteOriginal } from "../../document/types";
 import type { CSLDate, CSLName, Referencia } from "../types";
-import { ARTIGOS_INICIAIS, temAutoria } from "./abnt";
+import { temAutoria } from "./abnt";
+import { palavrasIniciais } from "./primeiraPalavra";
 
 export interface OpcoesChamada {
   // §6.1.2: com quatro ou mais autores, a chamada "pode" trazer só o primeiro
@@ -32,8 +33,11 @@ export interface OpcoesChamada {
 const PADRAO: OpcoesChamada = { etAl: "quatro-ou-mais" };
 
 export interface DadosDaCitacao {
-  // Página da fonte citada (§7.1: obrigatória na citação direta; quem cobra é
-  // a conferência da Fase 5, não esta função).
+  // Página ou localização da fonte citada (§6.1.3: "o número da página ou
+  // localização, se houver, após a data"). Número puro ganha `p.`; qualquer
+  // outra forma sai como digitada — `v. 1, p. 16` (§7.1.3), `cap. V, art. 49`,
+  // `local. 264`, `9 min 41 s` (§7.1.4). Obrigatória na direta; quem cobra é
+  // a conferência da Fase 5, não esta função.
   pagina?: string | null;
   // Citação de citação (§7.3): a obra original, que não está na lista.
   apud?: FonteOriginal | null;
@@ -86,9 +90,8 @@ function elementos(
 function autoria(autores: readonly CSLName[], opcoes: OpcoesChamada): string {
   const nomes = autores.map(nomeNaChamada).filter(Boolean);
   if (opcoes.etAl === "quatro-ou-mais" && nomes.length >= 4) return `${nomes[0]} et al.`;
-  // `CONVENÇÃO` — ponto e vírgula entre os coautores dentro dos parênteses.
-  // A auditoria registra o ponto e vírgula para "vários autores entre
-  // parênteses" (§6.1.8); é também a forma da lista (6023 §8.1.1).
+  // Ponto e vírgula entre os coautores dentro dos parênteses: §6.1.3, exemplo
+  // 1, "(Clarac; Bonnin, 1985, p. 72)"; §6.1.7, "(Cruz; Correa; Costa, ...)".
   return nomes.join("; ");
 }
 
@@ -103,18 +106,22 @@ function nomeNaChamada(nome: CSLName): string {
   return (nome.literal ?? nome.family ?? nome.given ?? "").trim();
 }
 
-// §6.1.1.4: sem autoria, a entrada é pelo título, "com supressão [...]
-// conforme o caso". `CONFERIR` no texto integral da norma a extensão exata: a
-// leitura aqui é a primeira palavra (com o artigo inicial, a mesma regra da
-// lista em `abnt.ts`, §6.7 da 6023) seguida de "[...]" quando o título
-// continua. Caixa como digitada — maiúsculas e minúsculas, como a autoria.
+// §6.1.1.4, alíneas a) a d): a única palavra; a primeira seguida de `[...]`;
+// o artigo ou o monossílabo com a palavra seguinte e `[...]` — "(Inglês,
+// 2012)", "(Anteprojeto [...], 1987)", "(A flor [...], 1995)", "(Nos
+// canaviais [...], 1995)". Caixa como digitada: a norma escreve os exemplos
+// em maiúsculas e minúsculas, como a autoria (§6.1.1.1).
 function entradaPeloTitulo(titulo: string): string {
   const palavras = titulo.trim().split(/\s+/).filter(Boolean);
   if (palavras.length === 0) return "[...]";
 
-  const quantas =
-    palavras.length > 1 && ARTIGOS_INICIAIS.has(palavras[0].toLocaleLowerCase("pt-BR")) ? 2 : 1;
-  const inicio = palavras.slice(0, quantas).join(" ");
+  const quantas = palavrasIniciais(palavras);
+  // A pontuação que seguia a palavra no título ("Nos canaviais, mutilações")
+  // é do título, não da chamada: "(Nos canaviais [...], 1995)".
+  const inicio = palavras
+    .slice(0, quantas)
+    .join(" ")
+    .replace(/[,.;:]+$/, "");
   return palavras.length > quantas ? `${inicio} [...]` : inicio;
 }
 
@@ -133,10 +140,14 @@ function ano(issued: CSLDate | undefined): string {
   return Number.isFinite(primeiro) ? String(primeiro) : "";
 }
 
-// "45" → "p. 45"; "45-47" → "p. 45-47". Página já escrita com a abreviatura
-// (`p.` ou `f.`, Anexo A) não ganha outra.
+// "45" → "p. 45"; "45-47" → "p. 45-47"; "xi" → "p. xi" (§6.1.1.2, exemplo 1,
+// "(Organização Mundial da Saúde, 2010, p. xi)"). Qualquer outra forma é
+// localização que a pessoa escreveu com o termo dela (§7.1.3, §7.1.4) e sai
+// como está — pôr `p.` na frente de "cap. V" daria "p. cap. V".
+const SO_PAGINA = /^[0-9ivxlcdm]+(\s*[-–—]\s*[0-9ivxlcdm]+)?$/i;
+
 function paginaDaChamada(pagina: string | null | undefined): string {
   const valor = pagina?.trim();
   if (!valor) return "";
-  return /^(p|f)\.\s/i.test(valor) ? valor : `p. ${valor.replace(/\s*[–—]\s*/g, "-")}`;
+  return SO_PAGINA.test(valor) ? `p. ${valor.replace(/\s*[–—-]\s*/g, "-")}` : valor;
 }

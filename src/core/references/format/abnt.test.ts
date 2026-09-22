@@ -337,6 +337,17 @@ describe("obra sem autoria — entrada pelo título (§8.1.4 e §6.7)", () => {
     expect(texto(comArtigo).startsWith("AS 500 maiores empresas.")).toBe(true);
   });
 
+  // "incluindo artigo E MONOSSÍLABO iniciais". O exemplo é o da lista de
+  // referências da NBR 10520:2023 §6.1.1.4 d): "NOS CANAVIAIS, mutilações...".
+  it("a caixa alta cobre o monossílabo inicial e a palavra seguinte", () => {
+    const comMonossilabo: ReferenciaLivro = {
+      ...semAutor,
+      title: "Nos canaviais, mutilações em vez de lazer e escola",
+    };
+
+    expect(texto(comMonossilabo).startsWith("NOS CANAVIAIS, mutilações")).toBe(true);
+  });
+
   it("nunca escreve Anônimo nem Autor desconhecido", () => {
     expect(texto(semAutor)).not.toMatch(/anônimo|autor desconhecido/i);
   });

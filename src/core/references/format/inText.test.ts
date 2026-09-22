@@ -141,3 +141,63 @@ describe("citação de citação (§7.3)", () => {
     ).toBe("(Freire, 1987 apud Silva, 2019)");
   });
 });
+
+// Exemplos tirados do texto da NBR 10520:2023, conferidos no PDF oficial.
+describe("chamada — exemplos da própria norma", () => {
+  it("§6.1.1.4 d): título que abre com monossílabo leva a palavra seguinte", () => {
+    expect(
+      formatarChamada(
+        livro(undefined, {
+          title: "Nos canaviais, mutilações em vez de lazer e escola",
+          issued: { "date-parts": [[1995]] },
+        }),
+        { pagina: "12" },
+      ),
+    ).toBe("(Nos canaviais [...], 1995, p. 12)");
+  });
+
+  it("§6.1.1.4 c): artigo e a palavra seguinte", () => {
+    expect(
+      formatarChamada(
+        livro(undefined, { title: "A flor prometida", issued: { "date-parts": [[1995]] } }),
+        { pagina: "4" },
+      ),
+    ).toBe("(A flor [...], 1995, p. 4)");
+  });
+
+  it("§6.1.1.2: página em algarismo romano ganha p.", () => {
+    expect(
+      formatarChamada(
+        livro([{ literal: "Organização Mundial da Saúde" }], {
+          issued: { "date-parts": [[2010]] },
+        }),
+        { pagina: "xi" },
+      ),
+    ).toBe("(Organização Mundial da Saúde, 2010, p. xi)");
+  });
+
+  it.each([
+    ["v. 1, p. 16", "(Silva, 2023, v. 1, p. 16)"], // §7.1.3
+    ["cap. V, art. 49, inc. I", "(Silva, 2023, cap. V, art. 49, inc. I)"], // §7.1.4
+    ["local. 264", "(Silva, 2023, local. 264)"], // §7.1.4
+    ["9 min 41 s", "(Silva, 2023, 9 min 41 s)"], // §7.1.4
+  ])("localização %s sai como digitada, sem p. na frente", (pagina, esperado) => {
+    expect(formatarChamada(livro([SILVA]), { pagina })).toBe(esperado);
+  });
+
+  it("§7.3, exemplo 2: apud com páginas nas duas pontas", () => {
+    expect(
+      formatarChamada(
+        livro([{ family: "Suassuna", given: "Lívia" }], { issued: { "date-parts": [[1995]] } }),
+        {
+          pagina: "55",
+          apud: {
+            author: [{ family: "Cagliari", given: "Luiz Carlos" }],
+            issued: { "date-parts": [[1986]] },
+            pagina: "104",
+          },
+        },
+      ),
+    ).toBe("(Cagliari, 1986, p. 104 apud Suassuna, 1995, p. 55)");
+  });
+});
