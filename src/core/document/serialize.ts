@@ -1,5 +1,6 @@
 import type { JSONContent } from "@tiptap/core";
 
+import { lerAtributosCitacao } from "../editor/marks/citation";
 import type {
   CelulaTabela,
   LinhaTabela,
@@ -11,7 +12,7 @@ import type {
   TipoMarca,
 } from "./types";
 
-const TIPOS_MARCA: readonly TipoMarca[] = ["negrito", "italico"];
+const TIPOS_MARCA: readonly TipoMarca[] = ["negrito", "italico", "citacao"];
 
 function ehTipoMarca(valor: string): valor is TipoMarca {
   return (TIPOS_MARCA as readonly string[]).includes(valor);
@@ -187,7 +188,14 @@ function paraMarcas(marks: JSONContent["marks"]): Marca[] {
     if (!ehTipoMarca(marca.type)) {
       throw new Error(`Marca ainda não suportada: "${marca.type}"`);
     }
-    return { type: marca.type };
+    if (marca.type !== "citacao") return { type: marca.type };
+
+    // Citação com atributo fora de forma lança em vez de cair para um
+    // padrão — mesma política da união fechada: uma ligação consertada em
+    // silêncio apontaria para a referência errada com cara de certa.
+    const attrs = lerAtributosCitacao(marca.attrs);
+    if (!attrs) throw new Error("Marca de citação com atributos inválidos");
+    return { type: "citacao", attrs };
   });
 }
 
@@ -231,7 +239,13 @@ function deConteudoInline(content: NoTexto[] | undefined): JSONContent[] | undef
     type: "text",
     text: texto.text,
     ...(texto.marks && texto.marks.length > 0
-      ? { marks: texto.marks.map((marca) => ({ type: marca.type })) }
+      ? {
+          marks: texto.marks.map((marca) =>
+            marca.type === "citacao"
+              ? { type: marca.type, attrs: { ...marca.attrs } }
+              : { type: marca.type },
+          ),
+        }
       : {}),
   }));
 }

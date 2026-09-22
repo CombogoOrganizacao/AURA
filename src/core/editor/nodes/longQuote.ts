@@ -35,11 +35,14 @@ export const CitacaoLonga = Node.create<CitacaoLongaOptions>({
   group: "block",
 
   // Inline direto, sem parágrafo por dentro — mesma forma de conteúdo de
-  // `paragrafo` (texto com marca `negrito`/`italico`; nunca a marca
-  // `citacao`, que ainda não existe — a ligação com a referência já mora em
-  // `refId`/`pagina`, atributos do próprio bloco, docs/schema-tiptap.md
-  // §4.3).
+  // `paragrafo`, com texto em `negrito`/`italico`.
   content: "inline*",
+
+  // Nunca a marca `citacao` (4.8): a ligação com a referência já mora em
+  // `refId`/`pagina`, atributos do próprio bloco (docs/schema-tiptap.md
+  // §4.3). Uma marca dentro dele seria uma segunda ligação, que poderia
+  // apontar para outra obra e deixar o bloco com duas chamadas.
+  marks: "negrito italico",
 
   addOptions() {
     return {

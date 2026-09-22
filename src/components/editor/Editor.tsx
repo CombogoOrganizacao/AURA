@@ -15,6 +15,7 @@ import { fromDocumento, toDocumento } from "@/core/document/serialize";
 import type { Secao } from "@/core/document/types";
 import { cursorNaUltimaLinha } from "@/core/editor/caret";
 import { CursorDeIntervalo } from "@/core/editor/gapcursor";
+import { Citacao } from "@/core/editor/marks/citation";
 import { Italico } from "@/core/editor/marks/italico";
 import { Negrito } from "@/core/editor/marks/negrito";
 import { Documento as DocumentoNode } from "@/core/editor/nodes/documento";
@@ -157,6 +158,11 @@ export function Editor({ sections, onSectionsChange, onReorderReady }: EditorPro
       FormulaComVisualizacao,
       Negrito,
       Italico,
+      // Citação ligada a uma referência (passo 4.8). Registrada antes de ter
+      // botão (4.10) pelo mesmo motivo da `citacao_longa` acima: um
+      // documento salvo com a marca precisa carregar, e o schema recusaria
+      // uma marca que não conhece.
+      Citacao,
       // Desfazer/refazer (passo 2B.12) não vem de graça: as extensões
       // "core" do TipTap v3 (Editable, Commands, Keymap...) não incluem
       // histórico — é um pacote separado desde sempre, agora

@@ -7,20 +7,58 @@
 // - referências são objetos CSL-JSON, nunca texto já formatado numa norma;
 // - elementos pré-textuais são campos de `Metadados`, não nós do editor.
 
-import type { Referencia } from "../references/types";
+import type { CSLDate, CSLName, Referencia } from "../references/types";
 
 export type NivelSecao = 1 | 2 | 3;
 
 // Lista fechada de marcas (docs/schema-tiptap.md §5) — cresce um membro de
 // cada vez, só quando a marca ganha código próprio em
-// src/core/editor/marks/. `negrito`/`italico` desde o passo 2.5; `citacao`
-// (referência ligada por `refId`) e `sugestao` (estado da IA) ainda não têm
-// nó/marca no editor — entram na Fase 4/6, quando ganharem código.
-export type TipoMarca = "negrito" | "italico";
+// src/core/editor/marks/. `negrito`/`italico` desde o passo 2.5, `citacao`
+// desde o 4.8; `sugestao` (estado da IA) entra quando ganhar código.
+export type TipoMarca = "negrito" | "italico" | "citacao";
 
-export interface Marca {
-  type: TipoMarca;
+// Citação no texto ligada a uma referência (NBR 10520, docs/schema-tiptap.md
+// §5.2) — passo 4.8. O trecho marcado é o texto DO ALUNO: o excerto citado
+// (direta) ou a paráfrase (indireta). A chamada "(Silva, 2019, p. 45)" nunca
+// é digitada nem guardada: é sintetizada destes atributos mais os dados da
+// referência (4.9), e por isso muda sozinha quando a referência é corrigida.
+//
+// **Guarda `refId`, nunca o texto formatado.** Com a chamada gravada, corrigir
+// o ano da referência deixaria o texto dizendo o ano velho, e excluir a
+// referência não teria como ser percebido.
+//
+// **Órfã é estado DERIVADO, não campo.** Uma citação é órfã quando o `refId`
+// não está mais em `Documento.references` (`citacoesOrfas()`,
+// src/core/references/citacoes.ts). Excluir uma referência não toca no texto
+// nem na marca — o texto do aluno fica exatamente como estava, e o "Desfazer"
+// do painel reata a ligação sem código nenhum, porque ela nunca foi desfeita.
+export type ModoCitacao = "direta_curta" | "indireta";
+
+// Citação de citação (10520 §7.3): o aluno leu Freire citado por Silva. Só a
+// fonte CONSULTADA (Silva) entra na lista de referências — é ela o `refId`. A
+// obra original não é uma `Referencia` e por isso não tem id: os dados que a
+// chamada precisa ("autoria, data, página, apud...") ficam aqui, em campos,
+// pelo mesmo motivo de a referência ser CSL-JSON e não string. Declarado no
+// 4.8, antes da interface que o cria (4.10), para a marca não mudar de forma
+// depois e exigir migração dos documentos já salvos.
+export interface FonteOriginal {
+  author: CSLName[];
+  issued?: CSLDate;
+  pagina: string | null;
 }
+
+export interface AtributosCitacao {
+  refId: string;
+  modo: ModoCitacao;
+  // Obrigatória quando `modo` é `direta_curta` (10520 §7.1) — quem cobra é a
+  // conferência da Fase 5, não o tipo: citação em edição passa por "sem
+  // página ainda" e não pode ser recusada no meio da digitação.
+  pagina: string | null;
+  apud: FonteOriginal | null;
+}
+
+export type Marca =
+  { type: "negrito" } | { type: "italico" } | { type: "citacao"; attrs: AtributosCitacao };
 
 // Texto inline dentro de um parágrafo.
 export interface NoTexto {
