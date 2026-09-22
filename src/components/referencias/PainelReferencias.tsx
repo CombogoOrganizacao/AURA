@@ -5,10 +5,11 @@ import { useState } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { novaReferencia } from "@/core/references/campos";
-import { formatarReferencia } from "@/core/references/format/abnt";
-import { ROTULO_TIPO, type Referencia } from "@/core/references/types";
+import type { Referencia } from "@/core/references/types";
 
 import { FormReferencia } from "./FormReferencia";
+import { ImportarBib } from "./ImportarBib";
+import { nomeDaReferencia, PreviaReferencia } from "./PreviaReferencia";
 
 interface PainelReferenciasProps {
   references: readonly Referencia[];
@@ -48,6 +49,12 @@ export function PainelReferencias({ references, onChange }: PainelReferenciasPro
     setAberta(nova.id);
   }
 
+  // As escolhidas na prévia (4.7) entram no fim da lista, na ordem do arquivo
+  // — a mesma regra de "ordem de cadastro" do resto do painel.
+  function importar(novas: Referencia[]) {
+    onChange((atual) => [...atual, ...novas]);
+  }
+
   function editar(id: string, atualizador: (atual: Referencia) => Referencia) {
     onChange((atual) =>
       atual.map((referencia) => (referencia.id === id ? atualizador(referencia) : referencia)),
@@ -73,14 +80,17 @@ export function PainelReferencias({ references, onChange }: PainelReferenciasPro
 
   return (
     <div className="flex flex-col gap-3 font-sans">
-      <Button variant="outline" size="sm" onClick={adicionar}>
-        Nova referência
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={adicionar}>
+          Nova referência
+        </Button>
+        <ImportarBib onImportar={importar} />
+      </div>
 
       {removida && (
         <Alert tone="warning" title="Referência excluída" onDismiss={() => setRemovida(null)}>
           <div className="flex flex-col items-start gap-2">
-            <span>{nomeDe(removida)}</span>
+            <span>{nomeDaReferencia(removida)}</span>
             {/*
               "Desfazer" sozinho não basta como nome acessível: a toolbar do
               editor tem o dela ("Desfazer (Ctrl+Z)") e, fora de contexto,
@@ -112,12 +122,12 @@ export function PainelReferencias({ references, onChange }: PainelReferenciasPro
             >
               <div className="flex items-start gap-2">
                 <p className="flex-1 text-2xs leading-relaxed text-body">
-                  <Previa referencia={referencia} />
+                  <PreviaReferencia referencia={referencia} />
                 </p>
                 <Button
                   variant="quiet"
                   size="sm"
-                  aria-label={`${aberta === referencia.id ? "Fechar" : "Editar"} ${nomeDe(referencia)}`}
+                  aria-label={`${aberta === referencia.id ? "Fechar" : "Editar"} ${nomeDaReferencia(referencia)}`}
                   onClick={() => setAberta(aberta === referencia.id ? null : referencia.id)}
                 >
                   {aberta === referencia.id ? "Fechar" : "Editar"}
@@ -138,7 +148,7 @@ export function PainelReferencias({ references, onChange }: PainelReferenciasPro
                   <Button
                     variant="quiet"
                     size="sm"
-                    aria-label={`Excluir ${nomeDe(referencia)}`}
+                    aria-label={`Excluir ${nomeDaReferencia(referencia)}`}
                     onClick={() => remover(referencia)}
                   >
                     Excluir referência
@@ -156,42 +166,4 @@ export function PainelReferencias({ references, onChange }: PainelReferenciasPro
       </p>
     </div>
   );
-}
-
-// A referência como ela vai sair impressa — é o que torna concreto que os
-// campos separados viram uma entrada na norma, sem a pessoa precisar exportar
-// para conferir.
-//
-// **O negrito é escolha desta tela, não do core.** A §6.7 admite negrito,
-// itálico ou sublinhado, desde que uniforme em todas as referências; o core
-// marca o trecho com `papel: "titulo"` e quem desenha escolhe. A exportação
-// (4.11) precisa escolher o MESMO recurso, ou o documento fica com dois.
-function Previa({ referencia }: { referencia: Referencia }) {
-  // Referência recém-criada ainda não tem o que formatar: sem título, o
-  // formatador devolveria só a imprenta ausente ("[S. l.: s. n.]."), que
-  // parece defeito em vez de campo por preencher.
-  if (referencia.title.trim() === "") {
-    return <span className="text-muted">{ROTULO_TIPO[referencia.type]} sem título</span>;
-  }
-
-  return (
-    <>
-      {formatarReferencia(referencia).map((trecho, indice) =>
-        trecho.papel === "titulo" ? (
-          <strong key={indice} className="font-semibold">
-            {trecho.texto}
-          </strong>
-        ) : (
-          <span key={indice}>{trecho.texto}</span>
-        ),
-      )}
-    </>
-  );
-}
-
-// Nome curto para rótulo de botão e para o aviso de exclusão. O texto
-// formatado inteiro viraria um `aria-label` de duas linhas.
-function nomeDe(referencia: Referencia): string {
-  const titulo = referencia.title.trim();
-  return titulo === "" ? `${ROTULO_TIPO[referencia.type]} sem título` : titulo;
 }

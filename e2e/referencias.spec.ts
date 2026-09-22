@@ -302,3 +302,127 @@ test.describe("painel de referências — listar, criar, editar, excluir (passo 
     await expect(page.getByText("Obra do desktop")).toBeVisible();
   });
 });
+
+// --- Importação de .bib com prévia (passo 4.7) ------------------------------
+// O Vitest do 4.6 prova o mapeamento; aqui o que se prova é o critério do
+// passo: "importar 20 entradas mostra as 20 e permite descartar algumas", e
+// que nada entra no documento antes do "Importar".
+
+function bibComObras(quantidade: number, extra = ""): Buffer {
+  const entradas = Array.from(
+    { length: quantidade },
+    (_, i) => `@book{obra${i + 1},
+  author    = {Silva, Ana},
+  title     = {Obra ${i + 1}},
+  publisher = {Atlas},
+  address   = {S{\\~a}o Paulo},
+  year      = {${2000 + i}}
+}`,
+  );
+  return Buffer.from([...entradas, extra].join("\n\n"), "utf-8");
+}
+
+async function escolherBib(page: Page, conteudo: Buffer) {
+  await page
+    .getByLabel("Arquivo .bib")
+    .setInputFiles({ name: "tcc.bib", mimeType: "text/plain", buffer: conteudo });
+  return page.getByRole("dialog", { name: "Importar referências" });
+}
+
+function botoesEditar(page: Page) {
+  return page.getByRole("button", { name: /^Editar / });
+}
+
+test.describe("importação de .bib com prévia (passo 4.7)", () => {
+  test("importar 20 entradas mostra as 20 e permite descartar algumas", async ({ page }) => {
+    await novoDocumento(page);
+    const dialogo = await escolherBib(page, bibComObras(20));
+
+    await expect(dialogo.getByRole("checkbox")).toHaveCount(20);
+    // Todas começam marcadas, e cada uma já aparece na forma da norma — com o
+    // acento que no arquivo era `S{\~a}o`.
+    for (const caixa of await dialogo.getByRole("checkbox").all()) {
+      await expect(caixa).toBeChecked();
+    }
+    await expect(dialogo.getByText("SILVA, Ana. Obra 1. São Paulo: Atlas, 2000.")).toBeVisible();
+
+    // Nada entrou no documento ainda: a prévia é só prévia.
+    await expect(botoesEditar(page)).toHaveCount(0);
+
+    // Pelo teclado: o `<input>` do `Checkbox` é `sr-only` e o `<label>` recebe
+    // o clique do mouse — Espaço na caixa focada é o caminho de quem navega
+    // por teclado ou leitor de tela, e prova os dois de uma vez.
+    for (const titulo of ["Obra 3", "Obra 7", "Obra 20"]) {
+      const caixa = dialogo.getByRole("checkbox", { name: `Importar ${titulo}`, exact: true });
+      await caixa.press("Space");
+      await expect(caixa).not.toBeChecked();
+    }
+    await dialogo.getByRole("button", { name: "Importar 17 referências" }).click();
+
+    await expect(dialogo).toHaveCount(0);
+    await expect(botoesEditar(page)).toHaveCount(17);
+    await expect(page.getByRole("button", { name: "Editar Obra 3", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Editar Obra 4", exact: true })).toHaveCount(1);
+
+    // E vão para o documento de verdade, pelo autosave.
+    await expect(page.locator('span[role="status"]')).toHaveText("Salvo", { timeout: 15_000 });
+    await page.reload();
+    await page.getByText("Referências", { exact: true }).click();
+    await expect(botoesEditar(page)).toHaveCount(17);
+  });
+
+  test("mostra o que não entra, com o motivo, e o trecho com erro, com a linha", async ({
+    page,
+  }) => {
+    await novoDocumento(page);
+    const dialogo = await escolherBib(
+      page,
+      bibComObras(
+        2,
+        [
+          "@techreport{relatorio, title = {Relatório}}",
+          "@inproceedings{evento, title = {Artigo}, booktitle = {Congresso X}, year = 2020}",
+          "@book{quebrada, title = {Sem fechar,",
+        ].join("\n\n"),
+      ),
+    );
+
+    await expect(dialogo.getByRole("checkbox")).toHaveCount(3);
+    // O aviso do 4.6 aparece junto da referência a que se refere.
+    await expect(dialogo.getByText(/nome do evento veio de booktitle/)).toBeVisible();
+
+    const naoEntram = dialogo.getByRole("region", { name: "Entradas que não serão importadas" });
+    await expect(naoEntram.getByText(/relatorio/)).toBeVisible();
+    await expect(naoEntram.getByText(/@techreport/)).toBeVisible();
+
+    const comErro = dialogo.getByRole("region", { name: "Trechos com erro no arquivo" });
+    // Diz QUAL entrada quebrou, pela chave — não só um número de linha.
+    await expect(comErro.getByRole("listitem")).toHaveCount(1);
+    await expect(comErro.getByRole("listitem")).toContainText(/quebrada \(linha \d+\): /);
+  });
+
+  test("cancelar não traz nada; desmarcar todas impede confirmar", async ({ page }) => {
+    await novoDocumento(page);
+    let dialogo = await escolherBib(page, bibComObras(3));
+
+    await dialogo.getByRole("button", { name: "Desmarcar todas" }).click();
+    await expect(dialogo.getByRole("button", { name: "Nenhuma selecionada" })).toBeDisabled();
+
+    await dialogo.getByRole("button", { name: "Cancelar" }).click();
+    await expect(dialogo).toHaveCount(0);
+    await expect(botoesEditar(page)).toHaveCount(0);
+
+    // O mesmo arquivo pode ser escolhido de novo — o campo é zerado a cada
+    // escolha, senão o navegador não dispara `change`.
+    dialogo = await escolherBib(page, bibComObras(3));
+    await expect(dialogo.getByRole("checkbox")).toHaveCount(3);
+  });
+
+  test("arquivo sem referência nenhuma avisa, sem abrir a prévia", async ({ page }) => {
+    await novoDocumento(page);
+    await escolherBib(page, Buffer.from("% só um comentário\n", "utf-8"));
+
+    await expect(page.getByText("Nenhuma referência encontrada em tcc.bib.")).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+});
