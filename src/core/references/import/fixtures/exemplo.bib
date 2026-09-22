@@ -1,0 +1,108 @@
+% Arquivo de teste do passo 4.6 (bibtexToCsl.test.ts).
+%
+% Mistura as formas que um .bib real traz, de ferramentas diferentes:
+% acentuação em UTF-8 (Zotero, Mendeley) e em comando LaTeX (Google
+% Acadêmico, arquivos escritos à mão no Overleaf), chaves aninhadas de
+% proteção, @string, @comment do JabRef, delimitador por parênteses, vírgula
+% sobrando, uma entrada quebrada e tipos que o AURA não tem.
+%
+% As obras de Freire, Bauman, Knuth, Vaswani et al. e Nash são reais. As
+% entradas em português com nome de pessoa (silva2021, costa2019) são
+% ilustrativas.
+
+@comment{jabref-meta: databaseType:bibtex;}
+
+@string{pt = "Paz e Terra"}
+@string{rj = {Rio de Janeiro}}
+
+@book{freire1987,
+  author    = {Freire, Paulo},
+  title     = {Pedagogia do oprimido},
+  edition   = {17},
+  publisher = pt,
+  address   = rj,
+  year      = 1987,
+}
+
+@Book{bauman1999,
+  Author     = {Zygmunt Bauman},
+  Title      = {Globaliza{\c{c}}{\~a}o: as consequ{\^e}ncias humanas},
+  Translator = {Marcus Penchel},
+  Publisher  = {Jorge Zahar},
+  Address    = rj,
+  Year       = {1999}
+}
+
+@article{knuth1984,
+  author  = "Knuth, Donald E.",
+  title   = "{Literate Programming}",
+  journal = {The Computer Journal},
+  volume  = {27},
+  number  = {2},
+  pages   = {97--111},
+  year    = {1984},
+  month   = feb
+}
+
+@inproceedings{vaswani2017,
+  title     = {Attention is All you Need},
+  author    = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and others},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume    = {30},
+  pages     = {5998--6008},
+  year      = {2017}
+}
+
+@phdthesis{nash1950,
+  author = {John F. Nash},
+  title  = {Non-cooperative games},
+  school = {Princeton University},
+  year   = {1950}
+}
+
+@mastersthesis(silva2021,
+  author  = {Jo{\~a}o da Silva Filho},
+  title   = {Avalia{\c c}{\~a}o de {\'\i}ndices de {\'E}tica: {um estudo de caso} em S{\~a}o Paulo},
+  school  = {Universidade de S{\~a}o Paulo},
+  address = {S{\~a}o Paulo},
+  year    = {2021},
+  pagetotal = {82},
+)
+
+@incollection{costa2019,
+  author    = {Maria Costa},
+  title     = {Métodos qualitativos em educação},
+  booktitle = {Pesquisa em educação: caminhos e práticas},
+  editor    = {Ana Souza and Pedro Lima},
+  publisher = {Autêntica},
+  address   = {Belo Horizonte},
+  edition   = {2},
+  pages     = {45--67},
+  year      = {2019}
+}
+
+@article{quebrada,
+  title = {Uma entrada com a chave do título sem fechar,
+  year  = 2020
+}
+
+@misc{abnt,
+  author       = {{Associação Brasileira de Normas Técnicas}},
+  title        = {Normas ABNT},
+  howpublished = {\url{https://www.abnt.org.br/normalizacao}},
+  urldate      = {2026-09-20},
+  year         = {2026}
+}
+
+@techreport{relatorio2020,
+  author      = {Pedro Lima},
+  title       = {Relatório técnico},
+  institution = {Instituto X},
+  year        = {2020}
+}
+
+@misc{semendereco,
+  author = {Ana Souza},
+  title  = {Comunicação pessoal},
+  year   = {2022}
+}
