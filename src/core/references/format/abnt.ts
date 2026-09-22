@@ -359,7 +359,19 @@ function tituloSimples(
 // Artigos definidos e indefinidos do português. §6.7 manda a caixa alta cobrir
 // "a primeira palavra, incluindo artigo e monossílabo iniciais" — quando o
 // título abre com artigo, ele não conta sozinho como a primeira palavra.
-const ARTIGOS_INICIAIS = new Set(["o", "a", "os", "as", "um", "uma", "uns", "umas"]);
+// Exportada para a chamada no texto (`inText.ts`, 4.9), que entra pelo título
+// com a mesma "primeira palavra" — duas listas de artigo acabariam
+// discordando sobre onde a primeira palavra termina.
+export const ARTIGOS_INICIAIS: ReadonlySet<string> = new Set([
+  "o",
+  "a",
+  "os",
+  "as",
+  "um",
+  "uma",
+  "uns",
+  "umas",
+]);
 
 // LIMITAÇÃO conhecida: a regra da §6.7 fala em "artigo E MONOSSÍLABO
 // iniciais", e monossílabo não se detecta sem contar sílabas. Fica só o
