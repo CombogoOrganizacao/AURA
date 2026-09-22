@@ -20,6 +20,8 @@ import type {
   NoTexto,
   Secao,
 } from "../document/types";
+import { formatarChamada, type OpcoesChamada } from "./format/inText";
+import type { Referencia } from "./types";
 
 export type LocalCitacao =
   { tipo: "secao"; id: string } | { tipo: "apendice"; id: string } | { tipo: "anexo"; id: string };
@@ -147,4 +149,30 @@ function mesmaCitacao(a: AtributosCitacao, b: AtributosCitacao): boolean {
 
 function textoDe(content: NoTexto[] | undefined): string {
   return (content ?? []).map((texto) => texto.text).join("");
+}
+
+// --- Chamada para exibir -----------------------------------------------------
+
+export interface ChamadaExibida {
+  texto: string;
+  // A referência não está mais no documento (4.8). O texto do aluno fica; o
+  // que a tela mostra no lugar da chamada é o aviso.
+  orfa: boolean;
+}
+
+// O que a tela desenha ao lado de uma citação: a chamada da 10520 (4.9) ou,
+// se a referência sumiu, o aviso de órfã. Uma função só para as duas formas
+// de citar — marca inline e citação longa — para a tela e, depois, a
+// exportação não terem cada uma a sua regra.
+export function chamadaDaCitacao(
+  citacao: Pick<AtributosCitacao, "refId" | "pagina"> & { apud?: AtributosCitacao["apud"] },
+  references: readonly Referencia[],
+  opcoes?: OpcoesChamada,
+): ChamadaExibida {
+  const referencia = references.find((item) => item.id === citacao.refId);
+  if (!referencia) return { texto: "(referência excluída)", orfa: true };
+  return {
+    texto: formatarChamada(referencia, { pagina: citacao.pagina, apud: citacao.apud }, opcoes),
+    orfa: false,
+  };
 }

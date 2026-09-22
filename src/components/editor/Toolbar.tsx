@@ -12,6 +12,9 @@ import { novaFigura, novaFormula, novaTabela } from "@/core/document/factory";
 import { cursorDepoisDoBloco, fimDoBlocoAtual } from "@/core/editor/caret";
 import { deNoConteudo } from "@/core/document/serialize";
 import type { NivelSecao, NoConteudo } from "@/core/document/types";
+import type { Referencia } from "@/core/references/types";
+
+import { MenuCitacao } from "./MenuCitacao";
 
 // Re-renderiza a toolbar a cada transação do editor — é como o estado
 // "ativo" dos botões (negrito ligado, nível 2 selecionado...) acompanha a
@@ -98,6 +101,8 @@ const CONTROLES_FUTUROS: ReadonlyArray<{ nome: NomeIcone; label: string }> = [
 
 interface ToolbarProps {
   editor: Editor | null;
+  // Para o menu de citação (4.10) listar o que pode ser citado.
+  references: readonly Referencia[];
 }
 
 // Ações de formatação da v1 (passo 2.5, estendida no 2B.12): negrito,
@@ -134,7 +139,7 @@ interface ToolbarProps {
 // (`editor.chain().updateAttributes("secao", { nivel })`), não um parágrafo
 // — não existe "Título 1" como estilo de parágrafo neste schema: o título é
 // atributo da própria seção (docs/schema-tiptap.md §4.1).
-export function Toolbar({ editor }: ToolbarProps) {
+export function Toolbar({ editor, references }: ToolbarProps) {
   useEstadoEditor(editor);
 
   if (!editor) return null;
@@ -245,6 +250,26 @@ export function Toolbar({ editor }: ToolbarProps) {
       >
         <Icon name="quote" size={16} />
       </BotaoToolbar>
+      {/*
+        Citar só no desktop, pelo mesmo `hidden md:flex` do cadastro de
+        referências (4.5): citar é escolher uma referência cadastrada, e o
+        cadastro não existe no celular. A citação já inserida continua
+        visível em qualquer largura.
+      */}
+      <MenuCitacao
+        editor={editor}
+        references={references}
+        gatilho={({ abrir, ativo }) => (
+          <BotaoToolbar
+            label="Citar (só no computador) — liga o trecho selecionado a uma referência"
+            className="hidden md:flex"
+            ativo={ativo}
+            onClick={abrir}
+          >
+            <Icon name="book-marked" size={16} />
+          </BotaoToolbar>
+        )}
+      />
       <BotaoToolbar
         label="Figura — legenda e fonte numeradas automaticamente"
         onClick={() => inserirBloco(novaFigura())}

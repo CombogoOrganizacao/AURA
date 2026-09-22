@@ -256,6 +256,7 @@ function Carregado({
       >
         <Editor
           sections={documento.sections}
+          references={documento.references}
           onSectionsChange={atualizarSecoes}
           onReorderReady={registrarComandoDeReordenar}
         />

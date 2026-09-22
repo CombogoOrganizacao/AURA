@@ -28,6 +28,13 @@ interface DialogProps {
   /** Largura em px. 420 confirmação, 520 padrão, 720 formulário. */
   width?: number;
   onClose?: () => void;
+  /**
+   * Devolver o foco a quem abriu, ao fechar (padrão). `false` quando quem
+   * abriu decide para onde o foco vai — o menu de citação (4.10) o devolve ao
+   * texto, e não ao botão da toolbar: com o foco no botão, o Enter de quem
+   * continua escrevendo reabria o menu.
+   */
+  restaurarFoco?: boolean;
   children?: ReactNode;
 }
 
@@ -49,6 +56,7 @@ export function Dialog({
   footer,
   width = 520,
   onClose,
+  restaurarFoco = true,
   children,
 }: DialogProps) {
   const montado = useSyncExternalStore(inscreverNoop, instantaneoCliente, instantaneoServidor);
@@ -69,9 +77,9 @@ export function Dialog({
 
     return () => {
       raiz.style.overflow = overflowOriginal;
-      focoAnteriorRef.current?.focus();
+      if (restaurarFoco) focoAnteriorRef.current?.focus();
     };
-  }, [open]);
+  }, [open, restaurarFoco]);
 
   if (!open || !montado) return null;
 

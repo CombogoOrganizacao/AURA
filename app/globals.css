@@ -344,6 +344,35 @@ h5 {
   line-height: var(--leading-doc-simples);
 }
 
+/* Citação no texto (passo 4.10). Aspas e chamada NÃO são texto do documento:
+   são decorações desenhadas por `src/components/editor/chamadas.ts` a partir
+   da marca `citacao` e das referências. Aparecem na tinta do documento porque
+   é assim que vão sair impressas; o fundo creme leve no trecho citado é só da
+   tela, para o aluno ver o que está ligado a uma referência — some na
+   exportação. A órfã (4.8) troca o fundo por um sublinhado vermelho e a
+   chamada pelo aviso, sem apagar nada do texto. */
+.ProseMirror .doc-citado {
+  background-color: color-mix(in srgb, var(--color-creme-300) 28%, transparent);
+  border-radius: 2px;
+}
+
+.ProseMirror .doc-citado-orfa {
+  background-color: transparent;
+  text-decoration: underline wavy var(--color-danger);
+  text-underline-offset: 3px;
+}
+
+.ProseMirror .doc-chamada,
+.ProseMirror .doc-aspas {
+  user-select: none;
+}
+
+.ProseMirror .doc-chamada-orfa {
+  color: var(--color-danger);
+  font-family: var(--font-sans);
+  font-size: 0.85em;
+}
+
 /* Figura e tabela (passo 3.6.3) — docs/schema-tiptap.md §4.6/§4.7. Legenda e
    fonte em 10pt (`--doc-caption`) e espaço simples (`--leading-doc-simples`),
    os mesmos dois valores da citação longa acima e os mesmos que

@@ -13,6 +13,7 @@ import { PaperSheet } from "@/components/ui/PaperSheet";
 import { novaSecao } from "@/core/document/factory";
 import { fromDocumento, toDocumento } from "@/core/document/serialize";
 import type { Secao } from "@/core/document/types";
+import type { Referencia } from "@/core/references/types";
 import { cursorNaUltimaLinha } from "@/core/editor/caret";
 import { CursorDeIntervalo } from "@/core/editor/gapcursor";
 import { Citacao } from "@/core/editor/marks/citation";
@@ -28,6 +29,7 @@ import { mapearHtmlColado, type NoHtmlColado } from "@/core/editor/paste";
 import { moverSecaoDeTopo } from "@/core/editor/reorder";
 
 import { AvisoPaginacao } from "./AvisoPaginacao";
+import { atualizarReferenciasDasChamadas, ChamadasDeCitacao } from "./chamadas";
 import { FiguraView } from "./nodes/FiguraView";
 import { FormulaView } from "./nodes/FormulaView";
 import { SectionView } from "./nodes/SectionView";
@@ -99,6 +101,12 @@ export type MoverSecao = (idOrigem: string, idDestino: string, inserirDepois: bo
 
 interface EditorProps {
   sections: Secao[];
+  /**
+   * As referências do documento, para desenhar a chamada de cada citação
+   * (4.10). Diferente de `sections`, esta prop é seguida o tempo todo:
+   * corrigir o ano de uma referência atualiza as chamadas na hora.
+   */
+  references: readonly Referencia[];
   onSectionsChange: (secoes: Secao[]) => void;
   /**
    * Chamado com o comando `moverSecao` assim que o editor está pronto, e de
@@ -126,7 +134,7 @@ interface EditorProps {
 // digitando. Documento inexistente ganha uma seção-semente
 // (`novaSecao()`), porque `doc` exige pelo menos um bloco e um `secao`
 // vazio (`content: []`) não dá lugar pro cursor entrar.
-export function Editor({ sections, onSectionsChange, onReorderReady }: EditorProps) {
+export function Editor({ sections, references, onSectionsChange, onReorderReady }: EditorProps) {
   // `useState` com inicializador preguiçoso — roda uma vez só, no mount, e
   // ler o valor durante o render é normal (diferente de `ref.current`, que
   // a regra `react-hooks/refs` proíbe fora de efeito/handler).
@@ -163,6 +171,8 @@ export function Editor({ sections, onSectionsChange, onReorderReady }: EditorPro
       // documento salvo com a marca precisa carregar, e o schema recusaria
       // uma marca que não conhece.
       Citacao,
+      // Aspas e chamada ao lado de cada citação (4.10) — decoração, não texto.
+      ChamadasDeCitacao,
       // Desfazer/refazer (passo 2B.12) não vem de graça: as extensões
       // "core" do TipTap v3 (Editable, Commands, Keymap...) não incluem
       // histórico — é um pacote separado desde sempre, agora
@@ -233,6 +243,13 @@ export function Editor({ sections, onSectionsChange, onReorderReady }: EditorPro
     };
   }, [editor, onReorderReady]);
 
+  // As chamadas são sintetizadas das referências (4.9), que vivem fora do
+  // editor: cada mudança nelas é repassada ao plugin por uma transação só de
+  // meta, que não mexe no texto nem entra no desfazer.
+  useEffect(() => {
+    if (editor) atualizarReferenciasDasChamadas(editor, references);
+  }, [editor, references]);
+
   // `immediatelyRender: false` (acima) devolve `editor` como `null` no
   // primeiro render do cliente de propósito (evita o mismatch de
   // hidratação) — sem isso, essa janela mostrava a tela em branco por um
@@ -243,7 +260,7 @@ export function Editor({ sections, onSectionsChange, onReorderReady }: EditorPro
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <Toolbar editor={editor} />
+      <Toolbar editor={editor} references={references} />
       <AvisoPaginacao />
       {/*
         Folha A4 real (passo 2B.10, `PaperSheet` do passo 2B.4) — mesma
