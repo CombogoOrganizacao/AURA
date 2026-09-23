@@ -68,9 +68,12 @@ test("liga a epígrafe, exporta, e ela sai na posição correta", async ({ page 
   // dos agradecimentos.
   expect(xml).not.toContain("EPÍGRAFE");
 
-  // Recuada a partir do meio da mancha gráfica (`larguraUtil` / 2).
+  // Do meio da mancha à margem direita, no pé da página (NBR 14724:2024
+  // §5.2.4): desde o passo 4B.4 é um quadro da largura da metade direita da
+  // mancha (`larguraUtil` / 2 = 4535 twips), alinhado embaixo.
   const paragrafo = xml.slice(xml.lastIndexOf("<w:p>", xml.indexOf(EPIGRAFE)), xml.indexOf(EPIGRAFE));
-  expect(paragrafo).toContain('w:left="4535"');
+  expect(paragrafo).toContain('w:w="4535"');
+  expect(paragrafo).toContain('w:yAlign="bottom"');
 });
 
 test("desligar preserva o texto na tela e tira o elemento do .docx", async ({ page }) => {

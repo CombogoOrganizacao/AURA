@@ -1,4 +1,15 @@
-import { AlignmentType, PageBreak, Paragraph, TextRun, type FileChild } from "docx";
+import {
+  AlignmentType,
+  FrameAnchorType,
+  HeightRule,
+  HorizontalPositionAlign,
+  PageBreak,
+  Paragraph,
+  TextRun,
+  VerticalPositionAlign,
+  type FileChild,
+  type IFrameOptions,
+} from "docx";
 
 import { gerarCapa } from "../../document/elements/capa";
 import { gerarFolhaDeAprovacao } from "../../document/elements/folhaDeAprovacao";
@@ -173,6 +184,47 @@ function paragrafoDeLinha(linha: LinhaPreTextual): Paragraph {
   });
 }
 
+// Dedicatória e epígrafe na parte inferior da página — passo 4B.4. NBR
+// 14724:2024 §5.2.4: "Recomenda-se que a dedicatória e a epígrafe sejam
+// digitadas ou datilografadas com alinhamento do meio da mancha gráfica até a
+// margem direita, na parte inferior da página." É recomendação, e o AURA a
+// segue porque ela não tira escolha do aluno.
+//
+// **Um quadro de texto (`w:framePr`)** com a largura da metade direita da
+// mancha, alinhado à direita e embaixo, ancorado nas margens. Resolve as duas
+// metades da frase numa propriedade só: "do meio da mancha até a margem
+// direita" é a largura e o alinhamento horizontal do quadro, e "na parte
+// inferior" é o vertical. Por isso o parágrafo aqui dentro não leva o
+// `RECUO_METADE` de `paragrafoDeLinha()`: aplicado junto com o quadro, o texto
+// ficaria espremido num quarto da página.
+//
+// Alternativas descartadas: seção OOXML própria com alinhamento vertical
+// inferior mexeria nas seções de que depende a paginação, conferida no Word
+// desde o 1.4.4; espaço em branco calculado acima dependeria da altura do
+// texto, que só o Word conhece.
+//
+// Parágrafos seguidos com o mesmo `framePr` são um quadro só no Word, então
+// uma epígrafe com a atribuição na última linha sai num bloco único.
+// `HeightRule.AUTO`: a altura é a do conteúdo, e `height` é ignorado. 🔍
+// Conferir no Word.
+const NO_PE_DA_PAGINA: IFrameOptions = {
+  type: "alignment",
+  alignment: { x: HorizontalPositionAlign.RIGHT, y: VerticalPositionAlign.BOTTOM },
+  width: ABNT.larguraUtil - RECUO_METADE,
+  height: 0,
+  rule: HeightRule.AUTO,
+  anchor: { horizontal: FrameAnchorType.MARGIN, vertical: FrameAnchorType.MARGIN },
+};
+
+function paragrafoNoPeDaPagina(linha: LinhaPreTextual): Paragraph {
+  return new Paragraph({
+    children: [new TextRun(linha.texto)],
+    alignment: AlignmentType.JUSTIFIED,
+    spacing: { line: ABNT.espacamento15 },
+    frame: NO_PE_DA_PAGINA,
+  });
+}
+
 // Espaço vertical ANTES da primeira linha de cada papel — é o que distribui a
 // capa na folha em vez de amontoar tudo no topo. Porte dos parágrafos vazios
 // com `after` de `poc/docx/gerar.js`: a PoC não usa `spacing` na linha de
@@ -282,7 +334,7 @@ export function comQuebrasEntreBlocos(blocos: readonly FileChild[][]): FileChild
 // elemento só sabe virar OOXML. Cada um devolve `[]` quando está desligado ou
 // vazio, e a decisão continua sendo de `gerarDedicatoria()` e companhia.
 export function paragrafosDedicatoria(metadados: Metadados): Paragraph[] {
-  return gerarDedicatoria(metadados).map(paragrafoDeLinha);
+  return gerarDedicatoria(metadados).map(paragrafoNoPeDaPagina);
 }
 
 export function paragrafosAgradecimentos(metadados: Metadados): Paragraph[] {
@@ -290,5 +342,5 @@ export function paragrafosAgradecimentos(metadados: Metadados): Paragraph[] {
 }
 
 export function paragrafosEpigrafe(metadados: Metadados): Paragraph[] {
-  return gerarEpigrafe(metadados).map(paragrafoDeLinha);
+  return gerarEpigrafe(metadados).map(paragrafoNoPeDaPagina);
 }

@@ -24,9 +24,10 @@ import { type LinhaPreTextual, linhaTitulo } from "./linhaPreTextual";
 //   margem direita, **na parte inferior da página**".
 //
 // O recuo à direita, então, **tem base normativa** — deixou de ser convenção
-// com a leitura. **A posição vertical não está implementada**: o AURA não
-// empurra as duas para o rodapé da folha. É "recomenda-se", não "deve", e fica
-// registrado em docs/auditoria-abnt.md (achado 4) em vez de silenciado aqui.
+// com a leitura. **A posição vertical entrou no passo 4B.4**: no `.docx` as
+// duas saem num quadro no pé da página (`export/docx/preTextuais.ts`,
+// `paragrafoNoPeDaPagina()`). Esta camada continua dizendo só o alinhamento
+// ("recuada-a-direita"); onde fica na folha é decisão de quem exporta.
 //
 // A epígrafe não ganhou campo separado de autoria: a norma pede "citação,
 // seguida de indicação de autoria", sem dizer como dispor uma coisa e outra.
@@ -85,7 +86,7 @@ export function gerarEpigrafe(metadados: Metadados): LinhaPreTextual[] {
 
 // Na ordem da NBR 14724:2024 §4.2.1.4 a §4.2.1.6 (e da ordem canônica em
 // `../order.ts`): dedicatória, agradecimentos, epígrafe — entre a folha de
-// aprovação (fora da v1) e o resumo.
+// aprovação (passo 4B.3) e o resumo.
 // Cada elemento é um bloco à parte; quem exporta é que decide a quebra de
 // página entre eles.
 export function gerarOpcionaisPreTextuais(metadados: Metadados): LinhaPreTextual[][] {

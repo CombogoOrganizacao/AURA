@@ -199,29 +199,36 @@ describe("ordem canônica dos pré-textuais (passo 3.7.2)", () => {
     expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b));
   });
 
-  it("recua dedicatória e epígrafe a partir do meio da mancha; agradecimentos não", async () => {
+  // Passo 4B.4 — NBR 14724:2024 §5.2.4: "com alinhamento do meio da mancha
+  // gráfica até a margem direita, na parte inferior da página". Um quadro
+  // (`w:framePr`) da largura da metade direita da mancha — `larguraUtil`
+  // (16 cm) / 2 = 4535 twips, o mesmo número de `CM(8)` em `poc/docx/gerar.js`
+  // —, alinhado à direita e embaixo, ancorado nas margens.
+  it("dedicatória e epígrafe vão num quadro no pé da página, na metade direita da mancha; agradecimentos não", async () => {
     const xml = await xmlDoDocumento(
       criarMetadados({
         dedicatoria: { ativo: true, texto: "À minha família." },
         agradecimentos: { ativo: true, texto: "Ao meu orientador." },
+        epigrafe: { ativo: true, texto: "Uma epígrafe." },
       }),
     );
 
-    // `larguraUtil` (16 cm) / 2 = 4535 twips — o mesmo número que `CM(8)`
-    // produz em `poc/docx/gerar.js` na nota da folha de rosto, conferido.
-    // Derivar da largura útil em vez de repetir o 8 é o que mantém os dois
-    // ligados se a margem mudar.
-    const paragrafoDedicatoria = xml.slice(
-      xml.lastIndexOf("<w:p>", xml.indexOf("À minha família.")),
-      xml.indexOf("À minha família."),
-    );
-    expect(paragrafoDedicatoria).toContain('w:left="4535"');
+    const paragrafo = (texto: string) =>
+      xml.slice(xml.lastIndexOf("<w:p>", xml.indexOf(texto)), xml.indexOf(texto));
 
-    const paragrafoAgradecimento = xml.slice(
-      xml.lastIndexOf("<w:p>", xml.indexOf("Ao meu orientador.")),
-      xml.indexOf("Ao meu orientador."),
-    );
-    expect(paragrafoAgradecimento).not.toContain('w:left="4535"');
+    for (const texto of ["À minha família.", "Uma epígrafe."]) {
+      const framePr = paragrafo(texto).match(/<w:framePr[^>]*\/>/)?.[0] ?? "";
+      expect(framePr, texto).toContain('w:w="4535"');
+      expect(framePr).toContain('w:xAlign="right"');
+      expect(framePr).toContain('w:yAlign="bottom"');
+      expect(framePr).toContain('w:hAnchor="margin"');
+      expect(framePr).toContain('w:vAnchor="margin"');
+      expect(framePr).toContain('w:hRule="auto"');
+      // O quadro já é a metade direita: recuo junto espremeria o texto.
+      expect(paragrafo(texto)).not.toContain('w:left="4535"');
+    }
+
+    expect(paragrafo("Ao meu orientador.")).not.toContain("<w:framePr");
   });
 });
 
