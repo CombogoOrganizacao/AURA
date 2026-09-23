@@ -1,4 +1,5 @@
 import type { IdNorma, Norma } from "../standards/types";
+import type { ForcaRegra } from "./forca";
 
 // Forma de dado do motor de regras — passo 5.1.1. Porte do desenho de
 // `legacy/js/engine/rulesEngine.js`, corrigido: o legado tinha três camadas
@@ -57,6 +58,33 @@ export interface EntradaResolucao {
 
 export type RegrasResolvidas = Norma;
 
+export type OrigemCamada = "preset" | "edital" | "override";
+
+// Um campo em que o valor resolvido difere do da norma — passo 5.1.2. Um
+// registro por campo divergente no RESULTADO FINAL: se o preset muda a fonte
+// e o override a devolve ao valor da norma, não há conflito, porque o
+// documento segue a norma.
+export interface ConflitoRegra {
+  // Caminho do campo em `Norma`, ex.: "fonte.tamanho".
+  campo: string;
+  rotulo: string;
+  // A camada que decidiu o valor final, e o nome dela para mostrar
+  // (preset: nome da instituição; edital: título; override: o aluno).
+  origem: OrigemCamada;
+  nomeOrigem: string;
+  valorNorma: unknown;
+  // O valor logo antes da camada que decidiu. Difere de `valorNorma` quando
+  // uma camada intermediária já tinha mudado o campo.
+  valorAnterior: unknown;
+  valorEscolhido: unknown;
+  forca: ForcaRegra;
+  item: string | null;
+  // Frase em pt-BR para o painel: o que mudou, quem mudou, e se o documento
+  // continua conforme.
+  justificativa: string;
+}
+
 export interface ResultadoResolucao {
   regras: RegrasResolvidas;
+  conflitos: ConflitoRegra[];
 }
