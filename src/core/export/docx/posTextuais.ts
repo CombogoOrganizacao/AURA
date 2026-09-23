@@ -7,9 +7,12 @@ import {
   type EntradaListaReferencias,
 } from "../../document/elements/referencias";
 import { textoTituloPosTextual, type ItemPosTextual } from "../../document/elements/posTextual";
+import { trechosDaCitacaoLonga, trechosDoInline } from "../../document/elements/trechos";
 import type { Documento, ElementoPosTextual, NoConteudo } from "../../document/types";
+import type { Referencia } from "../../references/types";
 import { ABNT } from "./constants";
 import { paragrafoTituloPosTextual } from "./preTextuais";
+import { runsDeTrechos } from "./trechos";
 
 // Pós-textuais no `.docx` — passo 3.7.2 (lugar e títulos) e 4.11 (a lista de
 // referências): referências, apêndices e anexos. A
@@ -34,9 +37,9 @@ import { paragrafoTituloPosTextual } from "./preTextuais";
 // `comQuebrasEntreBlocos()`: qual bloco é o primeiro depende do que a pessoa
 // preencheu.
 
-function paragrafoDeTexto(texto: string): Paragraph {
+function paragrafoDeTexto(children: TextRun[]): Paragraph {
   return new Paragraph({
-    children: [new TextRun(texto)],
+    children,
     alignment: AlignmentType.JUSTIFIED,
     spacing: { line: ABNT.espacamento15 },
     indent: { firstLine: ABNT.recuoParagrafo },
@@ -53,12 +56,20 @@ function paragrafoDeTexto(texto: string): Paragraph {
 // 3.7.1), então `content` é sempre vazio. O aviso existe para o dia em que
 // existir — perder uma figura em silêncio é o desfecho que este projeto já
 // recusou na grade da tabela (`fromDocumento.ts`).
-function paragrafoDeConteudo(no: NoConteudo): Paragraph {
-  if (no.type === "paragraph" || no.type === "citacao_longa") {
-    return paragrafoDeTexto((no.content ?? []).map((noTexto) => noTexto.text).join(""));
+//
+// Negrito, itálico e citações pelos mesmos trechos do corpo (passo 4B.2).
+function paragrafoDeConteudo(no: NoConteudo, references: readonly Referencia[]): Paragraph {
+  if (no.type === "paragraph") {
+    return paragrafoDeTexto(runsDeTrechos(trechosDoInline(no.content, references)));
+  }
+  if (no.type === "citacao_longa") {
+    return new Paragraph({
+      children: runsDeTrechos(trechosDaCitacaoLonga(no, references)),
+      style: "CitacaoLonga",
+    });
   }
 
-  if (no.type === "formula") return paragrafoDeTexto(no.texto);
+  if (no.type === "formula") return paragrafoDeTexto([new TextRun(no.texto)]);
 
   return new Paragraph({
     children: [
@@ -72,26 +83,33 @@ function paragrafoDeConteudo(no: NoConteudo): Paragraph {
   });
 }
 
-function blocoDeElemento(item: ItemPosTextual, elemento: ElementoPosTextual): FileChild[] {
+function blocoDeElemento(
+  item: ItemPosTextual,
+  elemento: ElementoPosTextual,
+  references: readonly Referencia[],
+): FileChild[] {
   return [
     paragrafoTituloPosTextual(textoTituloPosTextual(item)),
-    ...elemento.content.map(paragrafoDeConteudo),
+    ...elemento.content.map((no) => paragrafoDeConteudo(no, references)),
   ];
 }
 
 function blocos(
   elementos: readonly ElementoPosTextual[],
   gerar: (lista: readonly ElementoPosTextual[]) => ItemPosTextual[],
+  references: readonly Referencia[],
 ): FileChild[][] {
-  return gerar(elementos).map((item, indice) => blocoDeElemento(item, elementos[indice]));
+  return gerar(elementos).map((item, indice) =>
+    blocoDeElemento(item, elementos[indice], references),
+  );
 }
 
 export function blocosDeApendices(documento: Documento): FileChild[][] {
-  return blocos(documento.apendices, gerarApendices);
+  return blocos(documento.apendices, gerarApendices, documento.references);
 }
 
 export function blocosDeAnexos(documento: Documento): FileChild[][] {
-  return blocos(documento.anexos, gerarAnexos);
+  return blocos(documento.anexos, gerarAnexos, documento.references);
 }
 
 // Referências — passo 4.11. O conteúdo e a ordem vêm de

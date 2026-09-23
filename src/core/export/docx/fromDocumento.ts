@@ -14,6 +14,7 @@ import {
   gerarListaDeTabelas,
 } from "../../document/elements/listas";
 import { textoItemSumario } from "../../document/elements/sumario";
+import { trechosDaCitacaoLonga, trechosDoInline } from "../../document/elements/trechos";
 import { numerarFiguras, numerarSecoes, numerarTabelas } from "../../document/numbering";
 import {
   elementosDaParte,
@@ -28,8 +29,10 @@ import type {
   NoParagrafo,
   Secao,
 } from "../../document/types";
+import type { Referencia } from "../../references/types";
 import { ABNT } from "./constants";
 import { paragrafoFonte, paragrafoLegenda } from "./legenda";
+import { runsDeTrechos } from "./trechos";
 import { montarDocumento } from "./index";
 import {
   blocoListaDeAbreviaturas,
@@ -74,12 +77,11 @@ import { blocoSumario } from "./toc";
 // congelada usa; a tabela sai com um aviso no lugar da grade, em vez de sumir
 // em silêncio do documento exportado.
 //
-// **Sem a "chamada" de autoria ao final** (ex.: "(SOBRENOME, ano, p. 42)")
-// que `poc/docx/gerar.js` já sabe montar: lá ela vem de `no.chamada` +
-// `no.refId` resolvido contra uma lista de referências de verdade — aqui
-// `refId` é sempre `null` na prática (`Documento.references` não tem UI que
-// escreva nele, ver `longQuote.ts`), então não há do que montar a chamada
-// ainda. Fica para quando a Fase 4 ligar `refId` a uma referência real.
+// **Negrito, itálico e citações desde o passo 4B.2.** O inline passa por
+// `trechosDoInline()`/`trechosDaCitacaoLonga()` (`document/elements/
+// trechos.ts`), que devolvem o texto com as marcas do aluno, as aspas da
+// citação direta e a chamada autor-data, pela mesma função que a tela usa.
+// Antes disso este arquivo juntava o texto e descartava toda marca.
 //
 // Devolve o `Document` (docx), não empacotado — mesmo motivo de
 // `montarDocumento()` em `index.ts`: quem chama escolhe `Packer.toBuffer()`
@@ -189,18 +191,22 @@ function paragrafosNumeravel(no: NoNumeravel, numero: number): Paragraph[] {
 // Recebe só os blocos que carregam inline direto. Figura e tabela ficam de
 // fora pelo tipo, não por um `if` aqui dentro: elas não têm `content`, e
 // tratá-las neste mesmo caminho seria exportá-las como parágrafo vazio.
-function paragrafoCorpo(no: NoParagrafo | NoCitacaoLonga): Paragraph {
-  const texto = (no.content ?? []).map((noTexto) => noTexto.text).join("");
-
+function paragrafoCorpo(
+  no: NoParagrafo | NoCitacaoLonga,
+  references: readonly Referencia[],
+): Paragraph {
   if (no.type === "citacao_longa") {
     // Estilo nomeado carrega recuo/fonte/espaçamento sozinho (styles.ts) —
     // nada repetido aqui, ao contrário do parágrafo comum abaixo, que ainda
     // não tem estilo nomeado próprio (isso é "Corpo" em 6.1.1).
-    return new Paragraph({ children: [new TextRun(texto)], style: "CitacaoLonga" });
+    return new Paragraph({
+      children: runsDeTrechos(trechosDaCitacaoLonga(no, references)),
+      style: "CitacaoLonga",
+    });
   }
 
   return new Paragraph({
-    children: [new TextRun(texto)],
+    children: runsDeTrechos(trechosDoInline(no.content, references)),
     alignment: AlignmentType.JUSTIFIED,
     spacing: { line: ABNT.espacamento15 },
     indent: { firstLine: ABNT.recuoParagrafo },
@@ -249,7 +255,7 @@ function paragrafosDoCorpo(documento: Documento): Paragraph[] {
       } else if (no.type === "formula") {
         corpo.push(paragrafoFormula(no));
       } else {
-        corpo.push(paragrafoCorpo(no));
+        corpo.push(paragrafoCorpo(no, documento.references));
       }
     }
   }

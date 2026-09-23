@@ -138,7 +138,9 @@ function coletarDoInline(
   }
 }
 
-function mesmaCitacao(a: AtributosCitacao, b: AtributosCitacao): boolean {
+// Exportada para a exportação (`document/elements/trechos.ts`, passo 4B.2)
+// agrupar os nós exatamente como esta varredura agrupa.
+export function mesmaCitacao(a: AtributosCitacao, b: AtributosCitacao): boolean {
   return (
     a.refId === b.refId &&
     a.modo === b.modo &&
