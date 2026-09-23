@@ -64,6 +64,13 @@ const abnt: Norma = {
   // edição de 2002 pedia e do que quase toda fonte secundária ainda ensina.
   // Armadilha registrada para os passos 4.8-4.10 (docs/auditoria-abnt.md).
   estiloReferencia: "ALFABETICA_MAIUSCULA",
+  limites: {
+    // NBR 6028:2021 §4.1.8 a), lido no PDF em 23/09/2026: "Quanto à sua
+    // extensão, **convém** que os resumos tenham: a) 150 a 500 palavras nos
+    // trabalhos acadêmicos". "Convém" é recomendação: a conferência aponta
+    // como aviso, não como erro.
+    resumoPalavras: { min: 150, max: 500 },
+  },
   elementos: {
     preTextuais: ["Capa", "Folha de Rosto", "Resumo", "Abstract", "Sumário"],
     textuais: [

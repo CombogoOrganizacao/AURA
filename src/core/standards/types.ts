@@ -99,6 +99,16 @@ export interface ElementosEstrutura {
   posTextuais: string[];
 }
 
+// Limites de extensão que a conferência (Fase 5) lê das regras resolvidas —
+// passo 5.1.1. Ficam na norma, e não soltos na regra que os consome, porque
+// são o que um edital ou preset de instituição sobrescreve: o legado tinha
+// `maxAbstractWords` na camada de edital pelo mesmo motivo.
+export interface LimitesExtensao {
+  // Palavras do resumo, inclusive. Vale para o resumo na língua vernácula e
+  // na estrangeira.
+  resumoPalavras?: { min: number; max: number };
+}
+
 export interface Norma {
   id: IdNorma;
   nome: string;
@@ -117,4 +127,6 @@ export interface Norma {
   estiloCitacao: EstiloCitacao;
   estiloReferencia: EstiloReferencia;
   elementos: ElementosEstrutura;
+  // Só na ABNT por enquanto: nenhuma das outras cinco foi auditada.
+  limites?: LimitesExtensao;
 }
