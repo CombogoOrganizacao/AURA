@@ -1,6 +1,7 @@
 import { AlignmentType, PageBreak, Paragraph, TextRun, type FileChild } from "docx";
 
 import { gerarCapa } from "../../document/elements/capa";
+import { gerarFolhaDeAprovacao } from "../../document/elements/folhaDeAprovacao";
 import { gerarFolhaDeRosto } from "../../document/elements/folhaDeRosto";
 import type {
   LinhaPreTextual,
@@ -222,6 +223,37 @@ export function montarFolhaDeRosto(metadados: Metadados): Paragraph[] {
     orientador: 600,
     local: 2400,
   });
+}
+
+// Folha de aprovação (NBR 14724:2024 §4.2.1.3) — passo 4B.3. A ordem vem de
+// `gerarFolhaDeAprovacao()`; aqui só a distribuição na folha, que é
+// convenção, como na folha de rosto.
+//
+// **Espaço antes de CADA assinatura**, e não só antes da primeira como faz
+// `comEspacosPorPapel()`: é o lugar da assinatura à mão, e cada membro
+// precisa do seu. Os espaços são menores que os da folha de rosto porque a
+// banca ocupa a metade de baixo: com três membros a folha cabe numa página.
+// Uma banca de quatro ou mais passa para a página seguinte. 🔍 Conferir no Word.
+export function montarFolhaDeAprovacao(metadados: Metadados): Paragraph[] {
+  const espacos: Partial<Record<PapelLinhaPreTextual, number>> = {
+    tituloDoTrabalho: 1200,
+    natureza: 600,
+    dataAprovacao: 600,
+  };
+  const vistos = new Set<PapelLinhaPreTextual>();
+  const paragrafos: Paragraph[] = [];
+
+  for (const linha of gerarFolhaDeAprovacao(metadados)) {
+    const primeiraDoPapel = linha.papel !== undefined && !vistos.has(linha.papel);
+    if (linha.papel) vistos.add(linha.papel);
+
+    const espaco =
+      linha.papel === "assinatura" ? 720 : primeiraDoPapel ? espacos[linha.papel!] : undefined;
+    if (espaco) paragrafos.push(new Paragraph({ text: "", spacing: { after: espaco } }));
+    paragrafos.push(paragrafoDeLinha(linha));
+  }
+
+  return paragrafos;
 }
 
 // Cada elemento pré-textual começa em página própria (NBR 14724, e é o que

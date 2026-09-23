@@ -20,6 +20,7 @@ describe("ORDEM_CANONICA (passo 3.7.2)", () => {
     expect([...ORDEM_CANONICA]).toEqual([
       "capa",
       "folhaDeRosto",
+      "folhaDeAprovacao",
       "dedicatoria",
       "agradecimentos",
       "epigrafe",

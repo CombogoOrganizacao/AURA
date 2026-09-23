@@ -20,6 +20,7 @@ import { useAutosave, type StatusAutosave } from "@/lib/useAutosave";
 
 import { Abstract } from "./Abstract";
 import { PainelAbreviaturas } from "./PainelAbreviaturas";
+import { PainelBanca } from "./PainelBanca";
 import { FormMetadados } from "./FormMetadados";
 import { PainelElementos } from "./PainelElementos";
 import { Resumo } from "./Resumo";
@@ -180,6 +181,14 @@ function Carregado({
               </summary>
               <div className="px-4 pb-4">
                 <FormMetadados metadados={documento.metadados} onChange={atualizarMetadados} />
+              </div>
+            </details>
+            <details className="shrink-0 border-b border-[var(--border-subtle)]">
+              <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                Folha de aprovação
+              </summary>
+              <div className="px-4 pb-4">
+                <PainelBanca metadados={documento.metadados} onChange={atualizarMetadados} />
               </div>
             </details>
             <details className="shrink-0 border-b border-[var(--border-subtle)]">

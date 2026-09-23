@@ -60,7 +60,7 @@ describe("paragrafosResumo", () => {
       criarMetadados({
         resumo: "Este trabalho investiga X.",
         palavrasChave: ["Educação", "Tecnologia", "Ensino remoto"],
-      })
+      }),
     );
 
     const xml = await documentXmlDe(paragrafos);
@@ -79,7 +79,7 @@ describe("paragrafosResumo", () => {
 
   it("omite a linha de palavras-chave quando o array está vazio", async () => {
     const paragrafos = paragrafosResumo(
-      criarMetadados({ resumo: "Este trabalho investiga X.", palavrasChave: [] })
+      criarMetadados({ resumo: "Este trabalho investiga X.", palavrasChave: [] }),
     );
 
     const xml = await documentXmlDe(paragrafos);
@@ -97,7 +97,7 @@ describe("paragrafosAbstract", () => {
       criarMetadados({
         abstract: "This work investigates X.",
         keywords: ["Education", "Technology"],
-      })
+      }),
     );
 
     const xml = await documentXmlDe(paragrafos);
@@ -222,5 +222,57 @@ describe("ordem canônica dos pré-textuais (passo 3.7.2)", () => {
       xml.indexOf("Ao meu orientador."),
     );
     expect(paragrafoAgradecimento).not.toContain('w:left="4535"');
+  });
+});
+
+// Passo 4B.3 — folha de aprovação (NBR 14724:2024 §4.2.1.3).
+describe("folha de aprovação no .docx (passo 4B.3)", () => {
+  const banca = [
+    { id: "b1", nome: "João Souza", titulacao: "Doutor em Computação", instituicao: "UNICAP" },
+    { id: "b2", nome: "Ana Lima", titulacao: "Mestra em Educação", instituicao: "UFPE" },
+  ];
+
+  it("sai depois da folha de rosto, com página própria, e antes da dedicatória", async () => {
+    const xml = await xmlDoDocumento(
+      criarMetadados({
+        naturezaTrabalho: "Trabalho de Conclusão de Curso.",
+        bancaExaminadora: banca,
+        dedicatoria: { ativo: true, texto: "À minha família." },
+      }),
+    );
+
+    const rosto = xml.indexOf("Orientador: João Souza");
+    const data = xml.indexOf("Data de aprovação:");
+    const dedicatoria = xml.indexOf("À minha família.");
+    expect(rosto).toBeGreaterThan(-1);
+    expect(data).toBeGreaterThan(rosto);
+    expect(dedicatoria).toBeGreaterThan(data);
+    expect(xml.slice(rosto, data)).toMatch(/<w:br w:type="page"\s*\/>/);
+  });
+
+  it("recua a natureza a partir do meio da mancha, como na folha de rosto (§5.2)", async () => {
+    const xml = await xmlDoDocumento(
+      criarMetadados({ naturezaTrabalho: "Natureza do trabalho.", bancaExaminadora: banca }),
+    );
+
+    // A natureza aparece duas vezes: folha de rosto e folha de aprovação.
+    const segunda = xml.indexOf("Natureza do trabalho.", xml.indexOf("Natureza do trabalho.") + 1);
+    expect(segunda).toBeGreaterThan(-1);
+    const paragrafo = xml.slice(xml.lastIndexOf("<w:p>", segunda), segunda);
+    expect(paragrafo).toContain('w:left="4535"');
+  });
+
+  it("uma linha de assinatura por membro, cada uma com espaço acima", async () => {
+    const xml = await xmlDoDocumento(criarMetadados({ bancaExaminadora: banca }));
+    const assinaturas = xml.match(/>_{20,}<\/w:t>/g) ?? [];
+    expect(assinaturas).toHaveLength(2);
+    expect(xml.indexOf("Ana Lima")).toBeGreaterThan(
+      xml.indexOf("João Souza", xml.indexOf("Data de aprovação:")),
+    );
+  });
+
+  it("sem banca, não sai nada", async () => {
+    const xml = await xmlDoDocumento(criarMetadados());
+    expect(xml).not.toContain("Data de aprovação:");
   });
 });

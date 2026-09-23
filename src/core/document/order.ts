@@ -15,24 +15,25 @@
 // **Auditada contra a fonte primária em 18/09/2026** (NBR 14724:2024, lida na
 // íntegra — docs/auditoria-abnt.md). A ordem abaixo bate item a item com o
 // Esquema 1 e com os itens §4.1.1 a §4.2.3.5: capa (§4.1.1), folha de rosto
-// (§4.2.1.1), dedicatória (§4.2.1.4), agradecimentos (§4.2.1.5), epígrafe
-// (§4.2.1.6), resumo vernáculo (§4.2.1.7), resumo estrangeiro (§4.2.1.8), as
+// (§4.2.1.1), folha de aprovação (§4.2.1.3, desde o 4B.3), dedicatória
+// (§4.2.1.4), agradecimentos (§4.2.1.5), epígrafe (§4.2.1.6), resumo vernáculo (§4.2.1.7), resumo estrangeiro (§4.2.1.8), as
 // três listas (§4.2.1.9 a §4.2.1.11), sumário (§4.2.1.13), corpo (§4.2.2),
 // referências (§4.2.3.1), apêndice (§4.2.3.3) e anexo (§4.2.3.4). Este passo
 // foi escrito antes da leitura e registrava a ressalva; ela caiu.
 //
 // Fora da v1, registrados para ninguém supor que foram esquecidos: errata
-// (§4.2.1.2), folha de aprovação (§4.2.1.3), lista de símbolos (§4.2.1.12),
-// glossário (§4.2.3.2) e índice (§4.2.3.5). Quatro deles são opcionais na
-// norma. **A folha de aprovação não é** — é elemento obrigatório, e está fora
-// porque não há tela que a alimente: ela leva nome, titulação e assinatura dos
-// membros da banca, preenchidos depois da defesa. A diferença entre "opcional
-// e ausente" e "obrigatório e ausente" está registrada em
-// docs/auditoria-abnt.md, achado 2, para não se perder aqui no meio da lista.
+// (§4.2.1.2), lista de símbolos (§4.2.1.12), glossário (§4.2.3.2) e índice
+// (§4.2.3.5). Os quatro são opcionais na norma.
+//
+// **A folha de aprovação (§4.2.1.3) entrou no passo 4B.3.** É obrigatória, e
+// estava fora sob o argumento de que a banca a preenche depois da defesa. O
+// próprio §4.2.1.3 separa as duas coisas: só "a data de aprovação e as
+// assinaturas... devem ser colocadas após a aprovação". O resto sai antes.
 
 export type ElementoDocumento =
   | "capa"
   | "folhaDeRosto"
+  | "folhaDeAprovacao"
   | "dedicatoria"
   | "agradecimentos"
   | "epigrafe"
@@ -50,6 +51,8 @@ export type ElementoDocumento =
 export const ORDEM_CANONICA: readonly ElementoDocumento[] = [
   "capa",
   "folhaDeRosto",
+  // "Deve ser inserida após a folha de rosto" (§4.2.1.3).
+  "folhaDeAprovacao",
   "dedicatoria",
   "agradecimentos",
   "epigrafe",
@@ -85,6 +88,7 @@ export type ParteDocumento = "capa" | "preTextual" | "textual" | "posTextual";
 const PARTES: Record<ElementoDocumento, ParteDocumento> = {
   capa: "capa",
   folhaDeRosto: "preTextual",
+  folhaDeAprovacao: "preTextual",
   dedicatoria: "preTextual",
   agradecimentos: "preTextual",
   epigrafe: "preTextual",

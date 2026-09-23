@@ -39,6 +39,9 @@ function documentoCompleto(): Documento {
     abreviaturas: [
       { id: "a1", sigla: "ABNT", significado: "Associação Brasileira de Normas Técnicas" },
     ],
+    bancaExaminadora: [
+      { id: "b1", nome: "Ana Lima", titulacao: "Doutora em Educação", instituicao: "UFPE" },
+    ],
   };
 
   documento.sections = [
@@ -76,6 +79,8 @@ const MARCADOR: Record<(typeof ORDEM_CANONICA)[number], string> = {
   // rosto ele vive dentro da nota de natureza) — ver `elements/capa.ts`.
   capa: "Universidade Católica de Pernambuco",
   folhaDeRosto: "Trabalho de Conclusão de Curso apresentado ao curso de X.",
+  // A natureza se repete aqui (§5.2), então o marcador é a linha da data.
+  folhaDeAprovacao: "Data de aprovação:",
   dedicatoria: "À minha família.",
   agradecimentos: "AGRADECIMENTOS",
   epigrafe: "Uma citação qualquer.",

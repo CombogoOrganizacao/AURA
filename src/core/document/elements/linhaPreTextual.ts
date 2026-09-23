@@ -37,7 +37,11 @@ export type PapelLinhaPreTextual =
   | "natureza"
   | "orientador"
   | "local"
-  | "ano";
+  | "ano"
+  // Folha de aprovação (§4.2.1.3), passo 4B.3.
+  | "dataAprovacao"
+  | "assinatura"
+  | "membroBanca";
 
 export interface LinhaPreTextual {
   texto: string;

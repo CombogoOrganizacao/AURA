@@ -277,6 +277,27 @@ export interface Metadados {
   // o campo no IndexedDB, e ausente significa "nenhuma cadastrada". Sem
   // migração nem valor padrão em `novoDocumento()`, só `?? []` na leitura.
   abreviaturas?: Abreviatura[];
+
+  // Banca examinadora da folha de aprovação (NBR 14724:2024 §4.2.1.3) —
+  // passo 4B.3. Opcional no tipo pelo mesmo motivo dos campos acima:
+  // documento gravado antes do passo não tem o campo, e ausente significa
+  // "nenhum membro cadastrado". Sem migração, só `?? []` na leitura.
+  //
+  // Sem data de aprovação e sem assinatura: a norma manda que as duas
+  // "sejam colocadas após a aprovação do trabalho", então a folha sai com as
+  // duas em branco, e o AURA não guarda nenhuma delas.
+  bancaExaminadora?: MembroBanca[];
+}
+
+// Um membro da banca: "nome, titulação e assinatura dos componentes da banca
+// examinadora e instituições a que pertencem" (§4.2.1.3). A assinatura é à
+// mão, depois da defesa. `id` para a lista da tela editar e remover sem
+// depender da posição.
+export interface MembroBanca {
+  id: string;
+  nome: string;
+  titulacao: string;
+  instituicao: string;
 }
 
 export interface Documento {

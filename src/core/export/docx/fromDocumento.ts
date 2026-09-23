@@ -47,6 +47,7 @@ import {
 import {
   comQuebrasEntreBlocos,
   montarCapa,
+  montarFolhaDeAprovacao,
   montarFolhaDeRosto,
   paragrafosAbstract,
   paragrafosAgradecimentos,
@@ -272,6 +273,7 @@ function blocoUnico(paragrafos: FileChild[]): FileChild[][] {
 const GERADORES: Record<ElementoDocumento, GeradorDeBlocos> = {
   capa: (documento) => blocoUnico(montarCapa(documento.metadados)),
   folhaDeRosto: (documento) => blocoUnico(montarFolhaDeRosto(documento.metadados)),
+  folhaDeAprovacao: (documento) => blocoUnico(montarFolhaDeAprovacao(documento.metadados)),
   dedicatoria: (documento) => blocoUnico(paragrafosDedicatoria(documento.metadados)),
   agradecimentos: (documento) => blocoUnico(paragrafosAgradecimentos(documento.metadados)),
   epigrafe: (documento) => blocoUnico(paragrafosEpigrafe(documento.metadados)),
