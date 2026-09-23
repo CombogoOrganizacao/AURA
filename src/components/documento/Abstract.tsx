@@ -28,6 +28,7 @@ export function Abstract({ metadados, onChange }: AbstractProps) {
       <Textarea
         label="Abstract"
         hint="Obrigatório (NBR 14724). Parágrafo único, entre 150 e 500 palavras (NBR 6028)."
+        data-campo="abstract"
         value={metadados.abstract}
         onChange={(evento) => atualizarCampo("abstract", evento.target.value)}
         rows={8}

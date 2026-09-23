@@ -189,6 +189,13 @@ function formulario(page: Page) {
   return page.getByLabel("Dados da referência");
 }
 
+// O painel de referências da coluna esquerda. Desde o passo 5.2.3 o painel de
+// Conferência também mostra o título de uma referência não citada, então
+// procurar o título na página inteira acharia os dois.
+function painelReferencias(page: Page) {
+  return page.locator('details[data-painel="referencias"]');
+}
+
 async function novoDocumento(page: Page) {
   await page.goto("/documentos");
   await page.getByRole("button", { name: "Novo documento" }).click();
@@ -235,7 +242,7 @@ test.describe("painel de referências — listar, criar, editar, excluir (passo 
     await page.reload();
     await page.getByText("Referências", { exact: true }).click();
 
-    await expect(page.getByText("Vigiar e punir")).toBeVisible();
+    await expect(painelReferencias(page).getByText("Vigiar e punir")).toBeVisible();
   });
 
   test("editar abre uma por vez", async ({ page }) => {
@@ -267,7 +274,7 @@ test.describe("painel de referências — listar, criar, editar, excluir (passo 
     // Uma dúzia de campos digitados à mão não pode sumir por um clique errado.
     await page.getByRole("button", { name: "Desfazer exclusão da referência" }).click();
 
-    await expect(page.getByText("Obra que será excluída")).toBeVisible();
+    await expect(painelReferencias(page).getByText("Obra que será excluída")).toBeVisible();
     await expect(page.getByText("Nenhuma referência cadastrada")).toHaveCount(0);
   });
 
@@ -281,7 +288,7 @@ test.describe("painel de referências — listar, criar, editar, excluir (passo 
     await page.reload();
     await page.getByText("Referências", { exact: true }).click();
 
-    await expect(page.getByText("Obra descartada")).toHaveCount(0);
+    await expect(painelReferencias(page).getByText("Obra descartada")).toHaveCount(0);
   });
 
   // Critério do passo: "restrito ao desktop". Mesmo `hidden md:` da tabela e
@@ -299,7 +306,7 @@ test.describe("painel de referências — listar, criar, editar, excluir (passo 
     // A referência já cadastrada continua no documento — some o cadastro, não
     // o dado.
     await page.setViewportSize({ width: 1280, height: 800 });
-    await expect(page.getByText("Obra do desktop")).toBeVisible();
+    await expect(painelReferencias(page).getByText("Obra do desktop")).toBeVisible();
   });
 });
 

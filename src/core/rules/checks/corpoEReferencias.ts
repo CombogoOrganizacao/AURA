@@ -21,7 +21,10 @@ export const corpoPresente: Verificacao = {
           {
             gravidade: "erro",
             item: "NBR 14724:2024 Esquema 1 e §4.2.2",
-            mensagem: "O trabalho não tem nenhuma seção no corpo do texto.",
+            // "Está vazio", e não "não tem seção": num documento novo o editor mostra
+            // uma seção-semente em branco, que só entra no documento quando o aluno
+            // escreve nela (`novaSecao()`, passo 1.3.7).
+            mensagem: "O corpo do texto está vazio: nada foi escrito ainda.",
             local: { tipo: "documento" },
           },
         ],

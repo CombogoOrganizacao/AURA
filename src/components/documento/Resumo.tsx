@@ -35,6 +35,7 @@ export function Resumo({ metadados, onChange }: ResumoProps) {
       <Textarea
         label="Resumo"
         hint="Parágrafo único, entre 150 e 500 palavras (NBR 6028)."
+        data-campo="resumo"
         value={metadados.resumo}
         onChange={(evento) => atualizarCampo("resumo", evento.target.value)}
         rows={8}

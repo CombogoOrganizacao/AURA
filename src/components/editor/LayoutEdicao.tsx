@@ -187,6 +187,13 @@ interface LayoutEdicaoProps {
   inspetor: ReactNode;
 }
 
+// Reabre a coluna esquerda se estiver recolhida — passo 5.2.3: clicar num
+// achado de metadado (resumo, banca...) abre o campo nessa coluna, e ele não
+// pode abrir escondido.
+export function mostrarColunaEsquerda() {
+  prefSidebarColapsada.definir(false);
+}
+
 export function LayoutEdicao({ sidebar, children, inspetor }: LayoutEdicaoProps) {
   const larguraSidebarPersistida = useSyncExternalStore(
     prefSidebarW.inscrever,

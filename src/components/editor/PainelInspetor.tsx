@@ -9,18 +9,23 @@ import { EstadoVazio } from "@/components/ui/Estados";
 import { Icon } from "@/components/ui/Icon";
 import { Switch } from "@/components/ui/Switch";
 import { Tabs } from "@/components/ui/Tabs";
+import type { Achado } from "@/core/rules/compliance";
+
+import { PainelConferencia } from "./PainelConferencia";
 
 interface PainelInspetorProps {
   documentoId: string;
+  achados: readonly Achado[];
+  onIrPara: (achado: Achado) => void;
 }
 
 type Aba = "ia" | "historico" | "conformidade";
 
-// Coluna direita do editor (passo 2B.11) — três abas, nenhuma com lógica
-// própria ainda. Sem `count` em nenhuma aba: um número de pendência aqui
-// seria fabricado (mesma regra do 2B.8/2B.10 — refletir o que existe, não
-// inventar o que a Fase 4/5 ainda não construiu).
-export function PainelInspetor({ documentoId }: PainelInspetorProps) {
+// Coluna direita do editor (passo 2B.11). A aba Conformidade tem conteúdo
+// desde o passo 5.2.3, e o `count` dela é a contagem real de achados da
+// conferência: só agora existe um número que não seria fabricado (mesma regra
+// do 2B.8/2B.10). IA e histórico seguem sem lógica (histórico é o 5.3).
+export function PainelInspetor({ documentoId, achados, onIrPara }: PainelInspetorProps) {
   const [aba, setAba] = useState<Aba>("conformidade");
 
   return (
@@ -32,7 +37,11 @@ export function PainelInspetor({ documentoId }: PainelInspetorProps) {
           items={[
             { id: "ia", label: "IA", icon: <Icon name="sparkles" size={15} /> },
             { id: "historico", label: "Histórico", icon: <Icon name="history" size={15} /> },
-            { id: "conformidade", label: "Conformidade" },
+            {
+              id: "conformidade",
+              label: "Conformidade",
+              count: achados.length > 0 ? achados.length : undefined,
+            },
           ]}
         />
       </div>
@@ -45,12 +54,7 @@ export function PainelInspetor({ documentoId }: PainelInspetorProps) {
             descricao="O histórico de versões chega na Fase 5."
           />
         )}
-        {aba === "conformidade" && (
-          <EstadoVazio
-            titulo="Conferência ainda não disponível"
-            descricao="A verificação de normas, citações e referências chega na Fase 3/4."
-          />
-        )}
+        {aba === "conformidade" && <PainelConferencia achados={achados} onIrPara={onIrPara} />}
       </div>
 
       <div className="flex shrink-0 flex-col gap-2.5 border-t border-[var(--border-subtle)] bg-sunken px-4 py-3">

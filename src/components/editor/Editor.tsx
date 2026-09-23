@@ -6,6 +6,7 @@ import TiptapHistory from "@tiptap/extension-history";
 import TiptapParagraph from "@tiptap/extension-paragraph";
 import TiptapText from "@tiptap/extension-text";
 import { Fragment, Slice } from "@tiptap/pm/model";
+import { NodeSelection, Selection, TextSelection } from "@tiptap/pm/state";
 import { EditorContent, ReactNodeViewRenderer, useEditor } from "@tiptap/react";
 
 import { EstadoCarregando } from "@/components/ui/Estados";
@@ -16,6 +17,7 @@ import type { Secao } from "@/core/document/types";
 import type { Referencia } from "@/core/references/types";
 import { cursorNaUltimaLinha } from "@/core/editor/caret";
 import { CursorDeIntervalo } from "@/core/editor/gapcursor";
+import { alvoNoEditor } from "@/core/editor/localizar";
 import { Citacao } from "@/core/editor/marks/citation";
 import { Italico } from "@/core/editor/marks/italico";
 import { Negrito } from "@/core/editor/marks/negrito";
@@ -27,6 +29,7 @@ import { Secao as SecaoNode } from "@/core/editor/nodes/section";
 import { CelulaTabela, LinhaTabela, Tabela as TabelaNode } from "@/core/editor/nodes/table";
 import { mapearHtmlColado, type NoHtmlColado } from "@/core/editor/paste";
 import { moverSecaoDeTopo } from "@/core/editor/reorder";
+import type { LocalAchado } from "@/core/rules/compliance";
 
 import { AvisoPaginacao } from "./AvisoPaginacao";
 import { atualizarReferenciasDasChamadas, ChamadasDeCitacao } from "./chamadas";
@@ -99,6 +102,12 @@ function arvoreColadaDoHtml(html: string): NoHtmlColado[] {
 // inteira do TipTap.
 export type MoverSecao = (idOrigem: string, idDestino: string, inserirDepois: boolean) => void;
 
+// Levar o cursor até o local de um achado da conferência (passo 5.2.3).
+// Devolve `false` quando o local não está no editor (metadado, referência,
+// apêndice) ou deixou de existir depois da última edição: quem chama decide o
+// que fazer, em vez de o clique não ter efeito nenhum.
+export type IrParaLocal = (local: LocalAchado) => boolean;
+
 interface EditorProps {
   sections: Secao[];
   /**
@@ -115,6 +124,8 @@ interface EditorProps {
    * componente irmão sem acesso à instância do TipTap, poder reordenar.
    */
   onReorderReady?: (mover: MoverSecao) => void;
+  /** Mesmo padrão de `onReorderReady`, para o painel de Conferência (5.2.3). */
+  onIrParaReady?: (irPara: IrParaLocal) => void;
 }
 
 // Editor com seções (passo 1.3.7), formatação (passo 2.5: negrito, itálico,
@@ -134,7 +145,13 @@ interface EditorProps {
 // digitando. Documento inexistente ganha uma seção-semente
 // (`novaSecao()`), porque `doc` exige pelo menos um bloco e um `secao`
 // vazio (`content: []`) não dá lugar pro cursor entrar.
-export function Editor({ sections, references, onSectionsChange, onReorderReady }: EditorProps) {
+export function Editor({
+  sections,
+  references,
+  onSectionsChange,
+  onReorderReady,
+  onIrParaReady,
+}: EditorProps) {
   // `useState` com inicializador preguiçoso — roda uma vez só, no mount, e
   // ler o valor durante o render é normal (diferente de `ref.current`, que
   // a regra `react-hooks/refs` proíbe fora de efeito/handler).
@@ -242,6 +259,36 @@ export function Editor({ sections, references, onSectionsChange, onReorderReady 
       onReorderReady(() => {});
     };
   }, [editor, onReorderReady]);
+
+  // Clicar num achado da conferência (5.2.3). `alvoNoEditor()`
+  // (src/core/editor/localizar.ts) traduz o local para uma posição; aqui só
+  // se escolhe a seleção. Trecho de texto fica selecionado, para o aluno ver
+  // exatamente a passagem; figura e fórmula (átomos) ficam selecionadas
+  // inteiras; o resto recebe o cursor no começo. `scrollIntoView` rola o
+  // contêiner da folha até ele.
+  useEffect(() => {
+    if (!editor || !onIrParaReady) return;
+    onIrParaReady((local) => {
+      const alvo = alvoNoEditor(editor.state.doc, local);
+      if (!alvo) return false;
+
+      const { doc, tr } = editor.state;
+      let selecao: Selection;
+      if (alvo.alvo === "trecho") {
+        selecao = TextSelection.create(doc, alvo.de, alvo.ate);
+      } else if (alvo.alvo === "no" && doc.nodeAt(alvo.posicao)?.isAtom) {
+        selecao = NodeSelection.create(doc, alvo.posicao);
+      } else {
+        selecao = Selection.near(doc.resolve(alvo.posicao + 1));
+      }
+      editor.view.dispatch(tr.setSelection(selecao).scrollIntoView());
+      editor.view.focus();
+      return true;
+    });
+    return () => {
+      onIrParaReady(() => false);
+    };
+  }, [editor, onIrParaReady]);
 
   // As chamadas são sintetizadas das referências (4.9), que vivem fora do
   // editor: cada mudança nelas é repassada ao plugin por uma transação só de

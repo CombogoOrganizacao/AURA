@@ -37,6 +37,7 @@ export function FormMetadados({ metadados, onChange }: FormMetadadosProps) {
       <Campo label="Título">
         <input
           className={estiloCampo}
+          data-campo="titulo"
           value={metadados.titulo}
           onChange={(evento) => atualizarCampo("titulo", evento.target.value)}
         />
@@ -45,6 +46,7 @@ export function FormMetadados({ metadados, onChange }: FormMetadadosProps) {
       <Campo label="Autor">
         <input
           className={estiloCampo}
+          data-campo="autores"
           value={metadados.autores[0] ?? ""}
           onChange={(evento) =>
             atualizarCampo("autores", evento.target.value ? [evento.target.value] : [])
@@ -55,6 +57,7 @@ export function FormMetadados({ metadados, onChange }: FormMetadadosProps) {
       <Campo label="Instituição">
         <input
           className={estiloCampo}
+          data-campo="instituicao"
           value={metadados.instituicao}
           onChange={(evento) => atualizarCampo("instituicao", evento.target.value)}
         />
@@ -63,6 +66,7 @@ export function FormMetadados({ metadados, onChange }: FormMetadadosProps) {
       <Campo label="Curso">
         <input
           className={estiloCampo}
+          data-campo="curso"
           value={metadados.curso}
           onChange={(evento) => atualizarCampo("curso", evento.target.value)}
         />
@@ -71,6 +75,7 @@ export function FormMetadados({ metadados, onChange }: FormMetadadosProps) {
       <Campo label="Orientador">
         <input
           className={estiloCampo}
+          data-campo="orientador"
           value={metadados.orientador}
           onChange={(evento) => atualizarCampo("orientador", evento.target.value)}
         />
@@ -79,6 +84,7 @@ export function FormMetadados({ metadados, onChange }: FormMetadadosProps) {
       <Campo label="Cidade">
         <input
           className={estiloCampo}
+          data-campo="local"
           value={metadados.local}
           onChange={(evento) => atualizarCampo("local", evento.target.value)}
         />
@@ -88,6 +94,7 @@ export function FormMetadados({ metadados, onChange }: FormMetadadosProps) {
         <input
           className={estiloCampo}
           type="number"
+          data-campo="ano"
           value={metadados.ano}
           onChange={(evento) => atualizarCampo("ano", Number(evento.target.value))}
         />
@@ -96,6 +103,7 @@ export function FormMetadados({ metadados, onChange }: FormMetadadosProps) {
       <Campo label="Natureza do trabalho">
         <input
           className={estiloCampo}
+          data-campo="naturezaTrabalho"
           value={metadados.naturezaTrabalho}
           onChange={(evento) => atualizarCampo("naturezaTrabalho", evento.target.value)}
           placeholder="Ex.: Trabalho de Conclusão de Curso apresentado a..."

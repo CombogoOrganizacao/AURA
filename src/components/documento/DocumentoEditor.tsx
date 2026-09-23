@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppTopBar } from "@/components/app/AppTopBar";
 import { BotaoExportar } from "@/components/editor/BotaoExportar";
-import { Editor, type MoverSecao } from "@/components/editor/Editor";
-import { LayoutEdicao } from "@/components/editor/LayoutEdicao";
+import { Editor, type IrParaLocal, type MoverSecao } from "@/components/editor/Editor";
+import { LayoutEdicao, mostrarColunaEsquerda } from "@/components/editor/LayoutEdicao";
 import { PainelInspetor } from "@/components/editor/PainelInspetor";
 import { PainelSecoes } from "@/components/editor/PainelSecoes";
 import { PainelReferencias } from "@/components/referencias/PainelReferencias";
@@ -14,6 +14,8 @@ import { EstadoCarregando, EstadoErro } from "@/components/ui/Estados";
 import { novoDocumento } from "@/core/document/factory";
 import type { Documento, Metadados, Secao } from "@/core/document/types";
 import type { AdaptadorPersistencia } from "@/core/persistence/types";
+import { conferirDocumento, type Achado } from "@/core/rules/compliance";
+import { resolveRules } from "@/core/rules/resolve";
 import type { Referencia } from "@/core/references/types";
 import { usePersistencia } from "@/lib/persistence-provider";
 import { useAutosave, type StatusAutosave } from "@/lib/useAutosave";
@@ -27,6 +29,56 @@ import { Resumo } from "./Resumo";
 
 interface DocumentoEditorProps {
   documentoId: string;
+}
+
+// Regras da conferência (passo 5.2.3). Na v1 não há preset, edital nem
+// override (docs/to-do.md, 5.1.1): as regras são a ABNT auditada, e resolver
+// uma vez basta.
+const REGRAS = resolveRules("abnt", null, null).regras;
+
+// Qual `<details data-painel>` da coluna esquerda edita cada campo de
+// metadado. É o que leva o clique num achado de metadado ao campo certo.
+const PAINEL_DO_CAMPO: Partial<Record<keyof Metadados, string>> = {
+  titulo: "dados",
+  subtitulo: "dados",
+  autores: "dados",
+  instituicao: "dados",
+  curso: "dados",
+  orientador: "dados",
+  local: "dados",
+  ano: "dados",
+  naturezaTrabalho: "dados",
+  bancaExaminadora: "aprovacao",
+  resumo: "resumo",
+  palavrasChave: "resumo",
+  abstract: "abstract",
+  keywords: "abstract",
+  dedicatoria: "elementos",
+  agradecimentos: "elementos",
+  epigrafe: "elementos",
+  abreviaturas: "abreviaturas",
+};
+
+// Abre o painel da coluna esquerda (reabrindo a coluna, se recolhida), rola
+// até ele e põe o foco no campo marcado com `data-campo`, ou no primeiro
+// campo do painel quando o campo não tem marca própria (lista de
+// palavras-chave, banca). DOM direto, como `irParaSecao()` em
+// `PainelSecoes.tsx`: os painéis são `<details>` nativos, sem estado React.
+function abrirPainel(painel: string, campo?: string) {
+  mostrarColunaEsquerda();
+  const detalhes = document.querySelector<HTMLDetailsElement>(
+    `details[data-painel="${CSS.escape(painel)}"]`,
+  );
+  if (!detalhes) return;
+  detalhes.open = true;
+  // O quadro seguinte: a coluna pode ter acabado de reabrir.
+  requestAnimationFrame(() => {
+    const alvo =
+      (campo && detalhes.querySelector<HTMLElement>(`[data-campo="${CSS.escape(campo)}"]`)) ||
+      detalhes.querySelector<HTMLElement>("input, textarea, button:not([disabled])");
+    detalhes.scrollIntoView({ behavior: "smooth", block: "start" });
+    alvo?.focus({ preventScroll: true });
+  });
 }
 
 const TEXTO_STATUS: Record<StatusAutosave, string> = {
@@ -158,6 +210,29 @@ function Carregado({
     moverSecaoRef.current?.(idOrigem, idDestino, inserirDepois);
   }, []);
 
+  // Conferência (passo 5.2.3). Recalcula a cada mudança do documento; o
+  // passo 5.2.4 põe isto sob debounce, para não pesar na digitação.
+  const achados = useMemo(() => conferirDocumento(documento, REGRAS), [documento]);
+
+  // Mesmo padrão do reordenar: o `Editor` entrega o comando, a ref guarda a
+  // versão mais recente.
+  const irParaLocalRef = useRef<IrParaLocal | null>(null);
+  const registrarIrPara = useCallback((irPara: IrParaLocal) => {
+    irParaLocalRef.current = irPara;
+  }, []);
+
+  const irParaAchado = useCallback((achado: Achado) => {
+    const { local } = achado;
+    if (local.tipo === "bloco") {
+      irParaLocalRef.current?.(local);
+    } else if (local.tipo === "metadado") {
+      const painel = PAINEL_DO_CAMPO[local.campo];
+      if (painel) abrirPainel(painel, local.campo);
+    } else if (local.tipo === "referencia") {
+      abrirPainel("referencias");
+    }
+  }, []);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <AppTopBar
@@ -175,7 +250,10 @@ function Carregado({
               fechado: a seção é o que a coluna prioriza; metadados são
               consulta ocasional, não o que se olha a cada abertura.
             */}
-            <details className="shrink-0 border-b border-[var(--border-subtle)]">
+            <details
+              data-painel="dados"
+              className="shrink-0 border-b border-[var(--border-subtle)]"
+            >
               <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
                 Dados do trabalho
               </summary>
@@ -183,7 +261,10 @@ function Carregado({
                 <FormMetadados metadados={documento.metadados} onChange={atualizarMetadados} />
               </div>
             </details>
-            <details className="shrink-0 border-b border-[var(--border-subtle)]">
+            <details
+              data-painel="aprovacao"
+              className="shrink-0 border-b border-[var(--border-subtle)]"
+            >
               <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
                 Folha de aprovação
               </summary>
@@ -191,7 +272,10 @@ function Carregado({
                 <PainelBanca metadados={documento.metadados} onChange={atualizarMetadados} />
               </div>
             </details>
-            <details className="shrink-0 border-b border-[var(--border-subtle)]">
+            <details
+              data-painel="resumo"
+              className="shrink-0 border-b border-[var(--border-subtle)]"
+            >
               <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
                 Resumo e palavras-chave
               </summary>
@@ -199,7 +283,10 @@ function Carregado({
                 <Resumo metadados={documento.metadados} onChange={atualizarMetadados} />
               </div>
             </details>
-            <details className="shrink-0 border-b border-[var(--border-subtle)]">
+            <details
+              data-painel="abstract"
+              className="shrink-0 border-b border-[var(--border-subtle)]"
+            >
               <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
                 Abstract e keywords
               </summary>
@@ -207,7 +294,10 @@ function Carregado({
                 <Abstract metadados={documento.metadados} onChange={atualizarMetadados} />
               </div>
             </details>
-            <details className="shrink-0 border-b border-[var(--border-subtle)]">
+            <details
+              data-painel="elementos"
+              className="shrink-0 border-b border-[var(--border-subtle)]"
+            >
               <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
                 Elementos opcionais
               </summary>
@@ -215,7 +305,10 @@ function Carregado({
                 <PainelElementos metadados={documento.metadados} onChange={atualizarMetadados} />
               </div>
             </details>
-            <details className="shrink-0 border-b border-[var(--border-subtle)]">
+            <details
+              data-painel="abreviaturas"
+              className="shrink-0 border-b border-[var(--border-subtle)]"
+            >
               <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
                 Abreviaturas e siglas
               </summary>
@@ -247,7 +340,10 @@ function Carregado({
               junto com os outros três — sumir sem aviso é pior que impedir
               com motivo, e a troca vale a pena fazer de uma vez só.
             */}
-            <details className="hidden shrink-0 border-b border-[var(--border-subtle)] md:block">
+            <details
+              data-painel="referencias"
+              className="hidden shrink-0 border-b border-[var(--border-subtle)] md:block"
+            >
               <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
                 Referências
               </summary>
@@ -261,13 +357,16 @@ function Carregado({
             <PainelSecoes sections={documento.sections} onReorder={reordenarSecoes} />
           </div>
         }
-        inspetor={<PainelInspetor documentoId={documentoId} />}
+        inspetor={
+          <PainelInspetor documentoId={documentoId} achados={achados} onIrPara={irParaAchado} />
+        }
       >
         <Editor
           sections={documento.sections}
           references={documento.references}
           onSectionsChange={atualizarSecoes}
           onReorderReady={registrarComandoDeReordenar}
+          onIrParaReady={registrarIrPara}
         />
       </LayoutEdicao>
     </div>
