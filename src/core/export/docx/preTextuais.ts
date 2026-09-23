@@ -92,14 +92,15 @@ function bloco(titulo: string, texto: string, rotuloTermos: string, termos: stri
 // Omite o bloco inteiro quando não há texto — não fabrica um "RESUMO" vazio
 // só pra ter aparência de conformidade (mesma lógica de
 // `metadados.instituicao` em `elements/capa.ts`). Elemento obrigatório que
-// falta é assunto de `validarDocumento()`, não do exportador.
+// falta é assunto da conferência (Fase 5), não do exportador.
 export function paragrafosResumo(metadados: Metadados): Paragraph[] {
   if (!metadados.resumo) return [];
   return bloco("RESUMO", metadados.resumo, "Palavras-chave", metadados.palavrasChave);
 }
 
-// Abstract é opcional na v1 (docs/aura-decisoes-e-pendencias.md §1.3) — sai
-// do `.docx` só quando o campo tem conteúdo. Critério de aceite deste passo.
+// Abstract é obrigatório (NBR 14724:2024 §4.2.1.8; opcional até o passo 4B.1)
+// e, como o resumo, sai do `.docx` só quando o campo tem conteúdo: a falta é
+// assunto da conferência, não um título vazio.
 export function paragrafosAbstract(metadados: Metadados): Paragraph[] {
   if (!metadados.abstract) return [];
   return bloco("ABSTRACT", metadados.abstract, "Keywords", metadados.keywords);

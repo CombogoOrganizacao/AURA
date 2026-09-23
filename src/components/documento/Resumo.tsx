@@ -15,8 +15,8 @@ interface ResumoProps {
   onChange: (atualizador: (atual: Metadados) => Metadados) => void;
 }
 
-// Resumo + palavras-chave (NBR 6028, passo 3.5.2) — obrigatório na v1
-// (docs/aura-decisoes-e-pendencias.md §1.3), ao contrário de `Abstract.tsx`.
+// Resumo + palavras-chave (NBR 6028, passo 3.5.2) — elemento obrigatório
+// (NBR 14724:2024 §4.2.1.7), como o `Abstract.tsx` desde o passo 4B.1.
 // Mesmo padrão controlado de `FormMetadados.tsx`: recebe `metadados` e
 // `onChange`, não é dono da persistência — quem monta os dois decide onde
 // (`DocumentoEditor.tsx`), com o mesmo `atualizarMetadados` que já existe lá.
