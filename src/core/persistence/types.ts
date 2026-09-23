@@ -1,4 +1,5 @@
 import type { Documento } from "../document/types";
+import type { PresetInstituicao } from "../rules/types";
 
 // Interface de persistência que o editor programa contra — sem menção a
 // IndexedDB nem a Firestore. O adaptador local (passo 1.2.3) implementa
@@ -35,4 +36,11 @@ export interface AdaptadorPersistencia {
   listarVersoes(documentoId: string): Promise<ResumoVersao[]>;
   salvarVersao(documento: Documento, nome?: string): Promise<void>;
   excluirDocumento(id: string): Promise<void>;
+
+  // Presets de instituição (passo 5.1.3, `rules/presets.ts`). Não pertencem
+  // a um documento: um preset serve a todos os trabalhos da mesma
+  // instituição. Salvar com um id existente substitui.
+  salvarPreset(preset: PresetInstituicao): Promise<void>;
+  listarPresets(): Promise<PresetInstituicao[]>;
+  excluirPreset(id: string): Promise<void>;
 }

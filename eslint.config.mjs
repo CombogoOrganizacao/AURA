@@ -27,6 +27,24 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  // `src/core/` é lógica pura (CLAUDE.md, "Camadas"): sem DOM e sem
+  // armazenamento do navegador. O legado gravava presets e documentos em
+  // `localStorage` direto; aqui tudo passa pela interface de persistência
+  // (passo 5.1.3). O IndexedDB do adaptador local é a exceção por desenho, e
+  // não está nesta lista.
+  {
+    files: ["src/core/**/*.ts"],
+    rules: {
+      "no-restricted-globals": [
+        "error",
+        ...["localStorage", "sessionStorage", "window", "document"].map((name) => ({
+          name,
+          message:
+            "src/core/ é lógica pura: sem DOM nem armazenamento do navegador. Persistência passa por AdaptadorPersistencia.",
+        })),
+      ],
+    },
+  },
   // Desliga regras de estilo do ESLint que brigariam com o Prettier.
   // Precisa vir depois das outras configs para sobrescrevê-las.
   eslintConfigPrettier,

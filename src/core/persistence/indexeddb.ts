@@ -1,10 +1,15 @@
 import type { Documento } from "../document/types";
+import type { PresetInstituicao } from "../rules/types";
 import type { AdaptadorPersistencia, ResumoDocumento, ResumoVersao } from "./types";
 
 const NOME_BANCO_PADRAO = "aura";
-const VERSAO_BANCO = 1;
+// 2 desde o passo 5.1.3 (loja `presets`). `onupgradeneeded` cria só a loja
+// que falta, então um banco da versão 1 sobe para a 2 sem perder documento
+// nem versão — há teste para isso em `indexeddb.test.ts`.
+const VERSAO_BANCO = 2;
 const LOJA_DOCUMENTOS = "documentos";
 const LOJA_VERSOES = "versoes";
+const LOJA_PRESETS = "presets";
 const INDICE_VERSOES_POR_DOCUMENTO = "documentoId";
 
 interface RegistroDocumento {
@@ -40,6 +45,9 @@ function abrirBanco(nomeBanco: string): Promise<IDBDatabase> {
       if (!banco.objectStoreNames.contains(LOJA_VERSOES)) {
         const lojaVersoes = banco.createObjectStore(LOJA_VERSOES, { keyPath: "id" });
         lojaVersoes.createIndex(INDICE_VERSOES_POR_DOCUMENTO, "documentoId");
+      }
+      if (!banco.objectStoreNames.contains(LOJA_PRESETS)) {
+        banco.createObjectStore(LOJA_PRESETS, { keyPath: "id" });
       }
     };
     requisicao.onsuccess = () => resolve(requisicao.result);
@@ -125,6 +133,18 @@ export async function criarAdaptadorIndexedDB(
       for (const chave of chaves) {
         await promisificar(loja(LOJA_VERSOES, "readwrite").delete(chave));
       }
+    },
+
+    async salvarPreset(preset) {
+      await promisificar(loja(LOJA_PRESETS, "readwrite").put(preset));
+    },
+
+    async listarPresets() {
+      return promisificar<PresetInstituicao[]>(loja(LOJA_PRESETS, "readonly").getAll());
+    },
+
+    async excluirPreset(id) {
+      await promisificar(loja(LOJA_PRESETS, "readwrite").delete(id));
     },
   };
 }

@@ -240,8 +240,9 @@ function iguais(a: unknown, b: unknown): boolean {
 
 // O tipo já restringe, mas preset e override vêm da persistência (5.1.3), e
 // um objeto gravado com `id` ou `estiloCitacao` passaria pelo `mesclar()`.
-// Campo fora da lista é ignorado, não aplicado.
-function soCamposSobrescreviveis(camada: SobrescritaRegras): SobrescritaRegras {
+// Campo fora da lista é ignorado, não aplicado. `novoPreset()` usa o mesmo
+// filtro para gravar só o que vai valer.
+export function soCamposSobrescreviveis(camada: SobrescritaRegras): SobrescritaRegras {
   const permitidos = new Set<string>(CAMPOS_SOBRESCREVIVEIS);
   return Object.fromEntries(
     Object.entries(camada).filter(([chave]) => permitidos.has(chave)),

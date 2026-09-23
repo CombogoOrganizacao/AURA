@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { novoDocumento } from "../../document/factory";
 import type { Documento } from "../../document/types";
+import type { PresetInstituicao } from "../../rules/types";
 import type { AdaptadorPersistencia } from "../types";
 
 // Suíte de contrato: qualquer adaptador de `AdaptadorPersistencia` roda os
@@ -101,6 +102,54 @@ export function executarSuiteDeContrato(
       expect(versoes).toContainEqual(
         expect.objectContaining({ automatica: false, nome: "Antes da entrega" }),
       );
+    });
+
+    // Presets de instituição — passo 5.1.3.
+    const PRESET: PresetInstituicao = {
+      id: "preset-1",
+      nome: "Universidade X",
+      regras: { citacaoLonga: { recuo: 3 }, fonte: { familia: "Arial" } },
+    };
+
+    it("listarPresets devolve vazio quando nada foi salvo (nenhum preset de fábrica)", async () => {
+      expect(await adaptador.listarPresets()).toEqual([]);
+    });
+
+    it("salva e lista um preset com igualdade estrutural", async () => {
+      await adaptador.salvarPreset(PRESET);
+      expect(await adaptador.listarPresets()).toEqual([PRESET]);
+    });
+
+    it("salvar preset com o mesmo id substitui, não duplica", async () => {
+      await adaptador.salvarPreset(PRESET);
+      const editado: PresetInstituicao = { ...PRESET, regras: { citacaoLonga: { recuo: 2 } } };
+      await adaptador.salvarPreset(editado);
+
+      expect(await adaptador.listarPresets()).toEqual([editado]);
+    });
+
+    it("excluirPreset tira só o preset pedido", async () => {
+      const outro: PresetInstituicao = { id: "preset-2", nome: "Faculdade Y", regras: {} };
+      await adaptador.salvarPreset(PRESET);
+      await adaptador.salvarPreset(outro);
+
+      await adaptador.excluirPreset(PRESET.id);
+
+      expect(await adaptador.listarPresets()).toEqual([outro]);
+    });
+
+    it("excluirPreset em id inexistente não lança erro", async () => {
+      await expect(adaptador.excluirPreset("nunca-existiu")).resolves.not.toThrow();
+    });
+
+    it("presets e documentos são independentes: excluir documento não apaga preset", async () => {
+      const documento = documentoComTitulo("Com preset");
+      await adaptador.salvarDocumento(documento);
+      await adaptador.salvarPreset(PRESET);
+
+      await adaptador.excluirDocumento(documento.id);
+
+      expect(await adaptador.listarPresets()).toEqual([PRESET]);
     });
   });
 }

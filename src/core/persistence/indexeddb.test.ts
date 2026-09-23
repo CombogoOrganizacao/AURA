@@ -30,3 +30,45 @@ describe("adaptador IndexedDB — sobrevive a uma nova conexão", () => {
     expect(await segundaConexao.carregarDocumento(documento.id)).toEqual(documento);
   });
 });
+
+describe("adaptador IndexedDB — migração da versão 1 para a 2 (passo 5.1.3)", () => {
+  // Um banco criado antes do passo 5.1.3 tem só `documentos` e `versoes`. O
+  // navegador de quem já usava o AURA está nesse estado: abrir na versão 2
+  // tem de criar `presets` sem perder nada do que já estava gravado.
+  it("cria a loja de presets e mantém os documentos gravados na versão 1", async () => {
+    const nomeBanco = `teste-migracao-${crypto.randomUUID()}`;
+    const documento = novoDocumento();
+    documento.metadados.titulo = "Gravado na versão 1";
+
+    await new Promise<void>((resolve, reject) => {
+      const requisicao = indexedDB.open(nomeBanco, 1);
+      requisicao.onupgradeneeded = () => {
+        const banco = requisicao.result;
+        banco.createObjectStore("documentos", { keyPath: "id" });
+        banco
+          .createObjectStore("versoes", { keyPath: "id" })
+          .createIndex("documentoId", "documentoId");
+      };
+      requisicao.onsuccess = () => {
+        const banco = requisicao.result;
+        const transacao = banco.transaction("documentos", "readwrite");
+        transacao
+          .objectStore("documentos")
+          .put({ id: documento.id, documento, atualizadoEm: new Date() });
+        transacao.oncomplete = () => {
+          banco.close();
+          resolve();
+        };
+        transacao.onerror = () => reject(transacao.error as Error);
+      };
+      requisicao.onerror = () => reject(requisicao.error as Error);
+    });
+
+    const adaptador = await criarAdaptadorIndexedDB(nomeBanco);
+
+    expect(await adaptador.carregarDocumento(documento.id)).toEqual(documento);
+    expect(await adaptador.listarPresets()).toEqual([]);
+    await adaptador.salvarPreset({ id: "p1", nome: "Universidade X", regras: {} });
+    expect(await adaptador.listarPresets()).toHaveLength(1);
+  });
+});

@@ -1,4 +1,5 @@
 import type { Documento } from "../document/types";
+import type { PresetInstituicao } from "../rules/types";
 import type { AdaptadorPersistencia, ResumoDocumento, ResumoVersao } from "./types";
 
 interface VersaoArmazenada extends ResumoVersao {
@@ -14,6 +15,7 @@ export function criarAdaptadorMemoria(): AdaptadorPersistencia {
   const documentos = new Map<string, Documento>();
   const atualizadoEm = new Map<string, Date>();
   const versoes = new Map<string, VersaoArmazenada[]>();
+  const presets = new Map<string, PresetInstituicao>();
 
   return {
     async salvarDocumento(documento) {
@@ -58,6 +60,18 @@ export function criarAdaptadorMemoria(): AdaptadorPersistencia {
       documentos.delete(id);
       atualizadoEm.delete(id);
       versoes.delete(id);
+    },
+
+    async salvarPreset(preset) {
+      presets.set(preset.id, preset);
+    },
+
+    async listarPresets() {
+      return Array.from(presets.values());
+    },
+
+    async excluirPreset(id) {
+      presets.delete(id);
     },
   };
 }
