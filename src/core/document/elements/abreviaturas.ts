@@ -69,13 +69,19 @@ function textoDoCorpo(sections: Secao[]): string {
 const FRONTEIRA_ESQUERDA = "(?<![\\p{L}\\p{N}])";
 const FRONTEIRA_DIREITA = "(?![\\p{L}\\p{N}])";
 
+// Exportado para a conferência (passo 5.2.2, `rules/checks/siglaPrimeiraMencao.ts`)
+// achar a primeira menção com a mesma noção de "palavra inteira" que decide
+// quem entra na lista. `g` porque quem procura a primeira ocorrência precisa
+// de `lastIndex`/`exec`; `test()` abaixo não depende disso.
+export function padraoSigla(sigla: string): RegExp {
+  return new RegExp(`${FRONTEIRA_ESQUERDA}${escaparRegex(sigla.trim())}${FRONTEIRA_DIREITA}`, "gu");
+}
+
 export function siglaAparece(sigla: string, sections: Secao[]): boolean {
   const alvo = sigla.trim();
   if (!alvo) return false;
 
-  const padrao = new RegExp(`${FRONTEIRA_ESQUERDA}${escaparRegex(alvo)}${FRONTEIRA_DIREITA}`, "u");
-
-  return padrao.test(textoDoCorpo(sections));
+  return padraoSigla(alvo).test(textoDoCorpo(sections));
 }
 
 // Ordem alfabética pela sigla, com colação pt-BR: "Á" fica junto de "A", não

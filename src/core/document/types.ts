@@ -50,9 +50,11 @@ export interface FonteOriginal {
 export interface AtributosCitacao {
   refId: string;
   modo: ModoCitacao;
-  // Obrigatória quando `modo` é `direta_curta` (10520 §7.1) — quem cobra é a
-  // conferência da Fase 5, não o tipo: citação em edição passa por "sem
-  // página ainda" e não pode ser recusada no meio da digitação.
+  // Na citação direta, a página entra "se houver" (10520:2023 §6.1.3 e
+  // §6.1.4; o Exemplo 2 do §6.1.3 cita sem página uma fonte não paginada).
+  // Este comentário dizia "obrigatória" até o passo 5.2.2, que releu o PDF.
+  // A falta é aviso da conferência (`rules/checks/citacoes.ts`), não recusa do
+  // tipo: citação em edição passa por "sem página ainda".
   pagina: string | null;
   apud: FonteOriginal | null;
 }
