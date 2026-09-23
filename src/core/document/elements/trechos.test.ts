@@ -36,7 +36,12 @@ function corrido(trechos: Trecho[]): string {
 describe("trechosDoInline — marcas do aluno", () => {
   it("negrito e itálico ficam só no trecho marcado", () => {
     const trechos = trechosDoInline(
-      [texto("Um "), texto("termo", [{ type: "italico" }]), texto(" e "), texto("outro", [{ type: "negrito" }])],
+      [
+        texto("Um "),
+        texto("termo", [{ type: "italico" }]),
+        texto(" e "),
+        texto("outro", [{ type: "negrito" }]),
+      ],
       REFS,
     );
 
@@ -63,7 +68,10 @@ describe("trechosDoInline — marcas do aluno", () => {
 
 describe("trechosDoInline — citações (NBR 10520:2023)", () => {
   it("direta curta sai entre aspas duplas e seguida da chamada com página (§7.1, §6.1.3)", () => {
-    const marca = { type: "citacao" as const, attrs: citacao({ modo: "direta_curta", pagina: "45" }) };
+    const marca = {
+      type: "citacao" as const,
+      attrs: citacao({ modo: "direta_curta", pagina: "45" }),
+    };
     const trechos = trechosDoInline(
       [texto("Ele disse "), texto("ensinar exige", [marca]), texto(".")],
       REFS,
@@ -115,7 +123,10 @@ describe("trechosDoInline — citações (NBR 10520:2023)", () => {
     const a = citacao({ modo: "direta_curta", pagina: "1" });
     const b = citacao({ modo: "direta_curta", pagina: "2" });
     const trechos = trechosDoInline(
-      [texto("um", [{ type: "citacao", attrs: a }]), texto("dois", [{ type: "citacao", attrs: b }])],
+      [
+        texto("um", [{ type: "citacao", attrs: a }]),
+        texto("dois", [{ type: "citacao", attrs: b }]),
+      ],
       REFS,
     );
     expect(corrido(trechos)).toBe("“um” (Freire, 1987, p. 1)“dois” (Freire, 1987, p. 2)");
@@ -123,7 +134,12 @@ describe("trechosDoInline — citações (NBR 10520:2023)", () => {
 
   it("aspas e chamada não herdam o negrito do trecho citado", () => {
     const trechos = trechosDoInline(
-      [texto("forte", [{ type: "citacao", attrs: citacao({ modo: "direta_curta" }) }, { type: "negrito" }])],
+      [
+        texto("forte", [
+          { type: "citacao", attrs: citacao({ modo: "direta_curta" }) },
+          { type: "negrito" },
+        ]),
+      ],
       REFS,
     );
     for (const trecho of trechos.filter((item) => item.papel !== "texto")) {
@@ -142,7 +158,11 @@ describe("trechosDoInline — citações (NBR 10520:2023)", () => {
 
   it("apud sai na ordem da §7.3", () => {
     const attrs = citacao({
-      apud: { author: [{ family: "Paulo", given: "Ana" }], issued: { "date-parts": [[1950]] }, pagina: null },
+      apud: {
+        author: [{ family: "Paulo", given: "Ana" }],
+        issued: { "date-parts": [[1950]] },
+        pagina: null,
+      },
     });
     const trechos = trechosDoInline([texto("x", [{ type: "citacao", attrs }])], REFS);
     expect(corrido(trechos)).toBe("x (Paulo, 1950 apud Freire, 1987)");

@@ -90,7 +90,10 @@ describe("citações no .docx (passo 4B.2, NBR 10520:2023)", () => {
               type: "text",
               text: "ensinar exige risco",
               marks: [
-                { type: "citacao", attrs: { refId: "freire", modo: "direta_curta", pagina: "35", apud: null } },
+                {
+                  type: "citacao",
+                  attrs: { refId: "freire", modo: "direta_curta", pagina: "35", apud: null },
+                },
               ],
             },
             { type: "text", text: "." },
