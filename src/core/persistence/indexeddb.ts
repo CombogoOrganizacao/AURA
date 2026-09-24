@@ -1,6 +1,7 @@
 import type { Documento } from "../document/types";
 import type { PresetInstituicao } from "../rules/types";
 import type { AdaptadorPersistencia, ResumoDocumento, ResumoVersao } from "./types";
+import { maisRecentePrimeiro } from "./versions";
 
 const NOME_BANCO_PADRAO = "aura";
 // 2 desde o passo 5.1.3 (loja `presets`). `onupgradeneeded` cria só a loja
@@ -103,12 +104,9 @@ export async function criarAdaptadorIndexedDB(
     async listarVersoes(documentoId): Promise<ResumoVersao[]> {
       const indice = loja(LOJA_VERSOES, "readonly").index(INDICE_VERSOES_POR_DOCUMENTO);
       const registros = await promisificar<RegistroVersao[]>(indice.getAll(documentoId));
-      return registros.map((registro) => ({
-        id: registro.id,
-        criadoEm: registro.criadoEm,
-        nome: registro.nome,
-        automatica: registro.automatica,
-      }));
+      // O índice devolve na ordem da chave, que é um UUID: a ordem do
+      // histórico vem de `criadoEm`.
+      return maisRecentePrimeiro(registros.map(resumir));
     },
 
     async salvarVersao(documento, nome) {
@@ -121,6 +119,24 @@ export async function criarAdaptadorIndexedDB(
         automatica: nome === undefined,
       };
       await promisificar(loja(LOJA_VERSOES, "readwrite").add(registro));
+      return resumir(registro);
+    },
+
+    async carregarVersao(documentoId, versaoId) {
+      const registro = await promisificar<RegistroVersao | undefined>(
+        loja(LOJA_VERSOES, "readonly").get(versaoId),
+      );
+      // A chave da loja é só o id da versão; conferir o dono mantém o
+      // contrato igual ao do Firestore, onde a versão mora sob o documento.
+      return registro?.documentoId === documentoId ? registro.documento : null;
+    },
+
+    async excluirVersao(documentoId, versaoId) {
+      const registro = await promisificar<RegistroVersao | undefined>(
+        loja(LOJA_VERSOES, "readonly").get(versaoId),
+      );
+      if (registro?.documentoId !== documentoId) return;
+      await promisificar(loja(LOJA_VERSOES, "readwrite").delete(versaoId));
     },
 
     async excluirDocumento(id) {
@@ -147,4 +163,8 @@ export async function criarAdaptadorIndexedDB(
       await promisificar(loja(LOJA_PRESETS, "readwrite").delete(id));
     },
   };
+}
+
+function resumir({ id, criadoEm, nome, automatica }: RegistroVersao): ResumoVersao {
+  return { id, criadoEm, nome, automatica };
 }

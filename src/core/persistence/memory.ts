@@ -1,6 +1,7 @@
 import type { Documento } from "../document/types";
 import type { PresetInstituicao } from "../rules/types";
 import type { AdaptadorPersistencia, ResumoDocumento, ResumoVersao } from "./types";
+import { maisRecentePrimeiro } from "./versions";
 
 interface VersaoArmazenada extends ResumoVersao {
   documento: Documento;
@@ -11,6 +12,10 @@ interface VersaoArmazenada extends ResumoVersao {
 // que precise de um `AdaptadorPersistencia` sem persistência de verdade.
 // Cada chamada devolve uma instância nova, com seu próprio estado — é o que
 // permite à suíte de contrato isolar um teste do outro.
+//
+// O snapshot de versão é copiado ao gravar e ao ler, como o IndexedDB faz
+// por natureza: sem isso, mexer no documento depois de salvar a versão
+// mudaria a versão junto, e o contrato passaria aqui e falharia lá.
 export function criarAdaptadorMemoria(): AdaptadorPersistencia {
   const documentos = new Map<string, Documento>();
   const atualizadoEm = new Map<string, Date>();
@@ -36,24 +41,33 @@ export function criarAdaptadorMemoria(): AdaptadorPersistencia {
     },
 
     async listarVersoes(documentoId): Promise<ResumoVersao[]> {
-      return (versoes.get(documentoId) ?? []).map((versao) => ({
-        id: versao.id,
-        criadoEm: versao.criadoEm,
-        nome: versao.nome,
-        automatica: versao.automatica,
-      }));
+      return maisRecentePrimeiro((versoes.get(documentoId) ?? []).map(resumir));
     },
 
     async salvarVersao(documento, nome) {
-      const lista = versoes.get(documento.id) ?? [];
-      lista.push({
+      const versao: VersaoArmazenada = {
         id: crypto.randomUUID(),
         criadoEm: new Date(),
         nome,
         automatica: nome === undefined,
-        documento,
-      });
-      versoes.set(documento.id, lista);
+        documento: structuredClone(documento),
+      };
+      versoes.set(documento.id, [...(versoes.get(documento.id) ?? []), versao]);
+      return resumir(versao);
+    },
+
+    async carregarVersao(documentoId, versaoId) {
+      const versao = versoes.get(documentoId)?.find((candidata) => candidata.id === versaoId);
+      return versao ? structuredClone(versao.documento) : null;
+    },
+
+    async excluirVersao(documentoId, versaoId) {
+      const lista = versoes.get(documentoId);
+      if (!lista) return;
+      versoes.set(
+        documentoId,
+        lista.filter((versao) => versao.id !== versaoId),
+      );
     },
 
     async excluirDocumento(id) {
@@ -74,4 +88,8 @@ export function criarAdaptadorMemoria(): AdaptadorPersistencia {
       presets.delete(id);
     },
   };
+}
+
+function resumir({ id, criadoEm, nome, automatica }: VersaoArmazenada): ResumoVersao {
+  return { id, criadoEm, nome, automatica };
 }

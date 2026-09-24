@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { novoDocumento } from "../../document/factory";
 import type { Documento } from "../../document/types";
@@ -102,6 +102,120 @@ export function executarSuiteDeContrato(
       expect(versoes).toContainEqual(
         expect.objectContaining({ automatica: false, nome: "Antes da entrega" }),
       );
+    });
+
+    // Histórico de versões — passo 5.3.1. A retenção é de `versions.ts`,
+    // testada lá; aqui, o que todo adaptador tem de cumprir.
+    describe("versões", () => {
+      // Só o relógio é falso: cada versão ganha um instante distinto, e a
+      // ordem do histórico fica verificável. `setTimeout` segue real, porque
+      // o `fake-indexeddb` depende dele.
+      beforeEach(() => {
+        vi.useFakeTimers({ toFake: ["Date"] });
+        vi.setSystemTime(new Date("2026-09-24T10:00:00Z"));
+      });
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      function avancarMinutos(minutos: number) {
+        vi.setSystemTime(new Date(Date.now() + minutos * 60_000));
+      }
+
+      it("salvarVersao devolve o resumo da versão que listarVersoes mostra", async () => {
+        const documento = documentoComTitulo("Com versão");
+
+        const salva = await adaptador.salvarVersao(documento, "Primeira");
+
+        expect(salva).toEqual({
+          id: expect.any(String),
+          criadoEm: new Date("2026-09-24T10:00:00Z"),
+          nome: "Primeira",
+          automatica: false,
+        });
+        expect(await adaptador.listarVersoes(documento.id)).toEqual([salva]);
+      });
+
+      it("listarVersoes vem da mais recente para a mais antiga", async () => {
+        const documento = documentoComTitulo("Três versões");
+        const primeira = await adaptador.salvarVersao(documento);
+        avancarMinutos(10);
+        const segunda = await adaptador.salvarVersao(documento, "Antes da banca");
+        avancarMinutos(10);
+        const terceira = await adaptador.salvarVersao(documento);
+
+        const ids = (await adaptador.listarVersoes(documento.id)).map((versao) => versao.id);
+        expect(ids).toEqual([terceira.id, segunda.id, primeira.id]);
+      });
+
+      it("restaurar: carregarVersao devolve o documento como estava ao salvar", async () => {
+        const documento = documentoComTitulo("Título antigo");
+        const versao = await adaptador.salvarVersao(documento);
+
+        // O documento segue sendo editado depois da versão.
+        documento.metadados.titulo = "Título novo";
+        await adaptador.salvarDocumento(documento);
+
+        expect(await adaptador.carregarVersao(documento.id, versao.id)).toEqual({
+          ...documento,
+          metadados: { ...documento.metadados, titulo: "Título antigo" },
+        });
+      });
+
+      it("carregarVersao devolve null para versão inexistente ou de outro documento", async () => {
+        const dono = documentoComTitulo("Dono");
+        const outro = documentoComTitulo("Outro");
+        const versao = await adaptador.salvarVersao(dono);
+
+        expect(await adaptador.carregarVersao(dono.id, "inexistente")).toBeNull();
+        expect(await adaptador.carregarVersao(outro.id, versao.id)).toBeNull();
+      });
+
+      it("as versões de um documento não aparecem no histórico de outro", async () => {
+        const a = documentoComTitulo("A");
+        const b = documentoComTitulo("B");
+        await adaptador.salvarVersao(a);
+        const deB = await adaptador.salvarVersao(b);
+
+        expect(await adaptador.listarVersoes(b.id)).toEqual([deB]);
+      });
+
+      it("excluirVersao tira só a versão pedida", async () => {
+        const documento = documentoComTitulo("Duas versões");
+        const fica = await adaptador.salvarVersao(documento, "Fica");
+        avancarMinutos(1);
+        const sai = await adaptador.salvarVersao(documento);
+
+        await adaptador.excluirVersao(documento.id, sai.id);
+
+        expect(await adaptador.listarVersoes(documento.id)).toEqual([fica]);
+        expect(await adaptador.carregarVersao(documento.id, sai.id)).toBeNull();
+      });
+
+      it("excluirVersao não apaga versão pelo id de outro documento", async () => {
+        const dono = documentoComTitulo("Dono");
+        const outro = documentoComTitulo("Outro");
+        const versao = await adaptador.salvarVersao(dono);
+
+        await adaptador.excluirVersao(outro.id, versao.id);
+
+        expect(await adaptador.listarVersoes(dono.id)).toEqual([versao]);
+      });
+
+      it("excluirVersao de versão inexistente não lança erro", async () => {
+        await expect(adaptador.excluirVersao("doc", "nunca-existiu")).resolves.not.toThrow();
+      });
+
+      it("excluirDocumento apaga também as versões", async () => {
+        const documento = documentoComTitulo("Some com o histórico");
+        await adaptador.salvarDocumento(documento);
+        const versao = await adaptador.salvarVersao(documento);
+
+        await adaptador.excluirDocumento(documento.id);
+
+        expect(await adaptador.listarVersoes(documento.id)).toEqual([]);
+        expect(await adaptador.carregarVersao(documento.id, versao.id)).toBeNull();
+      });
     });
 
     // Presets de instituição — passo 5.1.3.

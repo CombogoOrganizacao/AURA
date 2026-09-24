@@ -18,10 +18,13 @@ export interface ResumoDocumento {
 }
 
 // Resumo de uma entrada do histórico de versões. `nome` presente marca um
-// snapshot manual (nomeado pela pessoa); ausente, é automático. A política
-// de retenção (~30 automáticos + todos os nomeados) e a restauração de uma
-// versão específica são construídas sobre isto no passo 5.3.1 — aqui só a
-// forma de listar o que existe.
+// snapshot manual (nomeado pela pessoa); ausente, é automático.
+//
+// O resumo e o snapshot andam separados de propósito: listar o histórico não
+// carrega nenhum documento inteiro. No Firestore, o resumo vira um documento
+// pequeno na subcoleção de versões, e o snapshot vai para o Cloud Storage
+// (docs/aura-decisoes-e-pendencias.md §1.11), porque o documento inteiro
+// pode passar do limite de 1 MB por documento do Firestore.
 export interface ResumoVersao {
   id: string;
   criadoEm: Date;
@@ -33,8 +36,23 @@ export interface AdaptadorPersistencia {
   salvarDocumento(documento: Documento): Promise<void>;
   carregarDocumento(id: string): Promise<Documento | null>;
   listarDocumentos(): Promise<ResumoDocumento[]>;
+
+  // Histórico de versões (passo 5.3.1). A retenção não mora no adaptador:
+  // é `registrarVersao()` (versions.ts), escrita sobre estes métodos, para
+  // o adaptador Firestore herdar a mesma política sem reescrevê-la.
+  //
+  // Os métodos de uma versão pedem também o id do documento: no Firestore a
+  // versão só é endereçável pelo caminho do documento dono dela.
+
+  // Da mais recente para a mais antiga.
   listarVersoes(documentoId: string): Promise<ResumoVersao[]>;
-  salvarVersao(documento: Documento, nome?: string): Promise<void>;
+  // Grava um snapshot do documento inteiro, não um diff (§1.11).
+  salvarVersao(documento: Documento, nome?: string): Promise<ResumoVersao>;
+  // O documento como estava na versão, ou `null` se ela não existe.
+  carregarVersao(documentoId: string, versaoId: string): Promise<Documento | null>;
+  excluirVersao(documentoId: string, versaoId: string): Promise<void>;
+
+  // Apaga também todas as versões do documento.
   excluirDocumento(id: string): Promise<void>;
 
   // Presets de instituição (passo 5.1.3, `rules/presets.ts`). Não pertencem
