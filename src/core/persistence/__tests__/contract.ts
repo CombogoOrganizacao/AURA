@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { novoDocumento } from "../../document/factory";
 import type { Documento } from "../../document/types";
 import type { PresetInstituicao } from "../../rules/types";
-import type { AdaptadorPersistencia } from "../types";
+import type { AdaptadorPersistencia, ImagemArmazenada } from "../types";
 
 // Suíte de contrato: qualquer adaptador de `AdaptadorPersistencia` roda os
 // mesmos testes. Não é `*.test.ts` — não é descoberta sozinha pelo Vitest —,
@@ -215,6 +215,56 @@ export function executarSuiteDeContrato(
 
         expect(await adaptador.listarVersoes(documento.id)).toEqual([]);
         expect(await adaptador.carregarVersao(documento.id, versao.id)).toBeNull();
+      });
+    });
+
+    // Imagens das figuras — passo 6.1.2.
+    describe("imagens", () => {
+      function imagem(documentoId: string, id = "img-1"): ImagemArmazenada {
+        return {
+          id,
+          documentoId,
+          formato: "png",
+          largura: 2,
+          altura: 1,
+          bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]),
+        };
+      }
+
+      it("salva e carrega uma imagem com os bytes intactos", async () => {
+        const salva = imagem("doc-1");
+        await adaptador.salvarImagem(salva);
+
+        const carregada = await adaptador.carregarImagem("doc-1", "img-1");
+        expect(carregada).toEqual(salva);
+        expect(Array.from(carregada!.bytes)).toEqual(Array.from(salva.bytes));
+      });
+
+      it("carregarImagem devolve null para imagem inexistente ou de outro documento", async () => {
+        await adaptador.salvarImagem(imagem("doc-1"));
+
+        expect(await adaptador.carregarImagem("doc-1", "inexistente")).toBeNull();
+        expect(await adaptador.carregarImagem("doc-2", "img-1")).toBeNull();
+      });
+
+      it("mexer nos bytes depois de salvar não muda a imagem guardada", async () => {
+        const salva = imagem("doc-1");
+        await adaptador.salvarImagem(salva);
+        salva.bytes[0] = 0;
+
+        expect((await adaptador.carregarImagem("doc-1", "img-1"))!.bytes[0]).toBe(0x89);
+      });
+
+      it("excluirDocumento apaga as imagens dele, e só as dele", async () => {
+        const documento = documentoComTitulo("Com figura");
+        await adaptador.salvarDocumento(documento);
+        await adaptador.salvarImagem(imagem(documento.id, "minha"));
+        await adaptador.salvarImagem(imagem("outro-doc", "alheia"));
+
+        await adaptador.excluirDocumento(documento.id);
+
+        expect(await adaptador.carregarImagem(documento.id, "minha")).toBeNull();
+        expect(await adaptador.carregarImagem("outro-doc", "alheia")).not.toBeNull();
       });
     });
 

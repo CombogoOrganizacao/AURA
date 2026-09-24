@@ -27,9 +27,9 @@ export interface FiguraAttributes {
 // um campo `SEQ` no `.docx`. Um número gravado aqui ficaria errado no
 // instante em que alguém inserisse uma figura antes desta.
 //
-// `imagem` fica `null` na v1 — a moldura na tela e no `.docx` é um
-// placeholder honesto (é o que a própria PoC congelada faz). Embutir o
-// arquivo em `word/media/` com relacionamento é o passo 6.1.2.
+// `imagem` é o id da imagem na persistência (passo 6.1.2), ou `null`. Sem
+// imagem, a moldura na tela e no `.docx` é um espaço reservado, como na PoC
+// congelada. Quem embute o arquivo em `word/media/` é `export/docx/media.ts`.
 //
 // Sem estilo aqui, de propósito (mesmo motivo de `longQuote.ts`): fonte
 // menor e espaçamento simples da legenda são do CSS do editor

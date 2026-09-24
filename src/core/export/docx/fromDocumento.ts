@@ -28,6 +28,7 @@ import type {
 } from "../../document/types";
 import type { Referencia } from "../../references/types";
 import { ABNT } from "./constants";
+import { paragrafoImagem, type ImagensDoDocumento } from "./media";
 import { paragrafoFonte, paragrafoLegenda } from "./legenda";
 import { runsDeTrechos } from "./trechos";
 import { montarDocumento } from "./index";
@@ -58,14 +59,12 @@ import { blocoSumario } from "./toc";
 // docx/styles.ts. Lista entra aqui na mesma hora em que ganha nó no editor
 // (docs/schema-tiptap.md §7) — não antes.
 //
-// **Figura e tabela saem com legenda e fonte, não com o objeto.** A imagem
-// de verdade em `word/media/` é o passo 6.1.2 (`imagem` é sempre `null` hoje,
-// ver `editor/nodes/figure.ts`) e a grade OOXML da tabela é o 6.1.3 — os dois
-// já estão no plano com arquivo próprio. O que este passo entrega é a
-// **legenda numerada**, que é o que ele promete: campo `SEQ` em `legenda.ts`,
-// porte da PoC. A moldura da figura é o mesmo placeholder honesto que a PoC
-// congelada usa; a tabela sai com um aviso no lugar da grade, em vez de sumir
-// em silêncio do documento exportado.
+// **Figura com imagem desde o passo 6.1.2** (`media.ts`): as imagens chegam
+// já carregadas em `imagens`, e a figura sem imagem, ou cuja imagem não
+// chegou, sai com o espaço reservado. A grade OOXML da tabela é o 6.1.3; até
+// lá a tabela sai com um aviso no lugar da grade, em vez de sumir em silêncio
+// do documento exportado. A legenda numerada (campo `SEQ`, `legenda.ts`) é
+// porte da PoC.
 //
 // **Negrito, itálico e citações desde o passo 4B.2.** O inline passa por
 // `trechosDoInline()`/`trechosDaCitacaoLonga()` (`document/elements/
@@ -102,9 +101,8 @@ function paragrafoTitulo(secao: Secao, numero: string | null): Paragraph {
   });
 }
 
-// Placeholder honesto da figura, igual ao de `poc/docx/gerar.js` — a PoC
-// também não embute imagem (6.1.2). `keepNext` prende a moldura à linha de
-// fonte que vem logo abaixo.
+// Placeholder honesto da figura sem imagem, igual ao de `poc/docx/gerar.js`.
+// `keepNext` prende a moldura à linha de fonte que vem logo abaixo.
 function molduraFigura(): Paragraph {
   return new Paragraph({
     children: [new TextRun({ text: "[ espaço reservado para a imagem ]", italics: true })],
@@ -170,12 +168,19 @@ function paragrafoFormula(no: NoFormula): Paragraph {
 // cache do campo `SEQ` (ver `docx/legenda.ts`), que é o que faz a lista de
 // figuras/tabelas sair com o número na primeira atualização de campos do
 // Word.
-function paragrafosNumeravel(no: NoNumeravel, numero: number): Paragraph[] {
-  return [
-    paragrafoLegenda(no, numero),
-    no.type === "figura" ? molduraFigura() : avisoTabelaPendente(),
-    ...paragrafoFonte(no),
-  ];
+function paragrafosNumeravel(
+  no: NoNumeravel,
+  numero: number,
+  imagens: ImagensDoDocumento,
+): Paragraph[] {
+  let objeto: Paragraph;
+  if (no.type === "tabela") {
+    objeto = avisoTabelaPendente();
+  } else {
+    const imagem = no.imagem ? imagens.get(no.imagem) : undefined;
+    objeto = imagem ? paragrafoImagem(imagem, no) : molduraFigura();
+  }
+  return [paragrafoLegenda(no, numero), objeto, ...paragrafoFonte(no)];
 }
 
 // Recebe só os blocos que carregam inline direto. Figura e tabela ficam de
@@ -216,7 +221,7 @@ function paragrafoCorpo(
 // `Secao.ordem`. Era o miolo de `fromDocumento()` até este passo; virou função
 // própria para entrar no `Record` abaixo como mais um elemento da ordem
 // canônica, em vez de ser o caso especial que todos os outros contornam.
-function paragrafosDoCorpo(documento: Documento): Paragraph[] {
+function paragrafosDoCorpo(documento: Documento, imagens: ImagensDoDocumento): Paragraph[] {
   const secoesEmOrdem = [...documento.sections].sort((a, b) => a.ordem - b.ordem);
   const numeracao = numerarSecoes(documento.sections);
 
@@ -239,7 +244,7 @@ function paragrafosDoCorpo(documento: Documento): Paragraph[] {
         // deles significaria id repetido — e o número sai errado, não
         // `undefined` no meio da legenda.
         const numero = (no.type === "figura" ? figuras : tabelas).get(no.id) ?? 0;
-        corpo.push(...paragrafosNumeravel(no, numero));
+        corpo.push(...paragrafosNumeravel(no, numero, imagens));
       } else if (no.type === "formula") {
         corpo.push(paragrafoFormula(no));
       } else {
@@ -251,7 +256,7 @@ function paragrafosDoCorpo(documento: Documento): Paragraph[] {
   return corpo;
 }
 
-type GeradorDeBlocos = (documento: Documento) => FileChild[][];
+type GeradorDeBlocos = (documento: Documento, imagens: ImagensDoDocumento) => FileChild[][];
 
 function blocoUnico(paragrafos: FileChild[]): FileChild[][] {
   return paragrafos.length > 0 ? [paragrafos] : [];
@@ -275,35 +280,45 @@ const GERADORES: Record<ElementoDocumento, GeradorDeBlocos> = {
       blocoListaDeAbreviaturas(gerarListaDeAbreviaturas(documento.metadados, documento.sections)),
     ),
   sumario: () => blocoUnico(blocoSumario()),
-  corpo: (documento) => blocoUnico(paragrafosDoCorpo(documento)),
+  corpo: (documento, imagens) => blocoUnico(paragrafosDoCorpo(documento, imagens)),
   referencias: blocosDeReferencias,
   apendices: blocosDeApendices,
   anexos: blocosDeAnexos,
 };
 
-function blocosDaParte(documento: Documento, parte: ParteDocumento): FileChild[][] {
-  return elementosDaParte(parte).flatMap((elemento) => GERADORES[elemento](documento));
+function blocosDaParte(
+  documento: Documento,
+  parte: ParteDocumento,
+  imagens: ImagensDoDocumento,
+): FileChild[][] {
+  return elementosDaParte(parte).flatMap((elemento) => GERADORES[elemento](documento, imagens));
 }
 
-export function fromDocumento(documento: Documento): Document {
+// `imagens`: as imagens das figuras, já carregadas por quem exporta
+// (`carregarImagensDoDocumento`, `media.ts`). Sem elas, as figuras saem com
+// o espaço reservado.
+export function fromDocumento(
+  documento: Documento,
+  imagens: ImagensDoDocumento = new Map(),
+): Document {
   // Capa: um elemento só, numa seção OOXML só — sem quebra a compor.
-  const capa = blocosDaParte(documento, "capa").flat();
+  const capa = blocosDaParte(documento, "capa", imagens).flat();
 
   // Pré-textuais: cada elemento em página própria (NBR 14724), com a quebra
   // ENTRE os blocos e nunca antes do primeiro — a seção OOXML já começa numa
   // página nova.
-  const preTextuais = comQuebrasEntreBlocos(blocosDaParte(documento, "preTextual"));
+  const preTextuais = comQuebrasEntreBlocos(blocosDaParte(documento, "preTextual", imagens));
 
   // Textual e pós-textual dividem a mesma seção OOXML (mesma paginação,
   // contínua e exibida), mas o pós-textual começa em página nova: a quebra vem
   // ANTES de cada bloco, inclusive do primeiro, porque ele segue o corpo
   // dentro da mesma seção em vez de abrir uma.
-  const posTextuais = blocosDaParte(documento, "posTextual").flatMap((bloco) => [
+  const posTextuais = blocosDaParte(documento, "posTextual", imagens).flatMap((bloco) => [
     new Paragraph({ children: [new PageBreak()] }),
     ...bloco,
   ]);
 
-  const corpo = [...blocosDaParte(documento, "textual").flat(), ...posTextuais];
+  const corpo = [...blocosDaParte(documento, "textual", imagens).flat(), ...posTextuais];
 
   return montarDocumento({ capa, corpo, preTextuais });
 }

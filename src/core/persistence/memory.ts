@@ -1,6 +1,11 @@
 import type { Documento } from "../document/types";
 import type { PresetInstituicao } from "../rules/types";
-import type { AdaptadorPersistencia, ResumoDocumento, ResumoVersao } from "./types";
+import type {
+  AdaptadorPersistencia,
+  ImagemArmazenada,
+  ResumoDocumento,
+  ResumoVersao,
+} from "./types";
 import { maisRecentePrimeiro } from "./versions";
 
 interface VersaoArmazenada extends ResumoVersao {
@@ -21,6 +26,7 @@ export function criarAdaptadorMemoria(): AdaptadorPersistencia {
   const atualizadoEm = new Map<string, Date>();
   const versoes = new Map<string, VersaoArmazenada[]>();
   const presets = new Map<string, PresetInstituicao>();
+  const imagens = new Map<string, ImagemArmazenada>();
 
   return {
     async salvarDocumento(documento) {
@@ -74,6 +80,18 @@ export function criarAdaptadorMemoria(): AdaptadorPersistencia {
       documentos.delete(id);
       atualizadoEm.delete(id);
       versoes.delete(id);
+      for (const [idImagem, imagem] of imagens) {
+        if (imagem.documentoId === id) imagens.delete(idImagem);
+      }
+    },
+
+    async salvarImagem(imagem) {
+      imagens.set(imagem.id, structuredClone(imagem));
+    },
+
+    async carregarImagem(documentoId, id) {
+      const imagem = imagens.get(id);
+      return imagem?.documentoId === documentoId ? structuredClone(imagem) : null;
     },
 
     async salvarPreset(preset) {

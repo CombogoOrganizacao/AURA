@@ -4,6 +4,7 @@ import { Packer } from "docx";
 import { useState } from "react";
 
 import { fromDocumento } from "@/core/export/docx/fromDocumento";
+import { carregarImagensDoDocumento } from "@/core/export/docx/media";
 import type { Documento } from "@/core/document/types";
 import { usePersistencia } from "@/lib/persistence-provider";
 
@@ -37,7 +38,10 @@ export function BotaoExportar({ documentoId }: BotaoExportarProps) {
       if (!documento) {
         throw new Error(`Documento "${documentoId}" não encontrado`);
       }
-      const blob = await Packer.toBlob(fromDocumento(documento));
+      // As imagens das figuras moram fora do documento (6.1.2): o exportador,
+      // que é lógica pura, as recebe já carregadas.
+      const imagens = await carregarImagensDoDocumento(persistencia, documento);
+      const blob = await Packer.toBlob(fromDocumento(documento, imagens));
       baixar(blob, `${nomeArquivo(documento)}.docx`);
       setStatus("pronto");
     } catch (erro) {

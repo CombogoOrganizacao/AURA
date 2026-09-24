@@ -1,17 +1,24 @@
 import type { Documento } from "../document/types";
 import type { PresetInstituicao } from "../rules/types";
-import type { AdaptadorPersistencia, ResumoDocumento, ResumoVersao } from "./types";
+import type {
+  AdaptadorPersistencia,
+  ImagemArmazenada,
+  ResumoDocumento,
+  ResumoVersao,
+} from "./types";
 import { maisRecentePrimeiro } from "./versions";
 
 const NOME_BANCO_PADRAO = "aura";
-// 2 desde o passo 5.1.3 (loja `presets`). `onupgradeneeded` cria só a loja
-// que falta, então um banco da versão 1 sobe para a 2 sem perder documento
-// nem versão — há teste para isso em `indexeddb.test.ts`.
-const VERSAO_BANCO = 2;
+// 2 desde o passo 5.1.3 (loja `presets`), 3 desde o 6.1.2 (loja `imagens`).
+// `onupgradeneeded` cria só a loja que falta, então um banco antigo sobe sem
+// perder documento nem versão — há teste para isso em `indexeddb.test.ts`.
+const VERSAO_BANCO = 3;
 const LOJA_DOCUMENTOS = "documentos";
 const LOJA_VERSOES = "versoes";
 const LOJA_PRESETS = "presets";
+const LOJA_IMAGENS = "imagens";
 const INDICE_VERSOES_POR_DOCUMENTO = "documentoId";
+const INDICE_IMAGENS_POR_DOCUMENTO = "documentoId";
 
 interface RegistroDocumento {
   id: string;
@@ -49,6 +56,10 @@ function abrirBanco(nomeBanco: string): Promise<IDBDatabase> {
       }
       if (!banco.objectStoreNames.contains(LOJA_PRESETS)) {
         banco.createObjectStore(LOJA_PRESETS, { keyPath: "id" });
+      }
+      if (!banco.objectStoreNames.contains(LOJA_IMAGENS)) {
+        const lojaImagens = banco.createObjectStore(LOJA_IMAGENS, { keyPath: "id" });
+        lojaImagens.createIndex(INDICE_IMAGENS_POR_DOCUMENTO, "documentoId");
       }
     };
     requisicao.onsuccess = () => resolve(requisicao.result);
@@ -149,6 +160,26 @@ export async function criarAdaptadorIndexedDB(
       for (const chave of chaves) {
         await promisificar(loja(LOJA_VERSOES, "readwrite").delete(chave));
       }
+
+      // A mesma cascata para as imagens (6.1.2).
+      const indiceImagens = loja(LOJA_IMAGENS, "readonly").index(INDICE_IMAGENS_POR_DOCUMENTO);
+      const chavesImagens = await promisificar<IDBValidKey[]>(indiceImagens.getAllKeys(id));
+      for (const chave of chavesImagens) {
+        await promisificar(loja(LOJA_IMAGENS, "readwrite").delete(chave));
+      }
+    },
+
+    async salvarImagem(imagem) {
+      await promisificar(loja(LOJA_IMAGENS, "readwrite").put(imagem));
+    },
+
+    async carregarImagem(documentoId, id) {
+      const imagem = await promisificar<ImagemArmazenada | undefined>(
+        loja(LOJA_IMAGENS, "readonly").get(id),
+      );
+      // A chave é só o id; conferir o dono mantém o contrato igual ao do
+      // Firestore, onde a imagem mora sob o documento.
+      return imagem?.documentoId === documentoId ? imagem : null;
     },
 
     async salvarPreset(preset) {

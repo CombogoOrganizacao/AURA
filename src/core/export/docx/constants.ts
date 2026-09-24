@@ -24,6 +24,10 @@ export const ABNT = {
   recuoCitacao: cm(4),
   paginaA4: { width: cm(21), height: cm(29.7) },
   larguraUtil: cm(16), // 21 - 3 (margem esquerda) - 2 (margem direita)
+  // Altura máxima da imagem de uma figura (passo 6.1.2). **Convenção do AURA,
+  // não da norma**: a mancha útil da A4 tem 24,7 cm (29,7 - 3 - 2), e 18 cm
+  // deixam lugar, na mesma página, para a legenda acima e a fonte abaixo.
+  alturaMaximaFigura: cm(18),
   // A NBR 14724:2024 §5.2 manda espaço simples em citação longa, notas,
   // referências, legendas e natureza do trabalho — e **não** lista o resumo.
   // A NBR 6028:2021 §3.2 fecha a questão do outro lado: "a apresentação

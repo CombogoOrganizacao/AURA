@@ -426,14 +426,37 @@ h5 {
    como uma borda do documento. */
 .ProseMirror .doc-figura-moldura {
   display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   align-items: center;
   justify-content: center;
   min-height: 6rem;
+  padding: 0.5rem;
   margin-block: 0.25rem;
   border: 1px dashed var(--border-subtle);
   font-size: var(--doc-caption);
   font-style: italic;
   color: var(--color-subtle);
+}
+
+/* A imagem da figura (passo 6.1.2) cabe na largura da folha, como no .docx,
+   e nunca é ampliada além do tamanho que tem. */
+.ProseMirror .doc-figura-imagem {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.ProseMirror .doc-figura-acoes {
+  display: flex;
+  gap: 0.5rem;
+  font-style: normal;
+}
+
+.ProseMirror .doc-figura-erro {
+  font-family: var(--font-sans);
+  font-style: normal;
+  color: var(--color-danger);
 }
 
 /* Padrão IBGE adotado pela ABNT: laterais ABERTAS, sem nenhum traço

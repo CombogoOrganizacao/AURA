@@ -85,8 +85,10 @@ test("a lista de figuras aparece ao inserir uma figura e some ao removê-la", as
   expect(comFigura).toMatch(/TOC[^<]*\\c &quot;Figura&quot;/);
 
   // Apagar a figura tira o elemento inteiro: clicar na moldura seleciona o
-  // nó (é atômico e `selectable`), e Backspace o remove.
-  await page.locator(".ProseMirror .doc-figura-moldura").click();
+  // nó (é atômico e `selectable`), e Backspace o remove. O clique vai no
+  // texto do espaço reservado, e não no centro da moldura: desde o 6.1.2 o
+  // centro tem o botão "Inserir imagem".
+  await page.locator(".ProseMirror .doc-figura-moldura").getByText("espaço reservado").click();
   await page.keyboard.press("Backspace");
   await expect(page.locator(".ProseMirror figure")).toHaveCount(0);
 

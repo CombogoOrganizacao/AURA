@@ -1,3 +1,4 @@
+import type { FormatoImagem } from "../document/imagem";
 import type { Documento } from "../document/types";
 import type { PresetInstituicao } from "../rules/types";
 
@@ -32,6 +33,25 @@ export interface ResumoVersao {
   automatica: boolean;
 }
 
+// Imagem de uma figura (passo 6.1.2). O documento guarda só o `id`
+// (`NoFigura.imagem`); os bytes ficam aqui, fora dele. Dentro do documento,
+// cada autosave regravaria as imagens, cada versão do histórico guardaria
+// uma cópia, e no Firestore o documento passaria do limite de 1 MB. No
+// Firestore, os bytes vão para o Cloud Storage (docs/aura-decisoes-e-
+// pendencias.md §1.11).
+//
+// Uma imagem nunca é apagada sozinha, nem ao ser trocada na figura: uma
+// versão do histórico pode apontar para ela. Sai só com o documento.
+export interface ImagemArmazenada {
+  id: string;
+  documentoId: string;
+  formato: FormatoImagem;
+  // Em pixels.
+  largura: number;
+  altura: number;
+  bytes: Uint8Array;
+}
+
 export interface AdaptadorPersistencia {
   salvarDocumento(documento: Documento): Promise<void>;
   carregarDocumento(id: string): Promise<Documento | null>;
@@ -52,8 +72,13 @@ export interface AdaptadorPersistencia {
   carregarVersao(documentoId: string, versaoId: string): Promise<Documento | null>;
   excluirVersao(documentoId: string, versaoId: string): Promise<void>;
 
-  // Apaga também todas as versões do documento.
+  // Apaga também todas as versões e imagens do documento.
   excluirDocumento(id: string): Promise<void>;
+
+  // Imagens das figuras (passo 6.1.2). Salvar com um id existente substitui.
+  salvarImagem(imagem: ImagemArmazenada): Promise<void>;
+  // `null` se não existe ou é de outro documento, como `carregarVersao`.
+  carregarImagem(documentoId: string, id: string): Promise<ImagemArmazenada | null>;
 
   // Presets de instituição (passo 5.1.3, `rules/presets.ts`). Não pertencem
   // a um documento: um preset serve a todos os trabalhos da mesma

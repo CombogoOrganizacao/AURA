@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AppTopBar } from "@/components/app/AppTopBar";
 import { BotaoExportar } from "@/components/editor/BotaoExportar";
+import { ProvedorImagens } from "@/components/editor/ImagensDoDocumento";
 import { Editor, type IrParaLocal, type MoverSecao } from "@/components/editor/Editor";
 import { LayoutEdicao, mostrarColunaEsquerda } from "@/components/editor/LayoutEdicao";
 import { PainelInspetor } from "@/components/editor/PainelInspetor";
@@ -260,93 +261,95 @@ function Carregado({
         statusAutosave={TEXTO_STATUS[status]}
         acoes={<BotaoExportar documentoId={documentoId} />}
       />
-      <LayoutEdicao
-        sidebar={
-          <div className="flex min-h-0 flex-1 flex-col">
-            {/*
+      {/* As figuras enviam e carregam imagens por aqui (6.1.2). */}
+      <ProvedorImagens documentoId={documentoId} persistencia={persistencia}>
+        <LayoutEdicao
+          sidebar={
+            <div className="flex min-h-0 flex-1 flex-col">
+              {/*
               `<details>` nativo — recolhível sem estado React nem
               primitivo de acordeão novo (não pedido neste passo). Começa
               fechado: a seção é o que a coluna prioriza; metadados são
               consulta ocasional, não o que se olha a cada abertura.
             */}
-            <details
-              data-painel="dados"
-              className="shrink-0 border-b border-[var(--border-subtle)]"
-            >
-              <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
-                Dados do trabalho
-              </summary>
-              <div className="px-4 pb-4">
-                <FormMetadados metadados={documento.metadados} onChange={atualizarMetadados} />
-              </div>
-            </details>
-            <details
-              data-painel="aprovacao"
-              className="shrink-0 border-b border-[var(--border-subtle)]"
-            >
-              <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
-                Folha de aprovação
-              </summary>
-              <div className="px-4 pb-4">
-                <PainelBanca metadados={documento.metadados} onChange={atualizarMetadados} />
-              </div>
-            </details>
-            <details
-              data-painel="resumo"
-              className="shrink-0 border-b border-[var(--border-subtle)]"
-            >
-              <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
-                Resumo e palavras-chave
-              </summary>
-              <div className="px-4 pb-4">
-                <Resumo metadados={documento.metadados} onChange={atualizarMetadados} />
-              </div>
-            </details>
-            <details
-              data-painel="abstract"
-              className="shrink-0 border-b border-[var(--border-subtle)]"
-            >
-              <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
-                Abstract e keywords
-              </summary>
-              <div className="px-4 pb-4">
-                <Abstract metadados={documento.metadados} onChange={atualizarMetadados} />
-              </div>
-            </details>
-            <details
-              data-painel="elementos"
-              className="shrink-0 border-b border-[var(--border-subtle)]"
-            >
-              <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
-                Elementos opcionais
-              </summary>
-              <div className="px-4 pb-4">
-                <PainelElementos metadados={documento.metadados} onChange={atualizarMetadados} />
-              </div>
-            </details>
-            <details
-              data-painel="abreviaturas"
-              className="shrink-0 border-b border-[var(--border-subtle)]"
-            >
-              <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
-                Abreviaturas e siglas
-              </summary>
-              <div className="px-4 pb-4">
-                {/*
+              <details
+                data-painel="dados"
+                className="shrink-0 border-b border-[var(--border-subtle)]"
+              >
+                <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                  Dados do trabalho
+                </summary>
+                <div className="px-4 pb-4">
+                  <FormMetadados metadados={documento.metadados} onChange={atualizarMetadados} />
+                </div>
+              </details>
+              <details
+                data-painel="aprovacao"
+                className="shrink-0 border-b border-[var(--border-subtle)]"
+              >
+                <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                  Folha de aprovação
+                </summary>
+                <div className="px-4 pb-4">
+                  <PainelBanca metadados={documento.metadados} onChange={atualizarMetadados} />
+                </div>
+              </details>
+              <details
+                data-painel="resumo"
+                className="shrink-0 border-b border-[var(--border-subtle)]"
+              >
+                <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                  Resumo e palavras-chave
+                </summary>
+                <div className="px-4 pb-4">
+                  <Resumo metadados={documento.metadados} onChange={atualizarMetadados} />
+                </div>
+              </details>
+              <details
+                data-painel="abstract"
+                className="shrink-0 border-b border-[var(--border-subtle)]"
+              >
+                <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                  Abstract e keywords
+                </summary>
+                <div className="px-4 pb-4">
+                  <Abstract metadados={documento.metadados} onChange={atualizarMetadados} />
+                </div>
+              </details>
+              <details
+                data-painel="elementos"
+                className="shrink-0 border-b border-[var(--border-subtle)]"
+              >
+                <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                  Elementos opcionais
+                </summary>
+                <div className="px-4 pb-4">
+                  <PainelElementos metadados={documento.metadados} onChange={atualizarMetadados} />
+                </div>
+              </details>
+              <details
+                data-painel="abreviaturas"
+                className="shrink-0 border-b border-[var(--border-subtle)]"
+              >
+                <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                  Abreviaturas e siglas
+                </summary>
+                <div className="px-4 pb-4">
+                  {/*
                   Recebe `sections` além de `metadados` (passo 3.6.4): o
                   painel avisa quando uma sigla cadastrada ainda não aparece
                   no texto, e para isso precisa olhar o corpo. É leitura, não
                   edição — quem escreve em `sections` continua sendo só o
                   editor.
                 */}
-                <PainelAbreviaturas
-                  metadados={documento.metadados}
-                  sections={documento.sections}
-                  onChange={atualizarMetadados}
-                />
-              </div>
-            </details>
-            {/*
+                  <PainelAbreviaturas
+                    metadados={documento.metadados}
+                    sections={documento.sections}
+                    onChange={atualizarMetadados}
+                  />
+                </div>
+              </details>
+              {/*
               Referências **só no desktop** (critério do passo 4.5), com o
               mesmo `hidden md:block` da tabela e da fórmula na `Toolbar`
               (3.6.3/3.6.5). Cadastrar uma referência é preencher de seis a
@@ -359,47 +362,48 @@ function Carregado({
               junto com os outros três — sumir sem aviso é pior que impedir
               com motivo, e a troca vale a pena fazer de uma vez só.
             */}
-            <details
-              data-painel="referencias"
-              className="hidden shrink-0 border-b border-[var(--border-subtle)] md:block"
-            >
-              <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
-                Referências
-              </summary>
-              <div className="px-4 pb-4">
-                <PainelReferencias
-                  references={documento.references}
-                  onChange={atualizarReferencias}
-                />
-              </div>
-            </details>
-            <PainelSecoes sections={documento.sections} onReorder={reordenarSecoes} />
-          </div>
-        }
-        inspetor={
-          <PainelInspetor
-            documentoId={documentoId}
-            conferencia={conferencia}
-            historico={historico}
-            verificarEnquantoEscrevo={verificarEnquantoEscrevo}
-            onVerificarEnquantoEscrevoChange={(ligar) => {
-              setVerificarEnquantoEscrevo(ligar);
-              // Religar confere na hora, sem esperar a próxima pausa.
-              if (ligar) conferencia.conferirAgora();
-            }}
-            onIrPara={irParaAchado}
+              <details
+                data-painel="referencias"
+                className="hidden shrink-0 border-b border-[var(--border-subtle)] md:block"
+              >
+                <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                  Referências
+                </summary>
+                <div className="px-4 pb-4">
+                  <PainelReferencias
+                    references={documento.references}
+                    onChange={atualizarReferencias}
+                  />
+                </div>
+              </details>
+              <PainelSecoes sections={documento.sections} onReorder={reordenarSecoes} />
+            </div>
+          }
+          inspetor={
+            <PainelInspetor
+              documentoId={documentoId}
+              conferencia={conferencia}
+              historico={historico}
+              verificarEnquantoEscrevo={verificarEnquantoEscrevo}
+              onVerificarEnquantoEscrevoChange={(ligar) => {
+                setVerificarEnquantoEscrevo(ligar);
+                // Religar confere na hora, sem esperar a próxima pausa.
+                if (ligar) conferencia.conferirAgora();
+              }}
+              onIrPara={irParaAchado}
+            />
+          }
+        >
+          <Editor
+            key={geracaoDoEditor}
+            sections={documento.sections}
+            references={documento.references}
+            onSectionsChange={atualizarSecoes}
+            onReorderReady={registrarComandoDeReordenar}
+            onIrParaReady={registrarIrPara}
           />
-        }
-      >
-        <Editor
-          key={geracaoDoEditor}
-          sections={documento.sections}
-          references={documento.references}
-          onSectionsChange={atualizarSecoes}
-          onReorderReady={registrarComandoDeReordenar}
-          onIrParaReady={registrarIrPara}
-        />
-      </LayoutEdicao>
+        </LayoutEdicao>
+      </ProvedorImagens>
     </div>
   );
 }

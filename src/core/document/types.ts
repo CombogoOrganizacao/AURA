@@ -107,8 +107,9 @@ export interface NoFigura {
   id: string;
   legenda: string;
   fonte: string;
-  // Placeholder na v1: embutir o arquivo em `word/media/` é o passo 6.1.2.
-  // `null` é o estado real de toda figura criada hoje.
+  // Id da imagem guardada na persistência (`salvarImagem`, passo 6.1.2), ou
+  // `null` sem imagem. Os bytes não moram no documento: cada autosave e cada
+  // versão do histórico os copiaria (ver `ImagemArmazenada`).
   imagem: string | null;
 }
 
