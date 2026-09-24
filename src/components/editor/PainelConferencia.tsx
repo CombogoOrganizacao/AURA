@@ -160,8 +160,11 @@ function CartaoAchado({
   );
 
   const acao = onIrPara && destino(achado);
+  // `relative` segura o `sr-only` do destino (absoluto) dentro do cartão.
+  // Sem ele, o texto invisível escapava da coluna que rola e esticava a
+  // página inteira.
   const classes =
-    "block w-full rounded-md border border-[var(--border-subtle)] bg-card p-3 text-left";
+    "relative block w-full rounded-md border border-[var(--border-subtle)] bg-card p-3 text-left";
 
   if (!acao) {
     return <div className={`${classes} ${onIrPara ? "" : "opacity-60"}`}>{conteudo}</div>;

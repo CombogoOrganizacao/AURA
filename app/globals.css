@@ -362,6 +362,21 @@ h5 {
   text-underline-offset: 3px;
 }
 
+/* Localizar e substituir (passo 5.4.3). Decoração do ProseMirror, não marca:
+   o realce é só da tela, nunca entra no documento salvo nem no .docx. Âmbar,
+   e não o creme do trecho citado, para as duas coisas não se confundirem. A
+   ocorrência atual ganha contorno bordô. */
+.ProseMirror .realce-busca {
+  background-color: color-mix(in srgb, var(--color-warning) 24%, transparent);
+  border-radius: 2px;
+}
+
+.ProseMirror .realce-busca-atual {
+  background-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
+  outline: 2px solid var(--color-bordo-700);
+  outline-offset: 0;
+}
+
 .ProseMirror .doc-chamada,
 .ProseMirror .doc-aspas {
   user-select: none;

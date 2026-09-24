@@ -64,7 +64,9 @@ export function calcularEstatisticas(paragrafos: readonly string[]): Estatistica
 //
 // Os pré-textuais (resumo, dedicatória...) não entram: são campos de
 // metadado, fora do editor, e a barra conta o que está na folha.
-export function paragrafosDoCorpo(documento: Documento): string[] {
+export function paragrafosDoCorpo(
+  documento: Pick<Documento, "sections" | "apendices" | "anexos">,
+): string[] {
   const saida: string[] = [];
   for (const bloco of blocosEmOrdem(documento)) {
     saida.push(bloco.titulo);

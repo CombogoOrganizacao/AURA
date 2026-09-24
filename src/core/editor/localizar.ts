@@ -1,4 +1,5 @@
 import type { Node as NoPM } from "@tiptap/pm/model";
+import { NodeSelection, Selection, TextSelection } from "@tiptap/pm/state";
 
 import type { LocalAchado } from "../rules/compliance";
 
@@ -56,6 +57,18 @@ export function alvoNoEditor(doc: NoPM, local: LocalAchado): AlvoNoEditor | null
   const inicio = Math.min(local.trecho.inicio, limite);
   const fim = Math.min(Math.max(local.trecho.fim, inicio), limite);
   return { alvo: "trecho", de: posicao + 1 + inicio, ate: posicao + 1 + fim };
+}
+
+// A seleção que mostra o alvo: o trecho de texto fica selecionado, para o
+// aluno ver exatamente a passagem; figura e fórmula (átomos) ficam
+// selecionadas inteiras; o resto recebe o cursor no começo. Serve ao clique
+// num achado (5.2.3) e à ocorrência da busca (5.4.3).
+export function selecaoDoAlvo(doc: NoPM, alvo: AlvoNoEditor): Selection {
+  if (alvo.alvo === "trecho") return TextSelection.create(doc, alvo.de, alvo.ate);
+  if (alvo.alvo === "no" && doc.nodeAt(alvo.posicao)?.isAtom) {
+    return NodeSelection.create(doc, alvo.posicao);
+  }
+  return Selection.near(doc.resolve(alvo.posicao + 1));
 }
 
 function acharSecao(doc: NoPM, id: string): number | null {

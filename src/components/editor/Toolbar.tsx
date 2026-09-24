@@ -103,6 +103,8 @@ interface ToolbarProps {
   editor: Editor | null;
   // Para o menu de citação (4.10) listar o que pode ser citado.
   references: readonly Referencia[];
+  // Abre a barra de localizar e substituir (5.4.3).
+  onBuscar?: () => void;
 }
 
 // Ações de formatação da v1 (passo 2.5, estendida no 2B.12): negrito,
@@ -139,7 +141,7 @@ interface ToolbarProps {
 // (`editor.chain().updateAttributes("secao", { nivel })`), não um parágrafo
 // — não existe "Título 1" como estilo de parágrafo neste schema: o título é
 // atributo da própria seção (docs/schema-tiptap.md §4.1).
-export function Toolbar({ editor, references }: ToolbarProps) {
+export function Toolbar({ editor, references, onBuscar }: ToolbarProps) {
   useEstadoEditor(editor);
 
   if (!editor) return null;
@@ -328,6 +330,12 @@ export function Toolbar({ editor, references }: ToolbarProps) {
       ))}
 
       <Divisor />
+
+      {onBuscar && (
+        <BotaoToolbar label="Localizar e substituir (Ctrl+F)" onClick={onBuscar}>
+          <Icon name="search" size={16} />
+        </BotaoToolbar>
+      )}
 
       <BotaoToolbar label="Aplicar formatação ABNT — chega na Fase 3" disabled>
         <Icon name="wand-sparkles" size={16} />

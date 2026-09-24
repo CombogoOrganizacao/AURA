@@ -16,7 +16,9 @@ export interface Bloco {
 // Ordem de leitura: seções por `ordem` (não pela posição no array, mesma
 // convenção de `numerarSecoes()`), depois apêndices e anexos na ordem da
 // lista, como `listarCitacoes()` faz.
-export function blocosEmOrdem(documento: Documento): Bloco[] {
+export function blocosEmOrdem(
+  documento: Pick<Documento, "sections" | "apendices" | "anexos">,
+): Bloco[] {
   return [
     ...[...documento.sections]
       .sort((a, b) => a.ordem - b.ordem)

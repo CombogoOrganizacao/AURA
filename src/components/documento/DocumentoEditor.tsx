@@ -247,8 +247,13 @@ function Carregado({
     }
   }, []);
 
+  // Base `0px`, e não o `0%` do `flex-1`: base em porcentagem num `body` sem
+  // altura definida (só `min-h-full`) conta como "altura do conteúdo", e a
+  // tela inteira crescia com a folha. Com `0px`, o `body` fica na altura da
+  // janela, e cada coluna do `LayoutEdicao` rola por conta própria, como ele
+  // foi desenhado. A toolbar e a barra de estatísticas (5.4.3) ficam à vista.
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-[1_1_0px] flex-col">
       <AppTopBar
         mode="editor"
         docTitle={documento.metadados.titulo}

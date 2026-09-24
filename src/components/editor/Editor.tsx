@@ -6,7 +6,6 @@ import TiptapHistory from "@tiptap/extension-history";
 import TiptapParagraph from "@tiptap/extension-paragraph";
 import TiptapText from "@tiptap/extension-text";
 import { Fragment, Slice } from "@tiptap/pm/model";
-import { NodeSelection, Selection, TextSelection } from "@tiptap/pm/state";
 import { EditorContent, ReactNodeViewRenderer, useEditor } from "@tiptap/react";
 
 import { EstadoCarregando } from "@/components/ui/Estados";
@@ -17,7 +16,8 @@ import type { Secao } from "@/core/document/types";
 import type { Referencia } from "@/core/references/types";
 import { cursorNaUltimaLinha } from "@/core/editor/caret";
 import { CursorDeIntervalo } from "@/core/editor/gapcursor";
-import { alvoNoEditor } from "@/core/editor/localizar";
+import { alvoNoEditor, selecaoDoAlvo } from "@/core/editor/localizar";
+import { RealceBusca } from "@/core/editor/busca";
 import { Citacao } from "@/core/editor/marks/citation";
 import { Italico } from "@/core/editor/marks/italico";
 import { Negrito } from "@/core/editor/marks/negrito";
@@ -32,6 +32,8 @@ import { moverSecaoDeTopo } from "@/core/editor/reorder";
 import type { LocalAchado } from "@/core/rules/compliance";
 
 import { AvisoPaginacao } from "./AvisoPaginacao";
+import { BarraEstatisticas } from "./BarraEstatisticas";
+import { BuscaSubstituicao, type CampoDaBusca } from "./BuscaSubstituicao";
 import { atualizarReferenciasDasChamadas, ChamadasDeCitacao } from "./chamadas";
 import { FiguraView } from "./nodes/FiguraView";
 import { FormulaView } from "./nodes/FormulaView";
@@ -190,6 +192,8 @@ export function Editor({
       Citacao,
       // Aspas e chamada ao lado de cada citação (4.10) — decoração, não texto.
       ChamadasDeCitacao,
+      // Realce de localizar e substituir (5.4.3) — também decoração.
+      RealceBusca,
       // Desfazer/refazer (passo 2B.12) não vem de graça: as extensões
       // "core" do TipTap v3 (Editable, Commands, Keymap...) não incluem
       // histórico — é um pacote separado desde sempre, agora
@@ -260,12 +264,10 @@ export function Editor({
     };
   }, [editor, onReorderReady]);
 
-  // Clicar num achado da conferência (5.2.3). `alvoNoEditor()`
-  // (src/core/editor/localizar.ts) traduz o local para uma posição; aqui só
-  // se escolhe a seleção. Trecho de texto fica selecionado, para o aluno ver
-  // exatamente a passagem; figura e fórmula (átomos) ficam selecionadas
-  // inteiras; o resto recebe o cursor no começo. `scrollIntoView` rola o
-  // contêiner da folha até ele.
+  // Clicar num achado da conferência (5.2.3). `alvoNoEditor()` traduz o
+  // local para uma posição, e `selecaoDoAlvo()` escolhe a seleção
+  // (src/core/editor/localizar.ts). `scrollIntoView` rola o contêiner da
+  // folha até ela.
   useEffect(() => {
     if (!editor || !onIrParaReady) return;
     onIrParaReady((local) => {
@@ -273,15 +275,7 @@ export function Editor({
       if (!alvo) return false;
 
       const { doc, tr } = editor.state;
-      let selecao: Selection;
-      if (alvo.alvo === "trecho") {
-        selecao = TextSelection.create(doc, alvo.de, alvo.ate);
-      } else if (alvo.alvo === "no" && doc.nodeAt(alvo.posicao)?.isAtom) {
-        selecao = NodeSelection.create(doc, alvo.posicao);
-      } else {
-        selecao = Selection.near(doc.resolve(alvo.posicao + 1));
-      }
-      editor.view.dispatch(tr.setSelection(selecao).scrollIntoView());
+      editor.view.dispatch(tr.setSelection(selecaoDoAlvo(doc, alvo)).scrollIntoView());
       editor.view.focus();
       return true;
     });
@@ -289,6 +283,45 @@ export function Editor({
       onIrParaReady(() => false);
     };
   }, [editor, onIrParaReady]);
+
+  // Localizar e substituir (5.4.3). Ctrl+F abre no campo de busca, Ctrl+H no
+  // de substituição, e com a barra aberta põem o foco de volta nele. O Ctrl+F
+  // do navegador é trocado por este de propósito: o do navegador não acha o
+  // que está fora da tela, nem substitui. O texto selecionado, se for curto
+  // e de uma linha, já entra como termo.
+  const [busca, setBusca] = useState<{
+    campo: CampoDaBusca;
+    vez: number;
+    termoInicial: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!editor) return;
+    function aoTeclar(evento: KeyboardEvent) {
+      if (!(evento.ctrlKey || evento.metaKey) || evento.altKey) return;
+      const tecla = evento.key.toLowerCase();
+      if (tecla !== "f" && tecla !== "h") return;
+      evento.preventDefault();
+      abrirBusca(tecla === "f" ? "localizar" : "substituir");
+    }
+    window.addEventListener("keydown", aoTeclar);
+    return () => window.removeEventListener("keydown", aoTeclar);
+    // `abrirBusca` só lê `editor` e o `setBusca` estável.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor]);
+
+  function abrirBusca(campo: CampoDaBusca) {
+    if (!editor) return;
+    const { from, to } = editor.state.selection;
+    const selecionado = editor.state.doc.textBetween(from, to, "\n");
+    const termoInicial =
+      selecionado && !selecionado.includes("\n") && selecionado.length <= 100 ? selecionado : "";
+    setBusca((atual) => ({
+      campo,
+      vez: (atual?.vez ?? 0) + 1,
+      termoInicial: atual?.termoInicial ?? termoInicial,
+    }));
+  }
 
   // As chamadas são sintetizadas das referências (4.9), que vivem fora do
   // editor: cada mudança nelas é repassada ao plugin por uma transação só de
@@ -307,7 +340,16 @@ export function Editor({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <Toolbar editor={editor} references={references} />
+      <Toolbar editor={editor} references={references} onBuscar={() => abrirBusca("localizar")} />
+      {busca && (
+        <BuscaSubstituicao
+          editor={editor}
+          secoes={sections}
+          termoInicial={busca.termoInicial}
+          foco={busca}
+          onFechar={() => setBusca(null)}
+        />
+      )}
       <AvisoPaginacao />
       {/*
         Folha A4 real (passo 2B.10, `PaperSheet` do passo 2B.4) — mesma
@@ -320,7 +362,7 @@ export function Editor({
         curto que a v1 produz hoje (a v1 não tem "nova seção" nem rolagem de
         páginas), o limite não aparece na prática.
       */}
-      <div className="flex flex-1 flex-col items-center gap-6 overflow-auto bg-ink-100 p-8">
+      <div className="flex min-h-0 flex-1 flex-col items-center gap-6 overflow-auto bg-ink-100 p-8">
         <PaperSheet>
           {/*
             Clicar no vazio da folha, abaixo do texto, põe o cursor na última
@@ -351,6 +393,7 @@ export function Editor({
           </div>
         </PaperSheet>
       </div>
+      <BarraEstatisticas editor={editor} secoes={sections} />
     </div>
   );
 }

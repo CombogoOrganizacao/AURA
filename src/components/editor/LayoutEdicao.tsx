@@ -291,8 +291,13 @@ export function LayoutEdicao({ sidebar, children, inspetor }: LayoutEdicaoProps)
             onToggle={() => prefInspetorColapsado.definir(!inspetorColapsado)}
           />
         </div>
-        {/* Único painel que rola — os dois laterais rolam por conta própria, dentro do próprio slot. */}
-        <div className="min-h-0 flex-1 overflow-auto">{children}</div>
+        {/*
+          Único painel que rola — os dois laterais rolam por conta própria,
+          dentro do próprio slot. Coluna flex desde o 5.4.3: o editor divide a
+          altura entre toolbar, folha e barra de estatísticas, e só a folha
+          rola.
+        */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto">{children}</div>
       </div>
 
       {!inspetorColapsado && (

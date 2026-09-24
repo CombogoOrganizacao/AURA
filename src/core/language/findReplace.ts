@@ -46,8 +46,12 @@ export interface OcorrenciaBusca {
   fim: number;
 }
 
-export interface ResultadoSubstituicao {
-  documento: Documento;
+// O que a busca lê do documento: o corpo, os apêndices e os anexos. O
+// editor, que só tem as seções, passa listas vazias no resto.
+export type CorpoDoDocumento = Pick<Documento, "sections" | "apendices" | "anexos">;
+
+export interface ResultadoSubstituicao<D extends CorpoDoDocumento = Documento> {
+  documento: D;
   substituidas: number;
 }
 
@@ -89,7 +93,7 @@ interface CampoDoDocumento {
 // Os campos de texto na ordem de leitura. A ordem das seções é por `ordem`,
 // como em `blocosEmOrdem()` (rules/checks/percorrer.ts), para "próxima
 // ocorrência" seguir o que o aluno lê.
-function camposDoDocumento(documento: Documento): CampoDoDocumento[] {
+function camposDoDocumento(documento: CorpoDoDocumento): CampoDoDocumento[] {
   const blocos = [
     ...[...documento.sections]
       .sort((a, b) => a.ordem - b.ordem)
@@ -142,7 +146,7 @@ function juntar(trechos: readonly NoTexto[] | undefined): string {
 
 // Todas as ocorrências no documento, na ordem de leitura.
 export function buscarNoDocumento(
-  documento: Documento,
+  documento: CorpoDoDocumento,
   termo: string,
   opcoes: OpcoesBusca = {},
 ): OcorrenciaBusca[] {
@@ -292,11 +296,11 @@ function trocarNoNo(
 
 // Aplica as ocorrências dadas, agrupadas por bloco e campo. As ocorrências
 // têm de ter vindo de `buscarNoDocumento` sobre este mesmo documento.
-function aplicar(
-  documento: Documento,
+function aplicar<D extends CorpoDoDocumento>(
+  documento: D,
   ocorrencias: readonly OcorrenciaBusca[],
   substituto: string,
-): Documento {
+): D {
   const faixasDe = (onde: LocalCitacao) => (campo: CampoTexto) =>
     ocorrencias
       .filter(
@@ -325,12 +329,12 @@ function aplicar(
 // Troca todas as ocorrências do documento, de uma vez. As ocorrências são
 // achadas no texto original: um substituto que contém o termo ("a" por "aa")
 // não é procurado de novo.
-export function substituirTodas(
-  documento: Documento,
+export function substituirTodas<D extends CorpoDoDocumento>(
+  documento: D,
   termo: string,
   substituto: string,
   opcoes: OpcoesBusca = {},
-): ResultadoSubstituicao {
+): ResultadoSubstituicao<D> {
   const ocorrencias = buscarNoDocumento(documento, termo, opcoes);
   if (ocorrencias.length === 0) return { documento, substituidas: 0 };
   return {
@@ -341,10 +345,10 @@ export function substituirTodas(
 
 // Troca uma ocorrência só, a que o aluno está vendo. Ela tem de ter vindo de
 // `buscarNoDocumento` sobre este mesmo documento.
-export function substituirOcorrencia(
-  documento: Documento,
+export function substituirOcorrencia<D extends CorpoDoDocumento>(
+  documento: D,
   ocorrencia: OcorrenciaBusca,
   substituto: string,
-): Documento {
+): D {
   return aplicar(documento, [ocorrencia], substituto);
 }
