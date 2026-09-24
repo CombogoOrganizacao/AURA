@@ -10,12 +10,15 @@ import { Icon } from "@/components/ui/Icon";
 import { Switch } from "@/components/ui/Switch";
 import { Tabs } from "@/components/ui/Tabs";
 import type { Achado } from "@/core/rules/compliance";
+import type { EstadoConferencia } from "@/lib/useConferencia";
 
 import { PainelConferencia } from "./PainelConferencia";
 
 interface PainelInspetorProps {
   documentoId: string;
-  achados: readonly Achado[];
+  conferencia: EstadoConferencia;
+  verificarEnquantoEscrevo: boolean;
+  onVerificarEnquantoEscrevoChange: (ligar: boolean) => void;
   onIrPara: (achado: Achado) => void;
 }
 
@@ -25,8 +28,17 @@ type Aba = "ia" | "historico" | "conformidade";
 // desde o passo 5.2.3, e o `count` dela é a contagem real de achados da
 // conferência: só agora existe um número que não seria fabricado (mesma regra
 // do 2B.8/2B.10). IA e histórico seguem sem lógica (histórico é o 5.3).
-export function PainelInspetor({ documentoId, achados, onIrPara }: PainelInspetorProps) {
+// A chave do rodapé liga e desliga a conferência na pausa da digitação
+// (passo 5.2.4).
+export function PainelInspetor({
+  documentoId,
+  conferencia,
+  verificarEnquantoEscrevo,
+  onVerificarEnquantoEscrevoChange,
+  onIrPara,
+}: PainelInspetorProps) {
   const [aba, setAba] = useState<Aba>("conformidade");
+  const { achados } = conferencia;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -54,14 +66,28 @@ export function PainelInspetor({ documentoId, achados, onIrPara }: PainelInspeto
             descricao="O histórico de versões chega na Fase 5."
           />
         )}
-        {aba === "conformidade" && <PainelConferencia achados={achados} onIrPara={onIrPara} />}
+        {aba === "conformidade" && (
+          <PainelConferencia
+            achados={achados}
+            // Com a chave ligada, o atraso é só a pausa da digitação, e
+            // avisar a cada tecla faria o painel piscar.
+            desatualizada={conferencia.desatualizada && !verificarEnquantoEscrevo}
+            onConferirAgora={conferencia.conferirAgora}
+            onIrPara={onIrPara}
+          />
+        )}
       </div>
 
       <div className="flex shrink-0 flex-col gap-2.5 border-t border-[var(--border-subtle)] bg-sunken px-4 py-3">
         <Switch
-          disabled
+          checked={verificarEnquantoEscrevo}
+          onChange={(evento) => onVerificarEnquantoEscrevoChange(evento.target.checked)}
           label="Verificar enquanto escrevo"
-          description="Chega com o motor de conformidade (Fase 5)."
+          description={
+            verificarEnquantoEscrevo
+              ? "Confere a cada pausa na digitação."
+              : "Confere só quando você pedir."
+          }
         />
         <BotaoExportar documentoId={documentoId} />
       </div>

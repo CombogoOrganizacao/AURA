@@ -2,11 +2,18 @@
 
 import { PanelHeading } from "@/components/app/PanelHeading";
 import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import type { Achado, Gravidade } from "@/core/rules/compliance";
 
 interface PainelConferenciaProps {
   achados: readonly Achado[];
+  /**
+   * O documento mudou depois da última conferência, e ela não vai se refazer
+   * sozinha ("Verificar enquanto escrevo" desligado).
+   */
+  desatualizada: boolean;
+  onConferirAgora: () => void;
   /** Leva ao lugar do achado: cursor no texto, ou o campo na coluna esquerda. */
   onIrPara: (achado: Achado) => void;
 }
@@ -24,6 +31,10 @@ interface PainelConferenciaProps {
 //
 // Achado de regra sem item na norma (`item: null`) é identificado como
 // convenção, nunca como exigência da NBR.
+//
+// Conferência desatualizada (passo 5.2.4): os achados continuam à vista, mas
+// sem clique. O trecho de um achado velho pode ter mudado de lugar, e levar o
+// cursor para lá selecionaria outro texto.
 
 const GRUPOS: { gravidade: Gravidade; titulo: string; icone: "circle-alert" | "triangle-alert" }[] =
   [
@@ -54,21 +65,44 @@ function destino(achado: Achado): string | null {
   }
 }
 
-export function PainelConferencia({ achados, onIrPara }: PainelConferenciaProps) {
+export function PainelConferencia({
+  achados,
+  desatualizada,
+  onConferirAgora,
+  onIrPara,
+}: PainelConferenciaProps) {
   const erros = achados.filter((achado) => achado.gravidade === "erro").length;
   const avisos = achados.length - erros;
 
+  const aviso = desatualizada && (
+    <Alert
+      tone="info"
+      title="Conferência desatualizada"
+      action={
+        <Button size="sm" variant="outline" onClick={onConferirAgora}>
+          Conferir agora
+        </Button>
+      }
+    >
+      O texto mudou depois da última conferência.
+    </Alert>
+  );
+
   if (achados.length === 0) {
     return (
-      <Alert tone="success" title="Nenhuma pendência">
-        Nenhum erro nem aviso nas regras conferidas. Margens, fonte e paginação não são conferidas
-        aqui: o .docx já sai com os valores da norma.
-      </Alert>
+      <div className="flex flex-col gap-5">
+        {aviso}
+        <Alert tone="success" title="Nenhuma pendência">
+          Nenhum erro nem aviso nas regras conferidas. Margens, fonte e paginação não são
+          conferidas aqui: o .docx já sai com os valores da norma.
+        </Alert>
+      </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-5">
+      {aviso}
       <p className="font-sans text-xs text-muted" aria-live="polite">
         {plural(erros, "erro", "erros")} · {plural(avisos, "aviso", "avisos")}
       </p>
@@ -84,7 +118,11 @@ export function PainelConferencia({ achados, onIrPara }: PainelConferenciaProps)
             <ul className="flex flex-col gap-2">
               {doGrupo.map((achado, indice) => (
                 <li key={`${achado.regra}-${indice}`}>
-                  <CartaoAchado achado={achado} icone={icone} onIrPara={onIrPara} />
+                  <CartaoAchado
+                    achado={achado}
+                    icone={icone}
+                    onIrPara={desatualizada ? null : onIrPara}
+                  />
                 </li>
               ))}
             </ul>
@@ -102,7 +140,7 @@ function CartaoAchado({
 }: {
   achado: Achado;
   icone: "circle-alert" | "triangle-alert";
-  onIrPara: (achado: Achado) => void;
+  onIrPara: ((achado: Achado) => void) | null;
 }) {
   const conteudo = (
     <>
@@ -121,11 +159,13 @@ function CartaoAchado({
     </>
   );
 
-  const acao = destino(achado);
+  const acao = onIrPara && destino(achado);
   const classes =
     "block w-full rounded-md border border-[var(--border-subtle)] bg-card p-3 text-left";
 
-  if (!acao) return <div className={classes}>{conteudo}</div>;
+  if (!acao) {
+    return <div className={`${classes} ${onIrPara ? "" : "opacity-60"}`}>{conteudo}</div>;
+  }
 
   return (
     <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AppTopBar } from "@/components/app/AppTopBar";
 import { BotaoExportar } from "@/components/editor/BotaoExportar";
@@ -14,11 +14,12 @@ import { EstadoCarregando, EstadoErro } from "@/components/ui/Estados";
 import { novoDocumento } from "@/core/document/factory";
 import type { Documento, Metadados, Secao } from "@/core/document/types";
 import type { AdaptadorPersistencia } from "@/core/persistence/types";
-import { conferirDocumento, type Achado } from "@/core/rules/compliance";
+import type { Achado } from "@/core/rules/compliance";
 import { resolveRules } from "@/core/rules/resolve";
 import type { Referencia } from "@/core/references/types";
 import { usePersistencia } from "@/lib/persistence-provider";
 import { useAutosave, type StatusAutosave } from "@/lib/useAutosave";
+import { useConferencia } from "@/lib/useConferencia";
 
 import { Abstract } from "./Abstract";
 import { PainelAbreviaturas } from "./PainelAbreviaturas";
@@ -210,9 +211,10 @@ function Carregado({
     moverSecaoRef.current?.(idOrigem, idDestino, inserirDepois);
   }, []);
 
-  // Conferência (passo 5.2.3). Recalcula a cada mudança do documento; o
-  // passo 5.2.4 põe isto sob debounce, para não pesar na digitação.
-  const achados = useMemo(() => conferirDocumento(documento, REGRAS), [documento]);
+  // Conferência (passo 5.2.3), recalculada na pausa da digitação (5.2.4).
+  // A chave "Verificar enquanto escrevo" vale só nesta sessão do editor.
+  const [verificarEnquantoEscrevo, setVerificarEnquantoEscrevo] = useState(true);
+  const conferencia = useConferencia(documento, REGRAS, { ativa: verificarEnquantoEscrevo });
 
   // Mesmo padrão do reordenar: o `Editor` entrega o comando, a ref guarda a
   // versão mais recente.
@@ -358,7 +360,17 @@ function Carregado({
           </div>
         }
         inspetor={
-          <PainelInspetor documentoId={documentoId} achados={achados} onIrPara={irParaAchado} />
+          <PainelInspetor
+            documentoId={documentoId}
+            conferencia={conferencia}
+            verificarEnquantoEscrevo={verificarEnquantoEscrevo}
+            onVerificarEnquantoEscrevoChange={(ligar) => {
+              setVerificarEnquantoEscrevo(ligar);
+              // Religar confere na hora, sem esperar a próxima pausa.
+              if (ligar) conferencia.conferirAgora();
+            }}
+            onIrPara={irParaAchado}
+          />
         }
       >
         <Editor
