@@ -5,18 +5,20 @@ import { useState } from "react";
 import { BotaoExportar } from "@/components/editor/BotaoExportar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { EstadoVazio } from "@/components/ui/Estados";
 import { Icon } from "@/components/ui/Icon";
 import { Switch } from "@/components/ui/Switch";
 import { Tabs } from "@/components/ui/Tabs";
 import type { Achado } from "@/core/rules/compliance";
 import type { EstadoConferencia } from "@/lib/useConferencia";
+import type { EstadoHistorico } from "@/lib/useVersaoAutomatica";
 
 import { PainelConferencia } from "./PainelConferencia";
+import { PainelHistorico } from "./PainelHistorico";
 
 interface PainelInspetorProps {
   documentoId: string;
   conferencia: EstadoConferencia;
+  historico: EstadoHistorico;
   verificarEnquantoEscrevo: boolean;
   onVerificarEnquantoEscrevoChange: (ligar: boolean) => void;
   onIrPara: (achado: Achado) => void;
@@ -27,12 +29,14 @@ type Aba = "ia" | "historico" | "conformidade";
 // Coluna direita do editor (passo 2B.11). A aba Conformidade tem conteúdo
 // desde o passo 5.2.3, e o `count` dela é a contagem real de achados da
 // conferência: só agora existe um número que não seria fabricado (mesma regra
-// do 2B.8/2B.10). IA e histórico seguem sem lógica (histórico é o 5.3).
+// do 2B.8/2B.10). O histórico tem conteúdo desde o 5.3.2; a IA segue sem
+// lógica.
 // A chave do rodapé liga e desliga a conferência na pausa da digitação
 // (passo 5.2.4).
 export function PainelInspetor({
   documentoId,
   conferencia,
+  historico,
   verificarEnquantoEscrevo,
   onVerificarEnquantoEscrevoChange,
   onIrPara,
@@ -60,12 +64,7 @@ export function PainelInspetor({
 
       <div className="flex-1 overflow-auto p-4">
         {aba === "ia" && <PainelIA />}
-        {aba === "historico" && (
-          <EstadoVazio
-            titulo="Sem histórico ainda"
-            descricao="O histórico de versões chega na Fase 5."
-          />
-        )}
+        {aba === "historico" && <PainelHistorico historico={historico} />}
         {aba === "conformidade" && (
           <PainelConferencia
             achados={achados}

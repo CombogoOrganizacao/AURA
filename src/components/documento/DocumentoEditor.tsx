@@ -20,6 +20,7 @@ import type { Referencia } from "@/core/references/types";
 import { usePersistencia } from "@/lib/persistence-provider";
 import { useAutosave, type StatusAutosave } from "@/lib/useAutosave";
 import { useConferencia } from "@/lib/useConferencia";
+import { useVersaoAutomatica } from "@/lib/useVersaoAutomatica";
 
 import { Abstract } from "./Abstract";
 import { PainelAbreviaturas } from "./PainelAbreviaturas";
@@ -216,6 +217,10 @@ function Carregado({
   const [verificarEnquantoEscrevo, setVerificarEnquantoEscrevo] = useState(true);
   const conferencia = useConferencia(documento, REGRAS, { ativa: verificarEnquantoEscrevo });
 
+  // Histórico de versões (passo 5.3.2): automática a cada 10 min de edição,
+  // e nomeada quando o aluno pede.
+  const historico = useVersaoAutomatica(documento, persistencia);
+
   // Mesmo padrão do reordenar: o `Editor` entrega o comando, a ref guarda a
   // versão mais recente.
   const irParaLocalRef = useRef<IrParaLocal | null>(null);
@@ -363,6 +368,7 @@ function Carregado({
           <PainelInspetor
             documentoId={documentoId}
             conferencia={conferencia}
+            historico={historico}
             verificarEnquantoEscrevo={verificarEnquantoEscrevo}
             onVerificarEnquantoEscrevoChange={(ligar) => {
               setVerificarEnquantoEscrevo(ligar);
