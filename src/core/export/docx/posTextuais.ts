@@ -38,12 +38,7 @@ import { runsDeTrechos } from "./trechos";
 // preencheu.
 
 function paragrafoDeTexto(children: TextRun[]): Paragraph {
-  return new Paragraph({
-    children,
-    alignment: AlignmentType.JUSTIFIED,
-    spacing: { line: ABNT.espacamento15 },
-    indent: { firstLine: ABNT.recuoParagrafo },
-  });
+  return new Paragraph({ children, style: "Corpo" });
 }
 
 // **Não reaproveita o renderizador do corpo de propósito.** Lá figura e tabela
@@ -136,7 +131,9 @@ export function blocosDeAnexos(documento: Documento): FileChild[][] {
 //
 // Sem referência nenhuma, nada sai: o exportador não fabrica um "REFERÊNCIAS"
 // vazio (ver `gerarListaReferencias()`).
-const ESPACO_SIMPLES = { line: ABNT.espacamento1, before: 0, after: 0 };
+//
+// Alinhamento, espaço simples e recuo zero vêm do estilo `Referencia`
+// (styles.ts, passo 6.1.1), e não de cada parágrafo.
 
 function paragrafoReferencia(trechos: EntradaListaReferencias["trechos"]): Paragraph {
   return new Paragraph({
@@ -144,14 +141,14 @@ function paragrafoReferencia(trechos: EntradaListaReferencias["trechos"]): Parag
       (trecho) =>
         new TextRun({ text: trecho.texto, ...(trecho.papel === "titulo" ? { bold: true } : {}) }),
     ),
-    alignment: AlignmentType.LEFT,
-    spacing: ESPACO_SIMPLES,
-    indent: { left: 0, firstLine: 0 },
+    style: "Referencia",
   });
 }
 
+// No mesmo estilo da referência: é a "linha em branco de espaço simples" da
+// norma, e mede uma linha da mesma fonte.
 function linhaEmBranco(): Paragraph {
-  return new Paragraph({ children: [], spacing: ESPACO_SIMPLES });
+  return new Paragraph({ children: [], style: "Referencia" });
 }
 
 export function blocosDeReferencias(documento: Documento): FileChild[][] {

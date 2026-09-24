@@ -51,6 +51,14 @@ async function xmlCom(references: Referencia[]): Promise<string> {
   return zip.file("word/document.xml")!.async("string");
 }
 
+async function estiloReferencia(): Promise<string> {
+  const zip = await JSZip.loadAsync(await Packer.toBuffer(fromDocumento(novoDocumento())));
+  const estilos = await zip.file("word/styles.xml")!.async("string");
+  const bloco = estilos.match(/<w:style [^>]*w:styleId="Referencia"[^>]*>[\s\S]*?<\/w:style>/)?.[0];
+  expect(bloco).toBeDefined();
+  return bloco!;
+}
+
 // Os parágrafos da seção de Referências: do título até o fim do documento
 // (sem apêndice nem anexo neste teste, a lista é o último elemento).
 function paragrafosDaLista(xml: string): string[] {
@@ -84,20 +92,27 @@ describe("seção de Referências no .docx (passo 4.11)", () => {
     ]);
   });
 
-  it("cada parágrafo alinhado à esquerda, em espaço simples, sem recuo", async () => {
+  // Desde o 6.1.1 a formatação vem do estilo nomeado `Referencia`, e não de
+  // cada parágrafo: o parágrafo aponta para o estilo, e o estilo carrega os
+  // valores da norma.
+  it("cada parágrafo, entrada ou linha em branco, usa o estilo Referencia", async () => {
     const [, ...corpo] = paragrafosDaLista(await xmlCom(REFERENCIAS));
 
     for (const paragrafo of corpo) {
-      // Espaço simples: linha de 240 twips "auto" = 1,0; nada antes nem depois
-      // — a separação é a linha em branco, não um espaçamento.
-      expect(paragrafo).toMatch(/<w:spacing [^>]*w:line="240"/);
-      expect(paragrafo).toMatch(/<w:spacing [^>]*w:before="0"/);
-      expect(paragrafo).toMatch(/<w:spacing [^>]*w:after="0"/);
+      expect(paragrafo).toContain('<w:pStyle w:val="Referencia"/>');
     }
-    for (const entrada of corpo.filter((paragrafo) => texto(paragrafo) !== "")) {
-      expect(entrada).toContain('<w:jc w:val="left"/>');
-      expect(entrada).toMatch(/<w:ind [^>]*w:firstLine="0"/);
-    }
+  });
+
+  it("o estilo Referencia é alinhado à esquerda, em espaço simples, sem recuo", async () => {
+    const estilo = await estiloReferencia();
+
+    // Espaço simples: linha de 240 twips "auto" = 1,0; nada antes nem depois
+    // — a separação é a linha em branco, não um espaçamento.
+    expect(estilo).toMatch(/<w:spacing [^>]*w:line="240"/);
+    expect(estilo).toMatch(/<w:spacing [^>]*w:before="0"/);
+    expect(estilo).toMatch(/<w:spacing [^>]*w:after="0"/);
+    expect(estilo).toContain('<w:jc w:val="left"/>');
+    expect(estilo).toMatch(/<w:ind [^>]*w:firstLine="0"/);
   });
 
   it("a linha em branco é UMA, e não sobra uma depois da última entrada", async () => {

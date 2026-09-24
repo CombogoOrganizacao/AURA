@@ -113,6 +113,41 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
     expect(paragrafo).toContain('<w:pStyle w:val="CitacaoLonga"/>');
   });
 
+  // Passo 6.1.1: o parágrafo comum, no corpo e no apêndice, aponta para o
+  // estilo `Corpo`, sem formatação solta. É o que faz o parágrafo seguinte,
+  // digitado pelo aluno no Word, sair na norma.
+  it("parágrafo do corpo e do apêndice exporta com o estilo Corpo, sem formatação solta", async () => {
+    const documento = novoDocumento();
+    documento.sections = [
+      {
+        id: "s1",
+        ordem: 0,
+        nivel: 1,
+        titulo: "Introdução",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "Texto do corpo." }] }],
+      },
+    ];
+    documento.apendices = [
+      {
+        id: "a1",
+        titulo: "Roteiro",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "Texto do apêndice." }] }],
+      },
+    ];
+
+    const zip = await JSZip.loadAsync(await empacotar(documento));
+    const xml = await zip.file("word/document.xml")!.async("string");
+
+    for (const texto of ["Texto do corpo.", "Texto do apêndice."]) {
+      const posTexto = xml.indexOf(texto);
+      expect(posTexto).toBeGreaterThan(-1);
+      const paragrafo = xml.slice(xml.lastIndexOf("<w:p>", posTexto), posTexto);
+      expect(paragrafo).toContain('<w:pStyle w:val="Corpo"/>');
+      expect(paragrafo).not.toContain("<w:ind ");
+      expect(paragrafo).not.toContain("<w:jc ");
+    }
+  });
+
   // Passo 3.6.5. A fórmula sai como a fonte LaTeX em texto simples — é o que
   // docs/schema-tiptap.md §6 registra até o passo 6.1.4 (OMML). O teste
   // existe pra garantir que o que a pessoa escreveu CHEGA ao `.docx`: um nó

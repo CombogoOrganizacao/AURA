@@ -65,7 +65,19 @@ function idsDeEstilo(xmlEstilos: string): string[] {
 // `TituloPreTextual` (NBR 14724:2024 §5.2.3) e existe separado só para o campo
 // `TOC` conseguir recolher os pós-textuais sem arrastar os pré-textuais junto
 // (NBR 6027 §5.2 contra §6.3) — ver `styles.ts` e `toc.ts`.
-const ESTILOS_ALEM_DA_POC = ["CitacaoLonga", "Legenda", "TituloPosTextual"];
+// O 6.1.1 fechou a lista: `Corpo`, `Referencia` e as três entradas de
+// sumário (`TOC1`–`TOC3`), que a PoC deixava o Word criar sozinho, com o
+// recuo por nível que a NBR 6027 §5.1 não aceita.
+const ESTILOS_ALEM_DA_POC = [
+  "CitacaoLonga",
+  "Corpo",
+  "Legenda",
+  "Referencia",
+  "TOC1",
+  "TOC2",
+  "TOC3",
+  "TituloPosTextual",
+];
 
 describe("montarDocumento — esqueleto das três seções OOXML (passo 1.4.1)", () => {
   it("word/document.xml tem os mesmos três <w:sectPr> da PoC, só o segundo com w:pgNumType/w:start", async () => {

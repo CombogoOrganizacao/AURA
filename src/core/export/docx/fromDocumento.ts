@@ -9,10 +9,7 @@ import {
 } from "docx";
 
 import { gerarListaDeAbreviaturas } from "../../document/elements/abreviaturas";
-import {
-  gerarListaDeFiguras,
-  gerarListaDeTabelas,
-} from "../../document/elements/listas";
+import { gerarListaDeFiguras, gerarListaDeTabelas } from "../../document/elements/listas";
 import { textoItemSumario } from "../../document/elements/sumario";
 import { trechosDaCitacaoLonga, trechosDoInline } from "../../document/elements/trechos";
 import { numerarFiguras, numerarSecoes, numerarTabelas } from "../../document/numbering";
@@ -34,16 +31,8 @@ import { ABNT } from "./constants";
 import { paragrafoFonte, paragrafoLegenda } from "./legenda";
 import { runsDeTrechos } from "./trechos";
 import { montarDocumento } from "./index";
-import {
-  blocoListaDeAbreviaturas,
-  blocoListaDeFiguras,
-  blocoListaDeTabelas,
-} from "./listas";
-import {
-  blocosDeAnexos,
-  blocosDeApendices,
-  blocosDeReferencias,
-} from "./posTextuais";
+import { blocoListaDeAbreviaturas, blocoListaDeFiguras, blocoListaDeTabelas } from "./listas";
+import { blocosDeAnexos, blocosDeApendices, blocosDeReferencias } from "./posTextuais";
 import {
   comQuebrasEntreBlocos,
   montarCapa,
@@ -198,8 +187,8 @@ function paragrafoCorpo(
 ): Paragraph {
   if (no.type === "citacao_longa") {
     // Estilo nomeado carrega recuo/fonte/espaçamento sozinho (styles.ts) —
-    // nada repetido aqui, ao contrário do parágrafo comum abaixo, que ainda
-    // não tem estilo nomeado próprio (isso é "Corpo" em 6.1.1).
+    // nada repetido aqui. O parágrafo comum abaixo, idem, com `Corpo`
+    // (6.1.1).
     return new Paragraph({
       children: runsDeTrechos(trechosDaCitacaoLonga(no, references)),
       style: "CitacaoLonga",
@@ -208,9 +197,7 @@ function paragrafoCorpo(
 
   return new Paragraph({
     children: runsDeTrechos(trechosDoInline(no.content, references)),
-    alignment: AlignmentType.JUSTIFIED,
-    spacing: { line: ABNT.espacamento15 },
-    indent: { firstLine: ABNT.recuoParagrafo },
+    style: "Corpo",
   });
 }
 
@@ -285,9 +272,7 @@ const GERADORES: Record<ElementoDocumento, GeradorDeBlocos> = {
     blocoUnico(blocoListaDeTabelas(gerarListaDeTabelas(documento.sections).length > 0)),
   listaDeAbreviaturas: (documento) =>
     blocoUnico(
-      blocoListaDeAbreviaturas(
-        gerarListaDeAbreviaturas(documento.metadados, documento.sections),
-      ),
+      blocoListaDeAbreviaturas(gerarListaDeAbreviaturas(documento.metadados, documento.sections)),
     ),
   sumario: () => blocoUnico(blocoSumario()),
   corpo: (documento) => blocoUnico(paragrafosDoCorpo(documento)),

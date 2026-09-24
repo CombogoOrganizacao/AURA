@@ -5,9 +5,16 @@ import { ABNT } from "./constants";
 // Estilos nomeados do `.docx` — porte 1:1 de `poc/docx/gerar.js` (ver
 // docs/porte-poc.md para o que ficou de fora deste porte). Fatorado de
 // `index.ts` no passo 3.2.5: este arquivo é o destino de todo estilo
-// nomeado do exportador, daqui em diante — `CitacaoLonga` chega em 3.4.2,
-// o restante (Título 1-3 completo, Corpo, Referência, Legenda) em 6.1.1.
-// Nunca de volta pra `index.ts`, que fica só com a montagem do `Document`.
+// nomeado do exportador. A lista fechou no passo 6.1.1: Título 1–3, Corpo,
+// Citação Longa, Referência, Legenda, os dois títulos sem indicativo e as
+// três entradas de sumário. Nunca de volta pra `index.ts`, que fica só com a
+// montagem do `Document`.
+//
+// **Por que estilo nomeado, e não formatação em cada parágrafo.** O aluno
+// abre o `.docx` no Word e continua escrevendo. Com estilos, o parágrafo novo
+// que ele digita herda a formatação da norma pelo painel de Estilos, e o
+// sumário automático reconhece os títulos. Formatação solta em cada
+// parágrafo não passa adiante.
 //
 // A NBR 14724:2024 §5.4 exige gradação visível entre níveis de título e
 // consistência entre sumário e texto ("destacam-se gradativamente, no sumário
@@ -19,10 +26,53 @@ import { ABNT } from "./constants";
 // `NORMAS.abnt.titulos` em `src/core/standards/standards.ts`). O Vitest
 // de 3.2.5 (`styles.test.ts`) confere que os três níveis se distinguem no
 // `<w:style>` gerado — não que esta seja "a" combinação exigida pela norma.
+//
+// `keepNext` em todo título: um título sozinho no pé da página, com o texto
+// dele na página seguinte, é o defeito que o Word evita nos títulos dele de
+// fábrica. Não é regra da norma; é o comportamento que o aluno espera ao
+// continuar no Word.
 function estiloTitulo(extra: Record<string, boolean>) {
   return {
     run: { font: ABNT.fonte, size: ABNT.tamanhoCorpo, color: "000000", ...extra },
-    paragraph: { spacing: { before: 360, after: 240, line: ABNT.espacamento15 } },
+    paragraph: { keepNext: true, spacing: { before: 360, after: 240, line: ABNT.espacamento15 } },
+  };
+}
+
+// Entrada de sumário, um estilo por nível (passo 6.1.1). Sem eles, o Word
+// cria os seus ao atualizar o campo `TOC`, e os de fábrica **recuam cada
+// nível**, o que contraria a NBR 6027:2012 §5.1: "os indicativos das seções
+// que compõem o sumário [...] devem ser alinhados à esquerda". Por isso o
+// recuo é zero nos três.
+//
+// - §6.2 ("recomenda-se"): a subordinação "destacada com a mesma apresentação
+//   tipográfica utilizada nas seções do documento". Cada nível repete o
+//   destaque do título correspondente (`extra`).
+// - §5.4: a paginação "à margem direita". Tabulação direita na largura útil
+//   da folha, **sem pontilhado**: a norma não o pede, e o exemplo dela não
+//   tem.
+// - Entrelinha 1,5: o sumário não está entre as exceções de espaço simples da
+//   NBR 14724:2024 §5.2.
+//
+// **Limitação registrada:** a §5.2 recomenda alinhar os títulos "pela margem
+// do título do indicativo mais extenso". O campo `TOC` copia o texto do
+// título como está, e no texto o indicativo é separado do título por um
+// espaço (NBR 14724:2024 §5.2.2). Com um espaço não há margem comum a
+// alinhar; seria preciso uma tabulação no título do corpo, contra a 14724.
+//
+// `name: "toc N"` é o nome interno que o Word usa para reconhecer o estilo
+// como o de sumário dele (no Word em português aparece como "Sumário N").
+function estiloSumario(nivel: 1 | 2 | 3, extra: Record<string, boolean>) {
+  return {
+    id: `TOC${nivel}`,
+    name: `toc ${nivel}`,
+    basedOn: "Normal",
+    next: "Normal",
+    run: { font: ABNT.fonte, size: ABNT.tamanhoCorpo, color: "000000", ...extra },
+    paragraph: {
+      spacing: { before: 0, after: 0, line: ABNT.espacamento15 },
+      indent: { left: 0, firstLine: 0 },
+      rightTabStop: ABNT.larguraUtil,
+    },
   };
 }
 
@@ -44,7 +94,10 @@ export const ESTILOS_DOCUMENTO: IStylesOptions = {
         allCaps: true,
         color: "000000",
       },
-      paragraph: { spacing: { before: 480, after: 240, line: ABNT.espacamento15 } },
+      paragraph: {
+        keepNext: true,
+        spacing: { before: 480, after: 240, line: ABNT.espacamento15 },
+      },
     },
     heading2: estiloTitulo({ bold: true }),
     heading3: estiloTitulo({ italics: true }),
@@ -56,13 +109,50 @@ export const ESTILOS_DOCUMENTO: IStylesOptions = {
     },
   },
   paragraphStyles: [
+    // Texto corrido — passo 6.1.1. NBR 14724:2024 §5.2: entrelinha 1,5; §5.1:
+    // fonte 12; recuo de primeira linha e justificado, os mesmos valores que
+    // o parágrafo já recebia solto antes deste estilo existir
+    // (`ABNT.recuoParagrafo`, ver constants.ts para a origem de cada um).
+    {
+      id: "Corpo",
+      name: "Corpo",
+      basedOn: "Normal",
+      next: "Corpo",
+      quickFormat: true,
+      run: { font: ABNT.fonte, size: ABNT.tamanhoCorpo },
+      paragraph: {
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { line: ABNT.espacamento15 },
+        indent: { firstLine: ABNT.recuoParagrafo },
+      },
+    },
+    // Referência da lista — passo 6.1.1. NBR 6023:2025 §6.3: "elaboradas em
+    // espaço simples, alinhadas à margem esquerda do texto"; a linha em branco
+    // entre uma e outra é um parágrafo vazio no mesmo estilo (ver
+    // `posTextuais.ts`, que explica por quê). Fonte 12: as referências não
+    // estão entre os elementos de tamanho menor (NBR 14724:2024 §5.1).
+    {
+      id: "Referencia",
+      name: "Referencia",
+      basedOn: "Normal",
+      next: "Referencia",
+      quickFormat: true,
+      run: { font: ABNT.fonte, size: ABNT.tamanhoCorpo },
+      paragraph: {
+        alignment: AlignmentType.LEFT,
+        spacing: { before: 0, after: 0, line: ABNT.espacamento1 },
+        indent: { left: 0, firstLine: 0 },
+      },
+    },
+    estiloSumario(1, { bold: true, allCaps: true }),
+    estiloSumario(2, { bold: true }),
+    estiloSumario(3, { italics: true }),
     // Título de elemento sem indicativo numérico — NBR 14724:2024 §5.2.3,
     // que trata NUMA LISTA SÓ os treze: errata, agradecimentos, as quatro
     // listas, os dois resumos, sumário, referências, glossário, apêndice(s),
-    // anexo(s) e índice(s). "Devem ser centralizados", e nada mais. Usar um
-    // estilo só para pré e pós-textual não é atalho: é o agrupamento da norma.
-    // (O nome ficou preso ao lugar onde apareceu primeiro; renomear quebraria
-    // a paridade com `poc/docx/saida.docx` — registrado para o 6.1.1.)
+    // anexo(s) e índice(s). "Devem ser centralizados", e nada mais. O
+    // `TituloPosTextual`, logo abaixo, tem a mesma aparência: o que separa os
+    // dois é só o sumário (ver lá).
     {
       id: "TituloPreTextual",
       name: "Titulo Pre-Textual",
