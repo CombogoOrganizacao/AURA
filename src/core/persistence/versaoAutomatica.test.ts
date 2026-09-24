@@ -77,7 +77,11 @@ describe("criarAgendadorDeVersao", () => {
       await vi.advanceTimersByTimeAsync(60_000);
     }
 
-    expect(gravadas.map((versao) => versao.titulo)).toEqual(["Minuto 10", "Minuto 20", "Minuto 30"]);
+    expect(gravadas.map((versao) => versao.titulo)).toEqual([
+      "Minuto 10",
+      "Minuto 20",
+      "Minuto 30",
+    ]);
   });
 
   it("depois de uma versão, 10 min parados não geram outra", async () => {
@@ -103,6 +107,21 @@ describe("criarAgendadorDeVersao", () => {
     await vi.advanceTimersByTimeAsync(DEZ_MIN);
 
     expect(gravadas).toEqual([{ titulo: "Antes da banca", nome: "Versão para a banca" }]);
+  });
+
+  it("definirBase (versão restaurada) desarma a espera e vira a base", async () => {
+    const restaurado = comTitulo(inicial, "Restaurado");
+    agendador.mudou(comTitulo(inicial, "Editado antes de restaurar"));
+    agendador.definirBase(restaurado);
+
+    // O editor avisa a troca como uma mudança; é o mesmo texto da base.
+    agendador.mudou(restaurado);
+    await vi.advanceTimersByTimeAsync(DEZ_MIN * 2);
+    expect(gravadas).toEqual([]);
+
+    agendador.mudou(comTitulo(inicial, "Editado depois"));
+    await vi.advanceTimersByTimeAsync(DEZ_MIN);
+    expect(gravadas).toEqual([{ titulo: "Editado depois", nome: undefined }]);
   });
 
   it("uma falha avisa e deixa a mudança pendente para a próxima edição", async () => {

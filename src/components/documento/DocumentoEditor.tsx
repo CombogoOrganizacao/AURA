@@ -219,7 +219,14 @@ function Carregado({
 
   // Histórico de versões (passo 5.3.2): automática a cada 10 min de edição,
   // e nomeada quando o aluno pede.
-  const historico = useVersaoAutomatica(documento, persistencia);
+  // Restaurar troca o documento inteiro. Os painéis são controlados e
+  // acompanham; o `Editor` só lê `sections` ao montar, então ganha uma
+  // `key` nova e remonta com o conteúdo restaurado.
+  const [geracaoDoEditor, setGeracaoDoEditor] = useState(0);
+  const historico = useVersaoAutomatica(documento, persistencia, (restaurado) => {
+    setDocumento(restaurado);
+    setGeracaoDoEditor((geracao) => geracao + 1);
+  });
 
   // Mesmo padrão do reordenar: o `Editor` entrega o comando, a ref guarda a
   // versão mais recente.
@@ -380,6 +387,7 @@ function Carregado({
         }
       >
         <Editor
+          key={geracaoDoEditor}
           sections={documento.sections}
           references={documento.references}
           onSectionsChange={atualizarSecoes}

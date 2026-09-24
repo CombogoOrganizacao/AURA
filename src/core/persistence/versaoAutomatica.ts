@@ -42,6 +42,11 @@ export interface AgendadorDeVersao {
   // Versão nomeada, na hora. Passa a ser a base: a automática seguinte só
   // sai se o texto mudar depois dela.
   salvarNomeada(documento: Documento, nome: string): Promise<ResumoVersao>;
+  // O documento foi trocado por inteiro (uma versão restaurada, 5.3.3): ele
+  // passa a ser a base e o mais recente, e a automática em espera é
+  // desarmada. Sem isso, a automática seguinte gravaria uma cópia da versão
+  // que acabou de ser restaurada.
+  definirBase(documento: Documento): void;
   // Desarma o temporizador, sem gravar. O documento em si já está salvo
   // pelo autosave; o que se perde é só a versão automática em espera.
   encerrar(): void;
@@ -58,6 +63,13 @@ export function criarAgendadorDeVersao({
   let atual = documentoInicial;
   let temporizador: ReturnType<typeof setTimeout> | undefined;
   let encerrado = false;
+
+  function desarmar() {
+    if (temporizador !== undefined) {
+      clearTimeout(temporizador);
+      temporizador = undefined;
+    }
+  }
 
   async function gravarAutomatica() {
     temporizador = undefined;
@@ -90,12 +102,15 @@ export function criarAgendadorDeVersao({
       return versao;
     },
 
+    definirBase(documento) {
+      base = JSON.stringify(documento);
+      atual = documento;
+      desarmar();
+    },
+
     encerrar() {
       encerrado = true;
-      if (temporizador !== undefined) {
-        clearTimeout(temporizador);
-        temporizador = undefined;
-      }
+      desarmar();
     },
   };
 }

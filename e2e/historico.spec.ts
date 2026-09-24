@@ -36,9 +36,7 @@ test("o nome dado à versão aparece na lista e continua lá depois de recarrega
 
   await page.reload();
   await abrirHistorico(page);
-  await expect(page.getByRole("list", { name: "Versões" })).toContainText(
-    "Enviada ao orientador",
-  );
+  await expect(page.getByRole("list", { name: "Versões" })).toContainText("Enviada ao orientador");
 });
 
 test("10 min de edição geram uma versão automática; parado, não", async ({ page }) => {
@@ -59,4 +57,55 @@ test("10 min de edição geram uma versão automática; parado, não", async ({ 
   const versoes = page.getByRole("list", { name: "Versões" });
   await expect(versoes.getByRole("listitem")).toHaveCount(1);
   await expect(versoes).toContainText("Versão automática");
+});
+
+// Passo 5.3.3 — restaurar, com confirmação; o texto de antes vira versão.
+test("restaurar traz o conteúdo antigo, e o texto de antes vira uma versão nova", async ({
+  page,
+}) => {
+  await novoDocumento(page);
+  await abrirHistorico(page);
+  const paragrafo = page.locator(".ProseMirror p").first();
+
+  await paragrafo.click();
+  await page.keyboard.type("Texto antigo.");
+  await page.getByRole("textbox", { name: "Nome da versão" }).fill("Primeira");
+  await page.getByRole("button", { name: "Salvar versão" }).click();
+  const versoes = page.getByRole("list", { name: "Versões" });
+  await expect(versoes.getByRole("listitem")).toHaveCount(1);
+
+  await paragrafo.click({ clickCount: 3 });
+  await page.keyboard.type("Texto novo.");
+  await expect(paragrafo).toHaveText("Texto novo.");
+
+  // Cancelar não muda nada.
+  await page.getByRole("button", { name: "Restaurar Primeira" }).click();
+  const dialogo = page.getByRole("dialog", { name: "Restaurar esta versão?" });
+  await expect(dialogo).toContainText("Antes de restaurar “Primeira”");
+  await dialogo.getByRole("button", { name: "Cancelar" }).click();
+  await expect(dialogo).toBeHidden();
+  await expect(paragrafo).toHaveText("Texto novo.");
+  await expect(versoes.getByRole("listitem")).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Restaurar Primeira" }).click();
+  await dialogo.getByRole("button", { name: "Restaurar" }).click();
+  await expect(dialogo).toBeHidden();
+
+  await expect(page.locator(".ProseMirror p").first()).toHaveText("Texto antigo.");
+  await expect(page.getByText("Versão restaurada")).toBeVisible();
+  // O texto de antes não some: é a versão mais recente.
+  await expect(versoes.getByRole("listitem")).toHaveCount(2);
+  await expect(versoes.getByRole("listitem").first()).toContainText(
+    "Antes de restaurar “Primeira”",
+  );
+
+  // E dá para voltar a ele do mesmo jeito.
+  await page.getByRole("button", { name: "Restaurar Antes de restaurar “Primeira”" }).click();
+  await dialogo.getByRole("button", { name: "Restaurar" }).click();
+  await expect(page.locator(".ProseMirror p").first()).toHaveText("Texto novo.");
+  await expect(versoes.getByRole("listitem")).toHaveCount(3);
+
+  // A restauração é gravada no documento na hora, sem esperar o autosave.
+  await page.reload();
+  await expect(page.locator(".ProseMirror p").first()).toHaveText("Texto novo.");
 });

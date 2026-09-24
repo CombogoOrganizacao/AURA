@@ -93,8 +93,8 @@ export function PainelConferencia({
       <div className="flex flex-col gap-5">
         {aviso}
         <Alert tone="success" title="Nenhuma pendência">
-          Nenhum erro nem aviso nas regras conferidas. Margens, fonte e paginação não são
-          conferidas aqui: o .docx já sai com os valores da norma.
+          Nenhum erro nem aviso nas regras conferidas. Margens, fonte e paginação não são conferidas
+          aqui: o .docx já sai com os valores da norma.
         </Alert>
       </div>
     );

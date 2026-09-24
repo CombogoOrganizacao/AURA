@@ -101,9 +101,7 @@ test("achado de metadado abre o campo na coluna esquerda; agrupado e sem nota", 
 // sumiria na primeira letra.
 const CORPO_VAZIO = /O corpo do texto está vazio/;
 
-test("digitar 10 s seguidos não congela a tela, e o painel atualiza na pausa", async ({
-  page,
-}) => {
+test("digitar 10 s seguidos não congela a tela, e o painel atualiza na pausa", async ({ page }) => {
   await novoDocumento(page);
   const achado = page.getByText(CORPO_VAZIO);
   await expect(achado).toBeVisible();

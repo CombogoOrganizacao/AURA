@@ -55,3 +55,42 @@ export async function registrarVersao(
 
   return salva;
 }
+
+export interface Restauracao {
+  // O documento como estava na versão restaurada.
+  documento: Documento;
+  // A versão nomeada com o texto de antes da restauração.
+  anterior: ResumoVersao;
+}
+
+// Restaura uma versão (passo 5.3.3). O texto de agora não some: vira uma
+// versão nomeada antes de ser substituído. Nomeada, e não automática, porque
+// uma automática poderia sair pela retenção, e o aluno que restaurou por
+// engano perderia o caminho de volta.
+//
+// A ordem protege o texto de agora:
+// 1. carrega a versão, e para se ela não existe, antes de gravar qualquer
+//    coisa;
+// 2. grava o texto de agora como versão;
+// 3. só então grava o documento restaurado por cima.
+// Uma falha no passo 2 deixa o documento como estava. Uma falha no passo 3
+// deixa uma versão a mais, e o texto de agora continua no documento.
+//
+// `nomeDoAnterior` vem de quem chama, porque o rótulo da versão (nome ou
+// data formatada) é texto de interface.
+export async function restaurarVersao(
+  adaptador: AdaptadorPersistencia,
+  atual: Documento,
+  versaoId: string,
+  nomeDoAnterior: string,
+): Promise<Restauracao> {
+  const documento = await adaptador.carregarVersao(atual.id, versaoId);
+  if (!documento) {
+    throw new Error("A versão não existe mais.");
+  }
+
+  const anterior = await registrarVersao(adaptador, atual, nomeDoAnterior);
+  await adaptador.salvarDocumento(documento);
+
+  return { documento, anterior };
+}

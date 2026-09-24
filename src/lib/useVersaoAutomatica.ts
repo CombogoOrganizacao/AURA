@@ -4,8 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { Documento } from "@/core/document/types";
 import type { AdaptadorPersistencia, ResumoVersao } from "@/core/persistence/types";
-import { criarAgendadorDeVersao, type AgendadorDeVersao } from "@/core/persistence/versaoAutomatica";
-import { registrarVersao } from "@/core/persistence/versions";
+import {
+  criarAgendadorDeVersao,
+  type AgendadorDeVersao,
+} from "@/core/persistence/versaoAutomatica";
+import { registrarVersao, restaurarVersao } from "@/core/persistence/versions";
 
 export interface EstadoHistorico {
   // Da mais recente para a mais antiga; `null` enquanto carrega.
@@ -13,6 +16,9 @@ export interface EstadoHistorico {
   // A última versão automática não foi gravada.
   falhouAutomatica: boolean;
   salvarNomeada: (nome: string) => Promise<void>;
+  // Restaura a versão (passo 5.3.3); o texto de agora vira a versão
+  // `nomeDoAnterior`. Quem troca o documento na tela é `aoRestaurar`.
+  restaurar: (versaoId: string, nomeDoAnterior: string) => Promise<void>;
 }
 
 // Histórico de versões do documento aberto (passo 5.3.2). A regra de quando
@@ -26,6 +32,7 @@ export interface EstadoHistorico {
 export function useVersaoAutomatica(
   documento: Documento,
   persistencia: AdaptadorPersistencia,
+  aoRestaurar: (restaurado: Documento) => void,
 ): EstadoHistorico {
   const [versoes, setVersoes] = useState<ResumoVersao[] | null>(null);
   const [falhouAutomatica, setFalhouAutomatica] = useState(false);
@@ -33,6 +40,11 @@ export function useVersaoAutomatica(
   const documentoRef = useRef(documento);
   useEffect(() => {
     documentoRef.current = documento;
+  });
+
+  const aoRestaurarRef = useRef(aoRestaurar);
+  useEffect(() => {
+    aoRestaurarRef.current = aoRestaurar;
   });
 
   const agendadorRef = useRef<AgendadorDeVersao | null>(null);
@@ -80,5 +92,22 @@ export function useVersaoAutomatica(
     await agendadorRef.current?.salvarNomeada(documentoRef.current, nome);
   }, []);
 
-  return { versoes, falhouAutomatica, salvarNomeada };
+  const restaurar = useCallback(
+    async (versaoId: string, nomeDoAnterior: string) => {
+      const { documento: restaurado } = await restaurarVersao(
+        persistencia,
+        documentoRef.current,
+        versaoId,
+        nomeDoAnterior,
+      );
+      // Antes de a tela trocar o documento: a troca chega ao agendador como
+      // uma mudança, e ele precisa já saber que é a base.
+      agendadorRef.current?.definirBase(restaurado);
+      aoRestaurarRef.current(restaurado);
+      setVersoes(await persistencia.listarVersoes(restaurado.id));
+    },
+    [persistencia],
+  );
+
+  return { versoes, falhouAutomatica, salvarNomeada, restaurar };
 }

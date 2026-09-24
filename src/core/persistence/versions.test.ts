@@ -10,6 +10,7 @@ import {
   LIMITE_VERSOES_AUTOMATICAS,
   maisRecentePrimeiro,
   registrarVersao,
+  restaurarVersao,
   versoesExcedentes,
 } from "./versions";
 
@@ -138,6 +139,49 @@ describe.each(ADAPTADORES)("registrarVersao — adaptador %s", (_, criarAdaptado
 
     expect(await adaptador.listarVersoes(cheio.id)).toHaveLength(LIMITE_VERSOES_AUTOMATICAS);
     expect(await adaptador.listarVersoes(vizinho.id)).toEqual([doVizinho]);
+  });
+
+  // Passo 5.3.3.
+  it("restaurar devolve o texto antigo, grava-o no documento e guarda o de agora como versão", async () => {
+    const documento = novoDocumento();
+    documento.metadados.titulo = "Texto antigo";
+    await adaptador.salvarDocumento(documento);
+    const antiga = await registrarVersao(adaptador, documento);
+    passarDezMinutos();
+
+    const atual = { ...documento, metadados: { ...documento.metadados, titulo: "Texto de agora" } };
+    await adaptador.salvarDocumento(atual);
+
+    const { documento: restaurado, anterior } = await restaurarVersao(
+      adaptador,
+      atual,
+      antiga.id,
+      "Antes de restaurar",
+    );
+
+    expect(restaurado.metadados.titulo).toBe("Texto antigo");
+    expect((await adaptador.carregarDocumento(documento.id))?.metadados.titulo).toBe(
+      "Texto antigo",
+    );
+    // O estado anterior não some: é uma versão nomeada, a mais recente.
+    expect(anterior).toMatchObject({ nome: "Antes de restaurar", automatica: false });
+    expect((await adaptador.listarVersoes(documento.id))[0].id).toBe(anterior.id);
+    expect((await adaptador.carregarVersao(documento.id, anterior.id))?.metadados.titulo).toBe(
+      "Texto de agora",
+    );
+  });
+
+  it("restaurar uma versão que não existe não grava nada", async () => {
+    const documento = novoDocumento();
+    documento.metadados.titulo = "Intacto";
+    await adaptador.salvarDocumento(documento);
+
+    await expect(
+      restaurarVersao(adaptador, documento, "inexistente", "Antes de restaurar"),
+    ).rejects.toThrow(/não existe/);
+
+    expect(await adaptador.listarVersoes(documento.id)).toEqual([]);
+    expect((await adaptador.carregarDocumento(documento.id))?.metadados.titulo).toBe("Intacto");
   });
 
   it("apara os espaços do nome, e nome em branco não vira versão automática", async () => {
