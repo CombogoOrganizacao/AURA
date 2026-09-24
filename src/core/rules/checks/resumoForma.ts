@@ -1,5 +1,5 @@
 import type { Verificacao } from "../compliance";
-import { contarPalavras } from "./percorrer";
+import { contarPalavras } from "../../language/stats";
 import { resumosPreenchidos } from "./resumos";
 
 // Forma do resumo — NBR 6028:2021, lida no PDF em 23/09/2026. Valem para o

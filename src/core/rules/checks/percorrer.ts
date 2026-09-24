@@ -157,10 +157,3 @@ function marcasDoInline(
   fechar();
   return saida;
 }
-
-// Palavras de um texto: sequências separadas por espaço que têm ao menos uma
-// letra ou algarismo. A NBR 6028 conta "palavras" sem definir; um travessão
-// solto não é palavra.
-export function contarPalavras(texto: string): number {
-  return texto.split(/\s+/u).filter((parte) => /[\p{L}\p{N}]/u.test(parte)).length;
-}

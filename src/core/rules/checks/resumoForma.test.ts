@@ -4,7 +4,7 @@ import { conferirCom } from "../__tests__/conferirCom";
 import { conferirDocumento } from "../compliance";
 import { documentoConforme } from "../__tests__/documentoConforme";
 import { resolveRules } from "../resolve";
-import { contarPalavras } from "./percorrer";
+import { contarPalavras } from "../../language/stats";
 import { palavrasChaveMinusculas, resumoExtensao, resumoParagrafoUnico } from "./resumoForma";
 
 // Passo 5.2.2 — forma do resumo pela NBR 6028:2021 (§4.1.2, §4.1.7, §4.1.8).
