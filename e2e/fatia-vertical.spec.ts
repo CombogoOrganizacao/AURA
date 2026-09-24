@@ -72,3 +72,34 @@ test("criar, digitar, recarregar, persistir e exportar", async ({ page }) => {
   const xmlDocumento = await zip.file("word/document.xml")!.async("string");
   expect(xmlDocumento).toContain(corpo);
 });
+
+// Correção feita junto do 6.1.2: o botão exportava o documento SALVO, e o
+// autosave espera 4 s depois da última tecla. Quem exportava logo após editar
+// recebia o arquivo sem as últimas mudanças. Agora exporta o que está na tela
+// e grava no mesmo clique.
+test("exportar logo depois de digitar leva o que está na tela, e grava", async ({ page }) => {
+  const corpo = "Frase digitada e exportada sem esperar o autosave.";
+
+  await page.goto("/documentos");
+  await page.getByRole("button", { name: "Novo documento" }).click();
+  await page.waitForURL(/\/documento\//);
+
+  const editor = page.locator('[contenteditable="true"]');
+  await editor.click();
+  await editor.pressSequentially(corpo);
+
+  // Sem esperar o "Salvo": o clique vem antes do debounce de 4 s acabar.
+  const statusAutosave = page.locator('span[role="status"]');
+  await expect(statusAutosave).toHaveText("Alterações não salvas…");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("banner").getByRole("button", { name: "Exportar .docx" }).click();
+  const download = await downloadPromise;
+
+  const zip = await JSZip.loadAsync(readFileSync((await download.path())!));
+  expect(await zip.file("word/document.xml")!.async("string")).toContain(corpo);
+
+  // O mesmo clique gravou: recarregar na hora não perde a frase.
+  await expect(statusAutosave).toHaveText("Salvo");
+  await page.reload();
+  await expect(editor).toContainText(corpo);
+});

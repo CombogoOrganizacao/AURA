@@ -9,24 +9,32 @@ import type { Documento } from "@/core/document/types";
 import { usePersistencia } from "@/lib/persistence-provider";
 
 interface BotaoExportarProps {
-  documentoId: string;
+  // O documento como está na tela, e não o salvo.
+  documento: Documento;
+  // Grava já, sem esperar o autosave.
+  salvarAgora: () => Promise<void>;
 }
 
 type Status = "pronto" | "exportando" | "erro";
 
-// Botão "Exportar .docx" (passo 1.4.4) — carrega o `Documento` salvo,
-// monta o `.docx` (`fromDocumento.ts`, passo 1.4.2) e empacota com
-// `Packer.toBlob()`, a escolha certa pra download no navegador
-// (`Packer.toBuffer()` é pra Node — ver o comentário em
-// `src/core/export/docx/index.ts`).
+// Botão "Exportar .docx" (passo 1.4.4) — monta o `.docx`
+// (`fromDocumento.ts`, passo 1.4.2) e empacota com `Packer.toBlob()`, a
+// escolha certa pra download no navegador (`Packer.toBuffer()` é pra Node —
+// ver o comentário em `src/core/export/docx/index.ts`).
 //
-// Exporta o que já está salvo, não o que está sendo digitado agora: o
-// autosave (metadados desde 1.3.6, corpo desde 1.3.7) salva com debounce —
-// exportar logo após digitar pode pegar a versão anterior. Capa e
-// pré-textuais continuam placeholder no exportador, sem ler `metadados`
-// nenhum (dependem do passo 3.5.1); o `.docx` baixado reflete isso — só o
-// corpo (título de seção + parágrafos) vem do que foi digitado.
-export function BotaoExportar({ documentoId }: BotaoExportarProps) {
+// **Exporta o que está na tela** (correção feita junto do 6.1.2). Até ali
+// exportava o documento salvo, e o autosave espera 4 s depois da última
+// tecla: quem exportava logo após editar recebia o arquivo sem as últimas
+// mudanças, e o aluno pode descobrir isso só depois de entregar. Agora o
+// documento vem de quem está com ele (`DocumentoEditor`), e o mesmo clique
+// grava na hora (`salvarAgora`), para o exportado estar também salvo.
+//
+// Desabilitar o botão até o autosave terminar foi considerado e descartado:
+// quem digita sem parar veria o botão sempre desabilitado, e uma falha de
+// gravação o prenderia assim, justo quando exportar é o jeito de não
+// perder o trabalho. Se a gravação falhar, a exportação segue com o que está
+// na tela, e o status do autosave mostra o erro.
+export function BotaoExportar({ documento, salvarAgora }: BotaoExportarProps) {
   const persistencia = usePersistencia();
   const [status, setStatus] = useState<Status>("pronto");
 
@@ -34,10 +42,9 @@ export function BotaoExportar({ documentoId }: BotaoExportarProps) {
     if (!persistencia) return;
     setStatus("exportando");
     try {
-      const documento = await persistencia.carregarDocumento(documentoId);
-      if (!documento) {
-        throw new Error(`Documento "${documentoId}" não encontrado`);
-      }
+      await salvarAgora().catch((erro: unknown) => {
+        console.error("Falha ao salvar antes de exportar:", erro);
+      });
       // As imagens das figuras moram fora do documento (6.1.2): o exportador,
       // que é lógica pura, as recebe já carregadas.
       const imagens = await carregarImagensDoDocumento(persistencia, documento);

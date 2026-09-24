@@ -186,7 +186,12 @@ function Carregado({
   persistencia: AdaptadorPersistencia;
 }) {
   const [documento, setDocumento] = useState(documentoInicial);
-  const status = useAutosave(documento, (atual) => persistencia.salvarDocumento(atual));
+  const { status, salvarAgora } = useAutosave(documento, (atual) =>
+    persistencia.salvarDocumento(atual),
+  );
+  // Os dois botões de exportar (barra superior e rodapé do inspetor) exportam
+  // o documento da tela e gravam na hora — ver `BotaoExportar.tsx`.
+  const botaoExportar = <BotaoExportar documento={documento} salvarAgora={salvarAgora} />;
 
   function atualizarMetadados(atualizador: (atual: Metadados) => Metadados) {
     setDocumento((atual) => ({ ...atual, metadados: atualizador(atual.metadados) }));
@@ -259,7 +264,7 @@ function Carregado({
         mode="editor"
         docTitle={documento.metadados.titulo}
         statusAutosave={TEXTO_STATUS[status]}
-        acoes={<BotaoExportar documentoId={documentoId} />}
+        acoes={botaoExportar}
       />
       {/* As figuras enviam e carregam imagens por aqui (6.1.2). */}
       <ProvedorImagens documentoId={documentoId} persistencia={persistencia}>
@@ -381,7 +386,7 @@ function Carregado({
           }
           inspetor={
             <PainelInspetor
-              documentoId={documentoId}
+              botaoExportar={botaoExportar}
               conferencia={conferencia}
               historico={historico}
               verificarEnquantoEscrevo={verificarEnquantoEscrevo}

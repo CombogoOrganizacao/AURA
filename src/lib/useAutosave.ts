@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { debounce, type Debounced } from "@/core/utils/debounce";
 
@@ -25,11 +25,20 @@ const ATRASO_PADRAO_MS = 4000;
 //
 // Não salva na primeira renderização — só quando `valor` muda de fato, pra
 // abrir uma tela existente não disparar uma escrita sem edição nenhuma.
+//
+// `salvarAgora` (passo 6.1.2, correção): grava já o valor mais recente e
+// descarta a escrita que esperava o debounce. É o que o botão de exportar
+// usa, para o que foi exportado estar também salvo.
+export interface Autosave {
+  status: StatusAutosave;
+  salvarAgora: () => Promise<void>;
+}
+
 export function useAutosave<T>(
   valor: T,
   salvar: (valor: T) => Promise<void>,
   opcoes: OpcoesAutosave = {},
-): StatusAutosave {
+): Autosave {
   const atrasoMs = opcoes.atrasoMs ?? ATRASO_PADRAO_MS;
   const [status, setStatus] = useState<StatusAutosave>("salvo");
 
@@ -60,8 +69,10 @@ export function useAutosave<T>(
     };
   }, [atrasoMs]);
 
+  const valorRef = useRef(valor);
   const primeiraExecucao = useRef(true);
   useEffect(() => {
+    valorRef.current = valor;
     if (primeiraExecucao.current) {
       primeiraExecucao.current = false;
       return;
@@ -70,5 +81,17 @@ export function useAutosave<T>(
     debounceRef.current?.(valor);
   }, [valor]);
 
-  return status;
+  const salvarAgora = useCallback(async () => {
+    debounceRef.current?.cancelar();
+    setStatus("salvando");
+    try {
+      await salvarRef.current(valorRef.current);
+      setStatus("salvo");
+    } catch (erro) {
+      setStatus("erro");
+      throw erro;
+    }
+  }, []);
+
+  return { status, salvarAgora };
 }

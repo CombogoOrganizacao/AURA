@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 
-import { BotaoExportar } from "@/components/editor/BotaoExportar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
@@ -16,7 +16,8 @@ import { PainelConferencia } from "./PainelConferencia";
 import { PainelHistorico } from "./PainelHistorico";
 
 interface PainelInspetorProps {
-  documentoId: string;
+  // O mesmo botão da barra superior, montado por quem tem o documento.
+  botaoExportar: ReactNode;
   conferencia: EstadoConferencia;
   historico: EstadoHistorico;
   verificarEnquantoEscrevo: boolean;
@@ -34,7 +35,7 @@ type Aba = "ia" | "historico" | "conformidade";
 // A chave do rodapé liga e desliga a conferência na pausa da digitação
 // (passo 5.2.4).
 export function PainelInspetor({
-  documentoId,
+  botaoExportar,
   conferencia,
   historico,
   verificarEnquantoEscrevo,
@@ -88,7 +89,7 @@ export function PainelInspetor({
               : "Confere só quando você pedir."
           }
         />
-        <BotaoExportar documentoId={documentoId} />
+        {botaoExportar}
       </div>
     </div>
   );
