@@ -68,7 +68,10 @@ function idsDeEstilo(xmlEstilos: string): string[] {
 // O 6.1.1 fechou a lista: `Corpo`, `Referencia` e as três entradas de
 // sumário (`TOC1`–`TOC3`), que a PoC deixava o Word criar sozinho, com o
 // recuo por nível que a NBR 6027 §5.1 não aceita.
+// `CelulaTabela` entrou no 6.1.3, com a grade da tabela: a PoC formatava cada
+// célula solta, em 10 pt, e a NBR 14724:2024 §5.1/§5.2 pede 12 pt e 1,5.
 const ESTILOS_ALEM_DA_POC = [
+  "CelulaTabela",
   "CitacaoLonga",
   "Corpo",
   "Legenda",

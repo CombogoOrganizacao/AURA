@@ -7,7 +7,8 @@ import { ABNT } from "./constants";
 // `index.ts` no passo 3.2.5: este arquivo é o destino de todo estilo
 // nomeado do exportador. A lista fechou no passo 6.1.1: Título 1–3, Corpo,
 // Citação Longa, Referência, Legenda, os dois títulos sem indicativo e as
-// três entradas de sumário. Nunca de volta pra `index.ts`, que fica só com a
+// três entradas de sumário; `CelulaTabela` entrou no 6.1.3, com a grade da
+// tabela. Nunca de volta pra `index.ts`, que fica só com a
 // montagem do `Document`.
 //
 // **Por que estilo nomeado, e não formatação em cada parágrafo.** O aluno
@@ -141,6 +142,25 @@ export const ESTILOS_DOCUMENTO: IStylesOptions = {
       paragraph: {
         alignment: AlignmentType.LEFT,
         spacing: { before: 0, after: 0, line: ABNT.espacamento1 },
+        indent: { left: 0, firstLine: 0 },
+      },
+    },
+    // Conteúdo de célula de tabela — passo 6.1.3. Fonte 12 e entrelinha 1,5
+    // porque a tabela não está entre as exceções da NBR 14724:2024 §5.1 e
+    // §5.2 (que alcançam só título, legenda e fonte da tabela — ver
+    // `table.ts`). À esquerda e sem recuo: o recuo de primeira linha e o
+    // justificado do `Corpo` são de parágrafo corrido, e numa coluna estreita
+    // o justificado abre buracos entre as palavras.
+    {
+      id: "CelulaTabela",
+      name: "Celula de Tabela",
+      basedOn: "Normal",
+      next: "CelulaTabela",
+      quickFormat: true,
+      run: { font: ABNT.fonte, size: ABNT.tamanhoCorpo },
+      paragraph: {
+        alignment: AlignmentType.LEFT,
+        spacing: { before: 0, after: 0, line: ABNT.espacamento15 },
         indent: { left: 0, firstLine: 0 },
       },
     },

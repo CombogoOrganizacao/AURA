@@ -112,11 +112,14 @@ export const ilustracaoComFonte: Verificacao = {
       })),
 };
 
-// Título da legenda. Figura: §5.8, "precedido por sua palavra designativa
-// [...], seguida de seu número de ordem [...], de travessão e do respectivo
-// título" — obrigação, erro. Tabela: o §5.9 remete às normas de apresentação
-// tabular do IBGE, que não foram lidas (pendência da auditoria). Sem o item,
-// fica AVISO com `item: null`, marcado como convenção.
+// Título da legenda, obrigação nas duas — erro. Figura: §5.8, "precedido por
+// sua palavra designativa [...], seguida de seu número de ordem [...], de
+// travessão e do respectivo título". Tabela: o §5.9 remete às normas de
+// apresentação tabular do IBGE (3. ed., 1993), e o §4.2 delas diz "Toda
+// tabela deve ter título, inscrito no topo". Era aviso sem item até o passo
+// 6.1.3, quando o documento do IBGE foi lido na fonte primária.
+const ITEM_TITULO_TABELA = "IBGE, Normas de apresentação tabular (1993) §4.2";
+
 export const ilustracaoComTitulo: Verificacao = {
   regra: "ilustracao-com-titulo",
   verificar: ({ documento }) =>
@@ -131,9 +134,9 @@ export const ilustracaoComTitulo: Verificacao = {
               local,
             }
           : {
-              gravidade: "aviso",
-              item: null,
-              mensagem: `${ROTULO_TABELA} ${numero} está sem título. A NBR 14724 remete as tabelas às normas do IBGE, ainda não conferidas pelo AURA; a lista de tabelas usa o título.`,
+              gravidade: "erro",
+              item: ITEM_TITULO_TABELA,
+              mensagem: `${ROTULO_TABELA} ${numero} está sem título. Toda tabela deve ter título, acima dela, dizendo o que os dados são, onde e quando.`,
               local,
             },
       ),

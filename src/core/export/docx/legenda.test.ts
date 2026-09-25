@@ -106,15 +106,12 @@ describe("legenda de figura/tabela no .docx (passo 3.6.3)", () => {
     expect(xml.indexOf("espaço reservado")).toBeLessThan(xml.indexOf("Fonte: IBGE (2024)"));
   });
 
-  // O que este passo NÃO entrega, dito por teste para ninguém supor o
-  // contrário: a imagem em `word/media/` é 6.1.2 e a grade OOXML é 6.1.3.
-  it("figura e tabela saem com placeholder no lugar do objeto, não em silêncio", async () => {
-    const xml = await documentXmlDe([
-      figura("f1", "Fluxo"),
-      { type: "tabela", id: "t1", legenda: "Faixas", fonte: "", linhas: [] },
-    ]);
+  // O que este passo NÃO entregava, dito por teste: a imagem em
+  // `word/media/` veio no 6.1.2 e a grade OOXML no 6.1.3 (`table.test.ts`).
+  // Sobra a figura sem imagem, que continua com placeholder em vez de sumir.
+  it("figura sem imagem sai com placeholder no lugar do objeto, não em silêncio", async () => {
+    const xml = await documentXmlDe([figura("f1", "Fluxo")]);
 
     expect(xml).toContain("espaço reservado para a imagem");
-    expect(xml).toContain("grade da tabela ainda não exportada");
   });
 });

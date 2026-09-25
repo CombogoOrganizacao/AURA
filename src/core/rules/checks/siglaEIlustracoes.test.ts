@@ -174,7 +174,7 @@ describe("ilustracao-com-fonte (§5.8 e §5.9)", () => {
   });
 });
 
-describe("ilustracao-com-titulo (§5.8; tabela pendente do IBGE)", () => {
+describe("ilustracao-com-titulo (§5.8; tabela pelo IBGE §4.2)", () => {
   it("conforme: nenhum achado", () => {
     expect(conferirCom(ilustracaoComTitulo)).toEqual([]);
   });
@@ -188,12 +188,18 @@ describe("ilustracao-com-titulo (§5.8; tabela pendente do IBGE)", () => {
     ).toEqual([expect.objectContaining({ gravidade: "erro", item: "NBR 14724:2024 §5.8" })]);
   });
 
-  it("tabela sem título: AVISO com item nulo, porque a norma remete ao IBGE, não lido", () => {
+  // A 14724 §5.9 remete ao IBGE, e o §4.2 dele: "Toda tabela deve ter título".
+  it("tabela sem título: erro pelo IBGE §4.2", () => {
     expect(
       conferirCom(
         ilustracaoComTitulo,
         (d) => ((d.sections[0].content[2] as NoTabela).legenda = ""),
       ),
-    ).toEqual([expect.objectContaining({ gravidade: "aviso", item: null })]);
+    ).toEqual([
+      expect.objectContaining({
+        gravidade: "erro",
+        item: "IBGE, Normas de apresentação tabular (1993) §4.2",
+      }),
+    ]);
   });
 });

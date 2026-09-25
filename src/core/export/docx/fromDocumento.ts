@@ -45,6 +45,7 @@ import {
   paragrafosEpigrafe,
   paragrafosResumo,
 } from "./preTextuais";
+import { tabelaDocx } from "./table";
 import { blocoSumario } from "./toc";
 
 // Liga o exportador ao `Documento` canônico de verdade (passo 1.4.2) — não
@@ -61,10 +62,9 @@ import { blocoSumario } from "./toc";
 //
 // **Figura com imagem desde o passo 6.1.2** (`media.ts`): as imagens chegam
 // já carregadas em `imagens`, e a figura sem imagem, ou cuja imagem não
-// chegou, sai com o espaço reservado. A grade OOXML da tabela é o 6.1.3; até
-// lá a tabela sai com um aviso no lugar da grade, em vez de sumir em silêncio
-// do documento exportado. A legenda numerada (campo `SEQ`, `legenda.ts`) é
-// porte da PoC.
+// chegou, sai com o espaço reservado. **Tabela com a grade desde o 6.1.3**
+// (`table.ts`, traços pelas normas de apresentação tabular do IBGE). A
+// legenda numerada (campo `SEQ`, `legenda.ts`) é porte da PoC.
 //
 // **Negrito, itálico e citações desde o passo 4B.2.** O inline passa por
 // `trechosDoInline()`/`trechosDaCitacaoLonga()` (`document/elements/
@@ -112,24 +112,6 @@ function molduraFigura(): Paragraph {
   });
 }
 
-// A grade de verdade (`<w:tbl>`, bordas no padrão IBGE, cabeçalho repetido)
-// é o passo 6.1.3, que tem `docx/table.ts` próprio no plano. Até lá a tabela
-// exporta legenda + aviso + fonte: quem abrir o `.docx` vê que falta algo,
-// em vez de descobrir depois que a tabela evaporou.
-function avisoTabelaPendente(): Paragraph {
-  return new Paragraph({
-    children: [
-      new TextRun({
-        text: "[ grade da tabela ainda não exportada — ver passo 6.1.3 ]",
-        italics: true,
-      }),
-    ],
-    alignment: AlignmentType.CENTER,
-    spacing: { line: ABNT.espacamento1, before: 120, after: 120 },
-    keepNext: true,
-  });
-}
-
 // Fórmula (passo 3.6.5) — sai como a própria fonte LaTeX, em texto simples e
 // centralizada. **Não é um placeholder**: `texto` É o dado do nó
 // (docs/schema-tiptap.md §4.8 e §6, "OMML em `formula` (texto simples até o
@@ -168,19 +150,21 @@ function paragrafoFormula(no: NoFormula): Paragraph {
 // cache do campo `SEQ` (ver `docx/legenda.ts`), que é o que faz a lista de
 // figuras/tabelas sair com o número na primeira atualização de campos do
 // Word.
-function paragrafosNumeravel(
+function blocosNumeravel(
   no: NoNumeravel,
   numero: number,
   imagens: ImagensDoDocumento,
-): Paragraph[] {
-  let objeto: Paragraph;
+  references: readonly Referencia[],
+): FileChild[] {
+  let objeto: FileChild[];
   if (no.type === "tabela") {
-    objeto = avisoTabelaPendente();
+    const tabela = tabelaDocx(no, references);
+    objeto = tabela ? [tabela] : [];
   } else {
     const imagem = no.imagem ? imagens.get(no.imagem) : undefined;
-    objeto = imagem ? paragrafoImagem(imagem, no) : molduraFigura();
+    objeto = [imagem ? paragrafoImagem(imagem, no) : molduraFigura()];
   }
-  return [paragrafoLegenda(no, numero), objeto, ...paragrafoFonte(no)];
+  return [paragrafoLegenda(no, numero), ...objeto, ...paragrafoFonte(no)];
 }
 
 // Recebe só os blocos que carregam inline direto. Figura e tabela ficam de
@@ -221,7 +205,7 @@ function paragrafoCorpo(
 // `Secao.ordem`. Era o miolo de `fromDocumento()` até este passo; virou função
 // própria para entrar no `Record` abaixo como mais um elemento da ordem
 // canônica, em vez de ser o caso especial que todos os outros contornam.
-function paragrafosDoCorpo(documento: Documento, imagens: ImagensDoDocumento): Paragraph[] {
+function paragrafosDoCorpo(documento: Documento, imagens: ImagensDoDocumento): FileChild[] {
   const secoesEmOrdem = [...documento.sections].sort((a, b) => a.ordem - b.ordem);
   const numeracao = numerarSecoes(documento.sections);
 
@@ -231,7 +215,7 @@ function paragrafosDoCorpo(documento: Documento, imagens: ImagensDoDocumento): P
   const figuras = numerarFiguras(documento.sections);
   const tabelas = numerarTabelas(documento.sections);
 
-  const corpo: Paragraph[] = [];
+  const corpo: FileChild[] = [];
   for (const secao of secoesEmOrdem) {
     // `?? null` pelo mesmo motivo de `gerarSumario()`: o `Map` é indexado
     // por `id`, e uma seção ausente dele sai sem indicativo em vez de com
@@ -244,7 +228,7 @@ function paragrafosDoCorpo(documento: Documento, imagens: ImagensDoDocumento): P
         // deles significaria id repetido — e o número sai errado, não
         // `undefined` no meio da legenda.
         const numero = (no.type === "figura" ? figuras : tabelas).get(no.id) ?? 0;
-        corpo.push(...paragrafosNumeravel(no, numero, imagens));
+        corpo.push(...blocosNumeravel(no, numero, imagens, documento.references));
       } else if (no.type === "formula") {
         corpo.push(paragrafoFormula(no));
       } else {

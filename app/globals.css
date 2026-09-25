@@ -459,9 +459,11 @@ h5 {
   color: var(--color-danger);
 }
 
-/* Padrão IBGE adotado pela ABNT: laterais ABERTAS, sem nenhum traço
-   vertical; um fio fecha em cima e outro embaixo, e um terceiro separa o
-   cabeçalho do corpo. `border-collapse` para os fios não duplicarem na
+/* Normas de apresentação tabular do IBGE, a que a NBR 14724:2024 §5.9
+   remete (lidas na fonte primária no passo 6.1.3): laterais ABERTAS, sem
+   nenhum traço vertical (§4.3.3); um fio fecha em cima e outro embaixo, e um
+   terceiro separa o cabeçalho do corpo (§4.3.1). O cabeçalho em negrito é
+   convenção, a mesma do `.docx`. `border-collapse` para os fios não duplicarem na
    junção das células. */
 .ProseMirror .doc-tabela table {
   width: 100%;
@@ -472,8 +474,11 @@ h5 {
   table-layout: fixed;
   border-collapse: collapse;
   border-block: 1px solid var(--doc-ink);
-  font-size: var(--doc-caption);
-  line-height: var(--leading-doc-simples);
+  /* Corpo e 1,5, como o estilo `CelulaTabela` do `.docx` (passo 6.1.3): a
+     NBR 14724:2024 §5.1/§5.2 dá fonte menor e espaço simples ao título, à
+     legenda e à fonte da tabela, não ao conteúdo dela. */
+  font-size: var(--doc-body);
+  line-height: var(--leading-doc-abnt);
 }
 
 /* O `NodeViewContent` do React embrulha o conteúdo num `<div>` próprio

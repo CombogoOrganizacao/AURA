@@ -32,8 +32,9 @@ import type { NoNumeravel } from "../types";
 // estilo `Legenda` continua sendo convenção (docs/auditoria-abnt.md).
 //
 // Tabela segue outra norma para a GRADE: o §5.9 remete às normas de
-// apresentação tabular do IBGE, documento externo à ABNT que o AURA ainda não
-// tem. Pesa no passo 6.1.3, não aqui — a legenda da tabela é a mesma do
+// apresentação tabular do IBGE (3. ed., 1993), lidas na fonte primária no
+// passo 6.1.3 e aplicadas em `export/docx/table.ts` — não aqui: a legenda da
+// tabela é a mesma do
 // §4.2.1.10 ("precedido da palavra Tabela, seguida de seu número de ordem de
 // ocorrência no texto e travessão").
 
