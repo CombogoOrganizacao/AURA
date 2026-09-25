@@ -515,6 +515,20 @@ h5 {
   font-weight: 700;
 }
 
+/* Barra de grade (passo 6.1.3b): interface, não documento — fonte da UI e
+   sem o recuo de parágrafo da folha. Só existe enquanto o cursor está numa
+   célula desta tabela (`TabelaView.tsx`). */
+.ProseMirror .doc-tabela-grade {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  font-family: var(--font-sans);
+  font-style: normal;
+  text-indent: 0;
+  user-select: none;
+}
+
 /* Fórmula (passo 3.6.5) — docs/schema-tiptap.md §4.8. "Destacada do
    parágrafo e centralizada" é o que a NBR 14724 pede de equação separada do
    texto corrido; como o resto das regras de ilustração, isso NÃO passou pela
