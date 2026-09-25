@@ -124,8 +124,8 @@ export function paragrafosAbstract(metadados: Metadados): Paragraph[] {
 // falam a mesma língua desde o 3.5.1, podem passar por aqui quando alguém
 // as ligar (3.7.2).
 //
-// "Recuada a partir do meio da mancha gráfica para a margem direita" (a nota
-// de natureza do trabalho na NBR 14724 §5.2, e por convenção a dedicatória e
+// "Alinhada do meio da mancha gráfica até a margem direita" (a natureza do
+// trabalho na NBR 14724:2024 §5.2, e por convenção a dedicatória e
 // a epígrafe) vira recuo à esquerda de metade da largura útil: é o mesmo
 // `CM(8)` que a PoC congelada usa na folha de rosto, derivado aqui de
 // `ABNT.larguraUtil` em vez de repetido como número solto.
@@ -153,16 +153,14 @@ function paragrafoDeLinha(linha: LinhaPreTextual): Paragraph {
   if (linha.alinhamento === "recuada-a-direita") {
     return new Paragraph({
       children: [
-        // A nota de natureza sai em corpo menor, como na PoC. Convenção, não
-        // norma: o §5.2 manda recuar, não diminuir. Vale só para ela — o
-        // nome do orientador segue centralizado e em corpo normal, que é o
-        // que o passo 3.5.1 decidiu (e onde a PoC diverge: lá ele é recuado
-        // junto com a natureza).
-        new TextRun(
-          linha.papel === "natureza"
-            ? { text: linha.texto, size: ABNT.tamanhoMenor }
-            : { text: linha.texto },
-        ),
+        // **Corpo 12, não o corpo menor da PoC** (corrigido em 25/09/2026,
+        // relendo o PDF). A NBR 14724:2024 §5.1 recomenda 12 "para todo o
+        // texto" e lista quem vai em tamanho menor (citação longa, notas,
+        // paginação, ficha catalográfica, fontes e legendas): a natureza não
+        // está na lista. O que o §5.2 dá a ela é só o espaço simples, logo
+        // abaixo. O nome do orientador segue centralizado, que é o que o
+        // passo 3.5.1 decidiu (a PoC o recuava junto com a natureza).
+        new TextRun({ text: linha.texto }),
       ],
       alignment: AlignmentType.JUSTIFIED,
       spacing: { line: linha.papel === "natureza" ? ABNT.espacamento1 : ABNT.espacamento15 },
@@ -250,11 +248,11 @@ function comEspacosPorPapel(
   return paragrafos;
 }
 
-// Capa (NBR 14724 §5.1) — passo 3.7.2. A ordem vem de `gerarCapa()` (3.5.1),
+// Capa (NBR 14724:2024 §4.1.1) — passo 3.7.2. A ordem vem de `gerarCapa()` (3.5.1),
 // que é quem leu a norma; aqui só a tipografia e a distribuição na folha.
 //
 // **Sem o curso**, que `poc/docx/gerar.js` põe logo abaixo da instituição: o
-// §5.1 não o lista, e `gerarCapa()` segue a enumeração da norma. É divergência
+// §4.1.1 não o lista, e `gerarCapa()` segue a enumeração da norma. É divergência
 // consciente da PoC, não esquecimento.
 export function montarCapa(metadados: Metadados): Paragraph[] {
   return comEspacosPorPapel(gerarCapa(metadados), {
@@ -264,7 +262,7 @@ export function montarCapa(metadados: Metadados): Paragraph[] {
   });
 }
 
-// Folha de rosto (NBR 14724 §5.2) — passo 3.7.2. **Primeiro elemento da seção
+// Folha de rosto (NBR 14724:2024 §4.2.1.1.1) — passo 3.7.2. **Primeiro elemento da seção
 // dos pré-textuais**, e não da capa: é nela que a contagem de páginas começa
 // (a capa fica fora da contagem), ainda que o número só passe a ser exibido no
 // textual. Ver `sections.ts`.

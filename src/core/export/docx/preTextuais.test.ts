@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { novoDocumento } from "../../document/factory";
 import type { Documento, Metadados } from "../../document/types";
 import { fromDocumento } from "./fromDocumento";
-import { paragrafosAbstract, paragrafosResumo } from "./preTextuais";
+import { montarFolhaDeRosto, paragrafosAbstract, paragrafosResumo } from "./preTextuais";
 
 function criarMetadados(overrides: Partial<Metadados> = {}): Metadados {
   return {
@@ -281,5 +281,28 @@ describe("folha de aprovação no .docx (passo 4B.3)", () => {
   it("sem banca, não sai nada", async () => {
     const xml = await xmlDoDocumento(criarMetadados());
     expect(xml).not.toContain("Data de aprovação:");
+  });
+});
+
+// NBR 14724:2024 §5.1: a natureza não está entre os elementos em tamanho
+// menor, então sai em 12 pt, como o resto da folha de rosto. O §5.2 lhe dá
+// só o espaço simples. Até 25/09/2026 saía em 10 pt, herdado da PoC.
+describe("natureza do trabalho na folha de rosto", () => {
+  it("sai em corpo 12 (sem tamanho próprio) e espaço simples", async () => {
+    const metadados = criarMetadados({
+      naturezaTrabalho: "Trabalho de Conclusão de Curso apresentado ao curso de Letras",
+    });
+    const zip = await JSZip.loadAsync(
+      await Packer.toBuffer(
+        new Document({ sections: [{ children: montarFolhaDeRosto(metadados) }] }),
+      ),
+    );
+    const xml = await zip.file("word/document.xml")!.async("string");
+    const paragrafo = xml.match(
+      /<w:p>(?:(?!<\/w:p>)[\s\S])*Trabalho de Conclusão[\s\S]*?<\/w:p>/,
+    )![0];
+
+    expect(paragrafo).not.toContain("<w:sz ");
+    expect(paragrafo).toContain('w:line="240"');
   });
 });
