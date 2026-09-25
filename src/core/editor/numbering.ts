@@ -53,6 +53,33 @@ export function numerarDocumentoProseMirror(doc: NoProseMirror): Map<string, str
 // ProseMirror e `Secao[]` canônico) diferem, mas ambas terminam em
 // `numerarPorOrdem()`. É o que impede a tela e o `.docx` de discordarem sobre
 // qual é a Figura 3.
+// Posições das notas de rodapé, na ordem de leitura (passo 6.1.3c). A nota N
+// é a que está em `posicoes[N - 1]`: o número é derivado da ordem, como o da
+// figura, e o `.docx` chega ao mesmo porque o Word conta as referências na
+// mesma ordem.
+//
+// Guardado por documento: cada nota na tela pergunta o próprio número a cada
+// transação, e sem o cache cada uma percorreria o documento inteiro. O
+// `doc` do ProseMirror é imutável, então a mesma instância tem sempre as
+// mesmas notas.
+const cacheNotas = new WeakMap<NoProseMirror, number[]>();
+
+export function posicoesDasNotas(doc: NoProseMirror): number[] {
+  const guardadas = cacheNotas.get(doc);
+  if (guardadas) return guardadas;
+
+  const posicoes: number[] = [];
+  doc.descendants((no, posicao) => {
+    if (no.type.name === "nota_rodape") posicoes.push(posicao);
+    // Só bloco de texto tem nota; figura, fórmula e tabela não precisam ser
+    // abertos.
+    return !no.isAtom && no.type.name !== "tabela";
+  });
+
+  cacheNotas.set(doc, posicoes);
+  return posicoes;
+}
+
 export function numerarNumeraveisProseMirror(
   doc: NoProseMirror,
   tipo: "figura" | "tabela",
@@ -72,7 +99,7 @@ export function numerarNumeraveisProseMirror(
       ids.push(id);
     }
     // `false` interrompe a descida: uma tabela não contém outra (o schema de
-    // `celula_tabela` é `inline*`), e uma figura é atômica.
+    // `celula_tabela` é `text*`), e uma figura é atômica.
     return false;
   });
 

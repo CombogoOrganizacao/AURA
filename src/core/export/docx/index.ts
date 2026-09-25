@@ -1,4 +1,4 @@
-import { Document, type FileChild } from "docx";
+import { Document, type FileChild, type Paragraph } from "docx";
 
 import { montarSecoes } from "./sections";
 import { ESTILOS_DOCUMENTO } from "./styles";
@@ -42,6 +42,10 @@ export interface ConteudoExportacao {
   // porque a capa continua sem gerador próprio: quem só testa o corpo
   // (`index.test.ts`) não precisa passar nada aqui.
   preTextuais?: FileChild[];
+  // Conteúdo das notas de rodapé, por id (passo 6.1.3c, `docx/notas.ts`). As
+  // referências já estão no corpo; aqui fica o que o Word põe no pé da
+  // página. Opcional pelo mesmo motivo da capa.
+  notas?: Record<number, { children: Paragraph[] }>;
 }
 
 // Só monta o `Document` (docx) — não empacota. Quem chama escolhe o
@@ -54,6 +58,7 @@ export function montarDocumento({
   corpo,
   capa = [],
   preTextuais = [],
+  notas = {},
 }: ConteudoExportacao): Document {
   return new Document({
     // `<w:updateFields/>` em `word/settings.xml` — porte do mesmo `features`
@@ -63,6 +68,7 @@ export function montarDocumento({
     // sem a pessoa precisar achar "Atualizar sumário" sozinha. O campo já vai
     // marcado `w:dirty="true"`; isto é o outro lado do mesmo par.
     features: { updateFields: true },
+    footnotes: notas,
     styles: ESTILOS_DOCUMENTO,
     sections: montarSecoes(corpo, preTextuais, capa),
   });

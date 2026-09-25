@@ -48,7 +48,11 @@ function textoDoNo(no: NoConteudo): string[] {
       ),
     ];
   }
-  return (no.content ?? []).map((texto) => texto.text);
+  // A nota de rodapé entra: é texto do trabalho, e uma sigla usada só numa
+  // nota foi "utilizada no texto" tanto quanto no parágrafo (passo 6.1.3c).
+  return (no.content ?? []).map((inline) =>
+    inline.type === "nota_rodape" ? inline.texto : inline.text,
+  );
 }
 
 // Títulos de seção entram: "Metodologia da ABNT" usa a sigla tanto quanto um

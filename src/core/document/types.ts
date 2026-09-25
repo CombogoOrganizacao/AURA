@@ -69,13 +69,38 @@ export interface NoTexto {
   marks?: Marca[];
 }
 
+// Nota de rodapé (docs/schema-tiptap.md §4.9) — passo 6.1.3c. Inline e
+// atômica: fica no meio do texto do parágrafo, onde a chamada (o expoente)
+// aparece, e o conteúdo dela é um campo só, texto simples.
+//
+// **Sem campo de número.** "¹, ², ³" vem da ordem das notas no documento,
+// como "Figura 3" vem da ordem das figuras: um número gravado ficaria errado
+// no instante em que alguém inserisse uma nota antes dela. A NBR 10520:2023
+// §8 pede números arábicos sequenciais; no `.docx` quem numera é o próprio
+// Word.
+//
+// **Conta zero caracteres no texto do parágrafo.** A busca, a conferência e
+// as estatísticas leem "palavra¹ continua" como "palavra continua"; quem
+// precisa da posição no editor, onde a nota ocupa uma posição, converte com
+// `posicaoNoBloco()` (src/core/editor/localizar.ts).
+export interface NoNotaRodape {
+  type: "nota_rodape";
+  texto: string;
+}
+
+// O que cabe no fluxo de um parágrafo ou de uma citação longa. A célula de
+// tabela fica só com `NoTexto`: a tabela tem rodapé próprio (fonte, nota
+// geral e nota específica, IBGE §3.2.3), e nota de rodapé da página dentro
+// da grade não é o que as normas de apresentação tabular preveem.
+export type NoInline = NoTexto | NoNotaRodape;
+
 // `paragraph` e não `parágrafo`: o nó ainda é o `Paragraph` de fábrica do
 // TipTap (src/components/editor/Editor.tsx), sem nó customizado próprio no
 // plano — o `type` aqui espelha o que o editor produz de verdade, não o
 // nome em prosa de docs/schema-tiptap.md §4.2.
 export interface NoParagrafo {
   type: "paragraph";
-  content?: NoTexto[];
+  content?: NoInline[];
 }
 
 // Citação longa (NBR 10520, docs/schema-tiptap.md §4.3) — passo 3.4.1.
@@ -88,7 +113,7 @@ export interface NoCitacaoLonga {
   type: "citacao_longa";
   refId: string | null;
   pagina: string;
-  content?: NoTexto[];
+  content?: NoInline[];
 }
 
 // Figura (docs/schema-tiptap.md §4.6) — passo 3.6.3. Atômico: não há texto

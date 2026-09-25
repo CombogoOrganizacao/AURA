@@ -22,6 +22,7 @@ import { Citacao } from "@/core/editor/marks/citation";
 import { Italico } from "@/core/editor/marks/italico";
 import { Negrito } from "@/core/editor/marks/negrito";
 import { Documento as DocumentoNode } from "@/core/editor/nodes/documento";
+import { NotaRodape as NotaRodapeNode } from "@/core/editor/nodes/footnote";
 import { Figura as FiguraNode } from "@/core/editor/nodes/figure";
 import { Formula as FormulaNode } from "@/core/editor/nodes/formula";
 import { CitacaoLonga } from "@/core/editor/nodes/longQuote";
@@ -37,6 +38,7 @@ import { BuscaSubstituicao, type CampoDaBusca } from "./BuscaSubstituicao";
 import { atualizarReferenciasDasChamadas, ChamadasDeCitacao } from "./chamadas";
 import { FiguraView } from "./nodes/FiguraView";
 import { FormulaView } from "./nodes/FormulaView";
+import { NotaRodapeView } from "./nodes/NotaRodapeView";
 import { SectionView } from "./nodes/SectionView";
 import { TabelaView } from "./nodes/TabelaView";
 import { Toolbar } from "./Toolbar";
@@ -72,6 +74,14 @@ const TabelaComVisualizacao = TabelaNode.extend({
 const FormulaComVisualizacao = FormulaNode.extend({
   addNodeView() {
     return ReactNodeViewRenderer(FormulaView);
+  },
+});
+
+// E para a nota de rodapé (passo 6.1.3c): o nó guarda o texto da nota, o
+// node view desenha o expoente numerado e o campo de edição.
+const NotaRodapeComVisualizacao = NotaRodapeNode.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(NotaRodapeView, { as: "span" });
   },
 });
 
@@ -183,6 +193,9 @@ export function Editor({
       // Fórmula (passo 3.6.5) — inserida pela toolbar, só no desktop, pelo
       // mesmo motivo da tabela (ver o botão em `Toolbar.tsx`).
       FormulaComVisualizacao,
+      // Nota de rodapé (passo 6.1.3c) — inline, dentro de parágrafo e de
+      // citação longa; inserida pela toolbar.
+      NotaRodapeComVisualizacao,
       Negrito,
       Italico,
       // Citação ligada a uma referência (passo 4.8). Registrada antes de ter

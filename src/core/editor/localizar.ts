@@ -49,14 +49,61 @@ export function alvoNoEditor(doc: NoPM, local: LocalAchado): AlvoNoEditor | null
 
   if (!local.trecho || !no.isTextblock) return { alvo: "no", posicao };
 
-  // Dentro de parágrafo e citação longa o conteúdo é só texto (a chamada e as
-  // aspas são decoração, não nó), então o caractere N está em posicao + 1 + N.
-  // O trecho é limitado ao tamanho do nó: texto encurtado depois da
-  // conferência não pode levar a seleção para fora dele.
-  const limite = no.content.size;
-  const inicio = Math.min(local.trecho.inicio, limite);
-  const fim = Math.min(Math.max(local.trecho.fim, inicio), limite);
-  return { alvo: "trecho", de: posicao + 1 + inicio, ate: posicao + 1 + fim };
+  // A chamada e as aspas da citação são decoração, não nó, mas a nota de
+  // rodapé é nó (passo 6.1.3c): o caractere N não está mais sempre em
+  // posicao + 1 + N. `posicaoNoBloco()` pula as notas. O trecho é limitado ao
+  // nó: texto encurtado depois da conferência não leva a seleção para fora.
+  const inicio = local.trecho.inicio;
+  const fim = Math.max(local.trecho.fim, inicio);
+  return {
+    alvo: "trecho",
+    de: posicao + 1 + posicaoNoBloco(no, inicio, "inicio"),
+    ate: posicao + 1 + posicaoNoBloco(no, fim, "fim"),
+  };
+}
+
+// Do índice de caractere no texto de um bloco (a contagem da conferência e
+// da busca, em que a nota de rodapé vale zero caracteres) para o
+// deslocamento dentro do nó do editor, em que a nota ocupa uma posição.
+//
+// Num índice que cai bem ao lado de uma nota há duas posições possíveis,
+// antes e depois dela. O começo de um trecho fica depois das notas e o fim
+// fica antes, para a seleção nunca engolir uma nota que não faz parte da
+// ocorrência. Índice além do texto para no fim do nó.
+export function posicaoNoBloco(bloco: NoPM, caractere: number, lado: "inicio" | "fim"): number {
+  let restante = Math.max(0, caractere);
+  let deslocamento = 0;
+
+  for (let i = 0; i < bloco.childCount; i++) {
+    const filho = bloco.child(i);
+    if (filho.isText) {
+      const tamanho = filho.text!.length;
+      if (restante < tamanho || (restante === tamanho && lado === "fim")) {
+        return deslocamento + restante;
+      }
+      restante -= tamanho;
+    } else if (restante === 0 && lado === "fim") {
+      return deslocamento;
+    }
+    deslocamento += filho.nodeSize;
+  }
+  return deslocamento;
+}
+
+// A posição da k-ésima nota de rodapé dentro do bloco que começa em
+// `posicao` (passo 6.1.3c) — onde a ocorrência da busca no texto de uma nota
+// leva a seleção. `null` se a nota não existe mais.
+export function posicaoDaNota(doc: NoPM, posicao: number, ordem: number): number | null {
+  const bloco = doc.nodeAt(posicao);
+  if (!bloco) return null;
+  let vista = 0;
+  let achada: number | null = null;
+  bloco.forEach((filho, deslocamento) => {
+    if (achada !== null || filho.type.name !== "nota_rodape") return;
+    if (vista === ordem) achada = posicao + 1 + deslocamento;
+    vista += 1;
+  });
+  return achada;
 }
 
 // A seleção que mostra o alvo: o trecho de texto fica selecionado, para o

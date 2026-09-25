@@ -12,6 +12,7 @@ import type { Documento, ElementoPosTextual, NoConteudo } from "../../document/t
 import type { Referencia } from "../../references/types";
 import { ABNT } from "./constants";
 import { paragrafoTituloPosTextual } from "./preTextuais";
+import type { NotasDeRodape } from "./notas";
 import { runsDeTrechos } from "./trechos";
 
 // Pós-textuais no `.docx` — passo 3.7.2 (lugar e títulos) e 4.11 (a lista de
@@ -53,13 +54,17 @@ function paragrafoDeTexto(children: TextRun[]): Paragraph {
 // recusou na grade da tabela (`fromDocumento.ts`).
 //
 // Negrito, itálico e citações pelos mesmos trechos do corpo (passo 4B.2).
-function paragrafoDeConteudo(no: NoConteudo, references: readonly Referencia[]): Paragraph {
+function paragrafoDeConteudo(
+  no: NoConteudo,
+  references: readonly Referencia[],
+  notas: NotasDeRodape,
+): Paragraph {
   if (no.type === "paragraph") {
-    return paragrafoDeTexto(runsDeTrechos(trechosDoInline(no.content, references)));
+    return paragrafoDeTexto(runsDeTrechos(trechosDoInline(no.content, references), notas));
   }
   if (no.type === "citacao_longa") {
     return new Paragraph({
-      children: runsDeTrechos(trechosDaCitacaoLonga(no, references)),
+      children: runsDeTrechos(trechosDaCitacaoLonga(no, references), notas),
       style: "CitacaoLonga",
     });
   }
@@ -82,10 +87,11 @@ function blocoDeElemento(
   item: ItemPosTextual,
   elemento: ElementoPosTextual,
   references: readonly Referencia[],
+  notas: NotasDeRodape,
 ): FileChild[] {
   return [
     paragrafoTituloPosTextual(textoTituloPosTextual(item)),
-    ...elemento.content.map((no) => paragrafoDeConteudo(no, references)),
+    ...elemento.content.map((no) => paragrafoDeConteudo(no, references, notas)),
   ];
 }
 
@@ -93,18 +99,19 @@ function blocos(
   elementos: readonly ElementoPosTextual[],
   gerar: (lista: readonly ElementoPosTextual[]) => ItemPosTextual[],
   references: readonly Referencia[],
+  notas: NotasDeRodape,
 ): FileChild[][] {
   return gerar(elementos).map((item, indice) =>
-    blocoDeElemento(item, elementos[indice], references),
+    blocoDeElemento(item, elementos[indice], references, notas),
   );
 }
 
-export function blocosDeApendices(documento: Documento): FileChild[][] {
-  return blocos(documento.apendices, gerarApendices, documento.references);
+export function blocosDeApendices(documento: Documento, notas: NotasDeRodape): FileChild[][] {
+  return blocos(documento.apendices, gerarApendices, documento.references, notas);
 }
 
-export function blocosDeAnexos(documento: Documento): FileChild[][] {
-  return blocos(documento.anexos, gerarAnexos, documento.references);
+export function blocosDeAnexos(documento: Documento, notas: NotasDeRodape): FileChild[][] {
+  return blocos(documento.anexos, gerarAnexos, documento.references, notas);
 }
 
 // Referências — passo 4.11. O conteúdo e a ordem vêm de

@@ -30,6 +30,7 @@ import type { Referencia } from "../../references/types";
 import { ABNT } from "./constants";
 import { paragrafoImagem, type ImagensDoDocumento } from "./media";
 import { paragrafoFonte, paragrafoLegenda } from "./legenda";
+import { criarNotasDeRodape, type NotasDeRodape } from "./notas";
 import { runsDeTrechos } from "./trechos";
 import { montarDocumento } from "./index";
 import { blocoListaDeAbreviaturas, blocoListaDeFiguras, blocoListaDeTabelas } from "./listas";
@@ -173,19 +174,20 @@ function blocosNumeravel(
 function paragrafoCorpo(
   no: NoParagrafo | NoCitacaoLonga,
   references: readonly Referencia[],
+  notas: NotasDeRodape,
 ): Paragraph {
   if (no.type === "citacao_longa") {
     // Estilo nomeado carrega recuo/fonte/espaçamento sozinho (styles.ts) —
     // nada repetido aqui. O parágrafo comum abaixo, idem, com `Corpo`
     // (6.1.1).
     return new Paragraph({
-      children: runsDeTrechos(trechosDaCitacaoLonga(no, references)),
+      children: runsDeTrechos(trechosDaCitacaoLonga(no, references), notas),
       style: "CitacaoLonga",
     });
   }
 
   return new Paragraph({
-    children: runsDeTrechos(trechosDoInline(no.content, references)),
+    children: runsDeTrechos(trechosDoInline(no.content, references), notas),
     style: "Corpo",
   });
 }
@@ -205,7 +207,11 @@ function paragrafoCorpo(
 // `Secao.ordem`. Era o miolo de `fromDocumento()` até este passo; virou função
 // própria para entrar no `Record` abaixo como mais um elemento da ordem
 // canônica, em vez de ser o caso especial que todos os outros contornam.
-function paragrafosDoCorpo(documento: Documento, imagens: ImagensDoDocumento): FileChild[] {
+function paragrafosDoCorpo(
+  documento: Documento,
+  imagens: ImagensDoDocumento,
+  notas: NotasDeRodape,
+): FileChild[] {
   const secoesEmOrdem = [...documento.sections].sort((a, b) => a.ordem - b.ordem);
   const numeracao = numerarSecoes(documento.sections);
 
@@ -232,7 +238,7 @@ function paragrafosDoCorpo(documento: Documento, imagens: ImagensDoDocumento): F
       } else if (no.type === "formula") {
         corpo.push(paragrafoFormula(no));
       } else {
-        corpo.push(paragrafoCorpo(no, documento.references));
+        corpo.push(paragrafoCorpo(no, documento.references, notas));
       }
     }
   }
@@ -240,7 +246,13 @@ function paragrafosDoCorpo(documento: Documento, imagens: ImagensDoDocumento): F
   return corpo;
 }
 
-type GeradorDeBlocos = (documento: Documento, imagens: ImagensDoDocumento) => FileChild[][];
+// `notas` recolhe as notas de rodapé de quem tem texto corrido (corpo,
+// apêndices, anexos) para o `Document` as receber no fim (passo 6.1.3c).
+type GeradorDeBlocos = (
+  documento: Documento,
+  imagens: ImagensDoDocumento,
+  notas: NotasDeRodape,
+) => FileChild[][];
 
 function blocoUnico(paragrafos: FileChild[]): FileChild[][] {
   return paragrafos.length > 0 ? [paragrafos] : [];
@@ -264,18 +276,22 @@ const GERADORES: Record<ElementoDocumento, GeradorDeBlocos> = {
       blocoListaDeAbreviaturas(gerarListaDeAbreviaturas(documento.metadados, documento.sections)),
     ),
   sumario: () => blocoUnico(blocoSumario()),
-  corpo: (documento, imagens) => blocoUnico(paragrafosDoCorpo(documento, imagens)),
+  corpo: (documento, imagens, notas) =>
+    blocoUnico(paragrafosDoCorpo(documento, imagens, notas)),
   referencias: blocosDeReferencias,
-  apendices: blocosDeApendices,
-  anexos: blocosDeAnexos,
+  apendices: (documento, _imagens, notas) => blocosDeApendices(documento, notas),
+  anexos: (documento, _imagens, notas) => blocosDeAnexos(documento, notas),
 };
 
 function blocosDaParte(
   documento: Documento,
   parte: ParteDocumento,
   imagens: ImagensDoDocumento,
+  notas: NotasDeRodape,
 ): FileChild[][] {
-  return elementosDaParte(parte).flatMap((elemento) => GERADORES[elemento](documento, imagens));
+  return elementosDaParte(parte).flatMap((elemento) =>
+    GERADORES[elemento](documento, imagens, notas),
+  );
 }
 
 // `imagens`: as imagens das figuras, já carregadas por quem exporta
@@ -285,24 +301,26 @@ export function fromDocumento(
   documento: Documento,
   imagens: ImagensDoDocumento = new Map(),
 ): Document {
+  const notas = criarNotasDeRodape();
+
   // Capa: um elemento só, numa seção OOXML só — sem quebra a compor.
-  const capa = blocosDaParte(documento, "capa", imagens).flat();
+  const capa = blocosDaParte(documento, "capa", imagens, notas).flat();
 
   // Pré-textuais: cada elemento em página própria (NBR 14724), com a quebra
   // ENTRE os blocos e nunca antes do primeiro — a seção OOXML já começa numa
   // página nova.
-  const preTextuais = comQuebrasEntreBlocos(blocosDaParte(documento, "preTextual", imagens));
+  const preTextuais = comQuebrasEntreBlocos(blocosDaParte(documento, "preTextual", imagens, notas));
 
   // Textual e pós-textual dividem a mesma seção OOXML (mesma paginação,
   // contínua e exibida), mas o pós-textual começa em página nova: a quebra vem
   // ANTES de cada bloco, inclusive do primeiro, porque ele segue o corpo
   // dentro da mesma seção em vez de abrir uma.
-  const posTextuais = blocosDaParte(documento, "posTextual", imagens).flatMap((bloco) => [
+  const posTextuais = blocosDaParte(documento, "posTextual", imagens, notas).flatMap((bloco) => [
     new Paragraph({ children: [new PageBreak()] }),
     ...bloco,
   ]);
 
-  const corpo = [...blocosDaParte(documento, "textual", imagens).flat(), ...posTextuais];
+  const corpo = [...blocosDaParte(documento, "textual", imagens, notas).flat(), ...posTextuais];
 
-  return montarDocumento({ capa, corpo, preTextuais });
+  return montarDocumento({ capa, corpo, preTextuais, notas: notas.conteudo });
 }

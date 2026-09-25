@@ -4,7 +4,7 @@ import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/p
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
 import type { OcorrenciaBusca } from "../language/findReplace";
-import { alvoNoEditor, type AlvoNoEditor } from "./localizar";
+import { alvoNoEditor, posicaoDaNota, type AlvoNoEditor } from "./localizar";
 
 // A ponte entre a busca (src/core/language/findReplace.ts, passo 5.4.2) e o
 // editor — passo 5.4.3. Três peças, nenhuma com React:
@@ -40,6 +40,15 @@ function alvoDaOcorrencia(doc: NoPM, { onde, campo, inicio, fim }: OcorrenciaBus
     case "legenda":
     case "fonte":
       return alvoNoEditor(doc, { tipo: "bloco", onde, no: campo.no });
+    case "nota": {
+      // A nota inteira fica selecionada, o que abre o campo dela na tela
+      // (`NotaRodapeView`): o texto da nota não é texto do ProseMirror, e não
+      // há trecho para realçar.
+      const bloco = alvoNoEditor(doc, { tipo: "bloco", onde, no: campo.no });
+      if (!bloco || bloco.alvo !== "no") return null;
+      const posicao = posicaoDaNota(doc, bloco.posicao, campo.nota);
+      return posicao === null ? null : ({ alvo: "no", posicao } as const);
+    }
     case "celula": {
       const tabela = alvoNoEditor(doc, { tipo: "bloco", onde, no: campo.no });
       if (!tabela || tabela.alvo !== "no") return null;

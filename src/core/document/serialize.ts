@@ -7,6 +7,7 @@ import type {
   Marca,
   NivelSecao,
   NoConteudo,
+  NoInline,
   NoTexto,
   Secao,
   TipoMarca,
@@ -88,11 +89,11 @@ export function toDocumento(doc: JSONContent): Secao[] {
 
 function paraNoConteudo(no: JSONContent): NoConteudo {
   if (no.type === "paragraph") {
-    const conteudo = (no.content ?? []).map(paraNoTexto);
+    const conteudo = (no.content ?? []).map(paraNoInline);
     return conteudo.length > 0 ? { type: "paragraph", content: conteudo } : { type: "paragraph" };
   }
   if (no.type === "citacao_longa") {
-    const conteudo = (no.content ?? []).map(paraNoTexto);
+    const conteudo = (no.content ?? []).map(paraNoInline);
     const { refId, pagina } = (no.attrs ?? {}) as { refId?: string | null; pagina?: string };
     return {
       type: "citacao_longa",
@@ -173,6 +174,18 @@ function paraCelulaTabela(no: JSONContent): CelulaTabela {
   };
 }
 
+// Parágrafo e citação longa aceitam nota de rodapé (passo 6.1.3c); a célula
+// de tabela, não (ver `NoInline` em types.ts), e por isso chama
+// `paraNoTexto()` direto, que recusa a nota como recusa qualquer nó fora da
+// lista.
+function paraNoInline(no: JSONContent): NoInline {
+  if (no.type === "nota_rodape") {
+    const { texto } = (no.attrs ?? {}) as { texto?: unknown };
+    return { type: "nota_rodape", texto: typeof texto === "string" ? texto : "" };
+  }
+  return paraNoTexto(no);
+}
+
 function paraNoTexto(no: JSONContent): NoTexto {
   if (no.type !== "text" || typeof no.text !== "string") {
     throw new Error(`Nó inline ainda não suportado dentro de parágrafo: "${no.type}"`);
@@ -233,9 +246,17 @@ export function fromDocumento(sections: Secao[]): JSONContent {
 // Texto+marca compartilhado por todo `NoConteudo` que carrega inline
 // diretamente (`paragrafo`, `citacao_longa`) — extraído aqui pra
 // `deNoConteudo` não repetir o mesmo mapeamento de marca por tipo de bloco.
-function deConteudoInline(content: NoTexto[] | undefined): JSONContent[] | undefined {
+function deConteudoInline(content: NoInline[] | undefined): JSONContent[] | undefined {
   if (!content || content.length === 0) return undefined;
-  return content.map((texto) => ({
+  return content.map((texto) =>
+    texto.type === "nota_rodape"
+      ? { type: "nota_rodape", attrs: { texto: texto.texto } }
+      : deNoTexto(texto),
+  );
+}
+
+function deNoTexto(texto: NoTexto): JSONContent {
+  return {
     type: "text",
     text: texto.text,
     ...(texto.marks && texto.marks.length > 0
@@ -247,7 +268,7 @@ function deConteudoInline(content: NoTexto[] | undefined): JSONContent[] | undef
           ),
         }
       : {}),
-  }));
+  };
 }
 
 // Exportada (passo 3.6.3) para a toolbar inserir uma figura/tabela/fórmula

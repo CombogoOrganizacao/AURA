@@ -1,4 +1,5 @@
-import type { AtributosCitacao, Documento, NoConteudo, NoTexto } from "../../document/types";
+import { soTexto } from "../../document/inline";
+import type { AtributosCitacao, Documento, NoConteudo, NoInline } from "../../document/types";
 import { mesmaCitacao, type LocalCitacao } from "../../references/citacoes";
 import type { LocalAchado } from "../compliance";
 
@@ -40,8 +41,12 @@ export function blocosEmOrdem(
   ];
 }
 
-export function textoInline(content: readonly NoTexto[] | undefined): string {
-  return (content ?? []).map((texto) => texto.text).join("");
+// Sem a nota de rodapé, que conta zero caracteres (`NoNotaRodape`): os
+// trechos que as regras apontam são índices neste texto.
+export function textoInline(content: readonly NoInline[] | undefined): string {
+  return soTexto(content)
+    .map((texto) => texto.text)
+    .join("");
 }
 
 // O texto corrido de um nó, sem legenda nem fonte: é onde o aluno ESCREVE, e
@@ -113,7 +118,7 @@ export function citacoesLocalizadas(documento: Documento): CitacaoLocalizada[] {
 }
 
 function marcasDoInline(
-  content: readonly NoTexto[] | undefined,
+  content: readonly NoInline[] | undefined,
   onde: LocalCitacao,
   no: number,
   comTrecho: boolean,
@@ -142,7 +147,7 @@ function marcasDoInline(
     aberta = null;
   };
 
-  for (const texto of content ?? []) {
+  for (const texto of soTexto(content)) {
     const marca = texto.marks?.find((item) => item.type === "citacao");
     const attrs = marca?.type === "citacao" ? marca.attrs : null;
     const inicio = posicao;

@@ -104,9 +104,25 @@ export const ESTILOS_DOCUMENTO: IStylesOptions = {
     heading3: estiloTitulo({ italics: true }),
     heading4: estiloTitulo({}),
     heading5: estiloTitulo({ italics: true, smallCaps: true }),
+    // Nota de rodapé — NBR 14724:2024 §5.2.1 (lida no PDF no passo 6.1.3c) e
+    // NBR 10520:2023 §8: espaço simples (também §5.2), fonte menor e uniforme
+    // (§5.1: 10 pt, a mesma da citação longa), "sem espaço entre elas" e a
+    // segunda linha "abaixo da primeira letra da primeira palavra". O recuo
+    // deslocado faz a última parte: o expoente fica na margem, e a tabulação
+    // que `notas.ts` põe depois dele leva o texto até `recuoNota`, onde as
+    // linhas seguintes também começam.
+    //
+    // O `docx` substitui o `paragraph` de fábrica inteiro por este, e o de
+    // fábrica é que zerava o `after`: por isso `before`/`after` explícitos.
+    //
+    // O filete de 5 cm da §5.2.1 é o separador de notas do próprio Word, que
+    // o `docx` grava e não deixa medir. Fica para a conferência no Word.
     footnoteText: {
       run: { font: ABNT.fonte, size: ABNT.tamanhoMenor },
-      paragraph: { spacing: { line: ABNT.espacamento1 } },
+      paragraph: {
+        spacing: { before: 0, after: 0, line: ABNT.espacamento1 },
+        indent: { left: ABNT.recuoNota, hanging: ABNT.recuoNota },
+      },
     },
   },
   paragraphStyles: [

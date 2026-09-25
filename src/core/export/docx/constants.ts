@@ -22,6 +22,12 @@ export const ABNT = {
   espacamento1: 240,
   recuoParagrafo: cm(1.25),
   recuoCitacao: cm(4),
+  // Recuo deslocado da nota de rodapé (passo 6.1.3c). A NBR 14724:2024 §5.2.1
+  // manda alinhar a segunda linha "abaixo da primeira letra da primeira
+  // palavra, de forma a destacar o expoente", mas não dá a medida: **4 mm é
+  // convenção do AURA**, o bastante para um expoente de até três algarismos
+  // em 10 pt caber antes da tabulação.
+  recuoNota: cm(0.4),
   paginaA4: { width: cm(21), height: cm(29.7) },
   larguraUtil: cm(16), // 21 - 3 (margem esquerda) - 2 (margem direita)
   // Altura máxima da imagem de uma figura (passo 6.1.2). **Convenção do AURA,

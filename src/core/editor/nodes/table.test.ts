@@ -51,8 +51,9 @@ describe("nós tabela / linha_tabela / celula_tabela (passo 3.6.3)", () => {
 
   // `celula_tabela` é `inline*`: uma célula que aceitasse blocos aceitaria
   // uma tabela dentro de outra, que a v1 não quer.
-  it("a célula aceita texto com marca, mas não blocos", () => {
-    expect(schema.nodes.celula_tabela.spec.content).toBe("inline*");
+  // Nem nota de rodapé (passo 6.1.3c): a tabela tem rodapé próprio (IBGE).
+  it("a célula aceita texto com marca, mas não blocos nem nota de rodapé", () => {
+    expect(schema.nodes.celula_tabela.spec.content).toBe("text*");
   });
 
   it("`cabecalho` decide a tag, e é o que a torna acessível a leitor de tela", () => {

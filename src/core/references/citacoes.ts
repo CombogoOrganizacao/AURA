@@ -17,9 +17,10 @@ import type {
   Documento,
   ElementoPosTextual,
   NoConteudo,
-  NoTexto,
+  NoInline,
   Secao,
 } from "../document/types";
+import { soTexto } from "../document/inline";
 import { formatarChamada, type OpcoesChamada } from "./format/inText";
 import type { Referencia } from "./types";
 
@@ -114,14 +115,17 @@ function coletarDoNo(no: NoConteudo, local: LocalCitacao, saida: OcorrenciaCitac
 // ter posto uma palavra do excerto em itálico, e o ProseMirror parte o texto
 // em dois nós com a marca repetida. Contar duas seria dizer que há duas
 // chamadas onde a tela mostra uma.
+//
+// A nota de rodapé no meio do excerto não parte a citação (passo 6.1.3c):
+// `soTexto()` a tira, e os dois lados dela seguem como vizinhos.
 function coletarDoInline(
-  content: NoTexto[] | undefined,
+  content: readonly NoInline[] | undefined,
   local: LocalCitacao,
   saida: OcorrenciaCitacao[],
 ) {
   let aberta: Extract<OcorrenciaCitacao, { origem: "marca" }> | null = null;
 
-  for (const texto of content ?? []) {
+  for (const texto of soTexto(content)) {
     const marca = texto.marks?.find((item) => item.type === "citacao");
     const attrs = marca?.type === "citacao" ? marca.attrs : undefined;
 
@@ -149,8 +153,10 @@ export function mesmaCitacao(a: AtributosCitacao, b: AtributosCitacao): boolean 
   );
 }
 
-function textoDe(content: NoTexto[] | undefined): string {
-  return (content ?? []).map((texto) => texto.text).join("");
+function textoDe(content: readonly NoInline[] | undefined): string {
+  return soTexto(content)
+    .map((texto) => texto.text)
+    .join("");
 }
 
 // --- Chamada para exibir -----------------------------------------------------

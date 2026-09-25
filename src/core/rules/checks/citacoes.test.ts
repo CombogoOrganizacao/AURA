@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { NoParagrafo } from "../../document/types";
+import type { NoParagrafo, NoTexto } from "../../document/types";
 import { conferirCom } from "../__tests__/conferirCom";
 import { documentoConforme } from "../__tests__/documentoConforme";
 import {
@@ -19,7 +19,7 @@ const INTRO = { tipo: "secao", id: "s-intro" } as const;
 
 function trechoDe(citado: string): { inicio: number; fim: number } {
   const paragrafo = documentoConforme().sections[0].content[0] as NoParagrafo;
-  const texto = paragrafo.content!.map((no) => no.text).join("");
+  const texto = (paragrafo.content as NoTexto[]).map((no) => no.text).join("");
   const inicio = texto.indexOf(citado);
   return { inicio, fim: inicio + citado.length };
 }
@@ -50,7 +50,7 @@ describe("citacao-orfa (10520 §5.1, 'deve permitir sua correlação')", () => {
   it("o trecho aponta exatamente o texto citado", () => {
     const [achado] = conferirCom(citacaoOrfa, (d) => (d.references = []));
     const paragrafo = documentoConforme().sections[0].content[0] as NoParagrafo;
-    const texto = paragrafo.content!.map((no) => no.text).join("");
+    const texto = (paragrafo.content as NoTexto[]).map((no) => no.text).join("");
     const local = achado.local;
     expect(
       local.tipo === "bloco" && local.trecho && texto.slice(local.trecho.inicio, local.trecho.fim),
@@ -61,8 +61,8 @@ describe("citacao-orfa (10520 §5.1, 'deve permitir sua correlação')", () => {
     const achados = conferirCom(citacaoOrfa, (d) => {
       d.references = [];
       const paragrafo = d.sections[0].content[0] as NoParagrafo;
-      const citado = paragrafo.content![1];
-      paragrafo.content!.splice(
+      const citado = (paragrafo.content as NoTexto[])[1];
+      (paragrafo.content as NoTexto[]).splice(
         1,
         1,
         { ...citado, text: "a educação " },
@@ -103,7 +103,7 @@ describe("citacao-direta-sem-pagina (10520 §6.1.3, 'se houver')", () => {
   it("direta curta sem página: AVISO, porque a fonte pode não ser paginada", () => {
     const achados = conferirCom(citacaoDiretaSemPagina, (d) => {
       const paragrafo = d.sections[0].content[0] as NoParagrafo;
-      const marca = paragrafo.content![3].marks![0];
+      const marca = (paragrafo.content as NoTexto[])[3].marks![0];
       if (marca.type === "citacao") marca.attrs.pagina = null;
     });
     expect(achados).toEqual([
@@ -153,7 +153,7 @@ describe("referencia-nao-citada (convenção, sem item na norma)", () => {
     expect(
       conferirCom(referenciaNaoCitada, (d) => {
         const paragrafo = d.sections[0].content[0] as NoParagrafo;
-        const marca = paragrafo.content![1].marks![0];
+        const marca = (paragrafo.content as NoTexto[])[1].marks![0];
         if (marca.type === "citacao") {
           marca.attrs.apud = { author: [{ family: "Outro" }], pagina: null };
         }

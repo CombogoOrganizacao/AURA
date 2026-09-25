@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/Select";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { novaFigura, novaFormula, novaTabela } from "@/core/document/factory";
 import { cursorDepoisDoBloco, fimDoBlocoAtual } from "@/core/editor/caret";
+import { inserirNotaRodape, podeInserirNota } from "@/core/editor/nodes/footnote";
 import { deNoConteudo } from "@/core/document/serialize";
 import type { NivelSecao, NoConteudo } from "@/core/document/types";
 import type { Referencia } from "@/core/references/types";
@@ -96,7 +97,6 @@ const CONTROLES_FUTUROS: ReadonlyArray<{ nome: NomeIcone; label: string }> = [
   { nome: "underline", label: "Sublinhado — sem nó no schema ainda" },
   { nome: "align-justify", label: "Justificar — chega na Fase 3.3" },
   { nome: "list-ordered", label: "Lista numerada — chega na Fase 3" },
-  { nome: "superscript", label: "Nota de rodapé — chega na Fase 6" },
 ];
 
 interface ToolbarProps {
@@ -307,6 +307,22 @@ export function Toolbar({ editor, references, onBuscar }: ToolbarProps) {
         onClick={() => inserirBloco(novaFormula())}
       >
         <Icon name="sigma" size={16} />
+      </BotaoToolbar>
+      {/*
+        Nota de rodapé (passo 6.1.3c). Desligada onde a nota não cabe, como
+        numa célula de tabela: `podeInserirNota()` pergunta ao schema.
+
+        **Sem `.focus()`**, ao contrário dos outros botões: o foco vai para o
+        campo da nota, que o node view abre (`NotaRodapeView`). O `focus()`
+        do TipTap devolve o foco ao editor num quadro seguinte, e o tirava do
+        campo logo depois de ele o receber.
+      */}
+      <BotaoToolbar
+        label="Nota de rodapé — numerada automaticamente, no pé da página no .docx"
+        disabled={!podeInserirNota(editor.state)}
+        onClick={() => editor.commands.command(({ tr }) => inserirNotaRodape(tr))}
+      >
+        <Icon name="superscript" size={16} />
       </BotaoToolbar>
       {CONTROLES_FUTUROS.map((item) => (
         <BotaoToolbar key={item.nome} label={item.label} disabled>

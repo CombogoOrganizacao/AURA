@@ -82,7 +82,7 @@ describe("marca citacao — guarda a ligação, não o texto formatado (4.8)", (
     const [paragrafo] = volta[0].content;
     // Nem aspas nem chamada entram no texto: quem as acrescenta é o
     // exportador (docs/schema-tiptap.md §5.2).
-    expect(paragrafo.type === "paragraph" && paragrafo.content?.map((t) => t.text).join("")).toBe(
+    expect(paragrafo.type === "paragraph" && paragrafo.content?.map((t) => (t.type === "text" ? t.text : "")).join("")).toBe(
       "A educação é um ato político, ninguém educa ninguém.",
     );
   });

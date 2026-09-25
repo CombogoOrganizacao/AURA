@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Documento, NoFigura, NoParagrafo, NoTabela } from "../../document/types";
+import type { Documento, NoFigura, NoParagrafo, NoTabela, NoTexto } from "../../document/types";
 import { conferirCom } from "../__tests__/conferirCom";
 import { ilustracaoCitada, ilustracaoComFonte, ilustracaoComTitulo } from "./ilustracoes";
 import { siglaPrimeiraMencao } from "./siglaPrimeiraMencao";
@@ -15,7 +15,7 @@ function paragrafoInicial(documento: Documento): NoParagrafo {
 }
 
 function trocarTexto(documento: Documento, de: string, para: string) {
-  for (const texto of paragrafoInicial(documento).content!) {
+  for (const texto of (paragrafoInicial(documento).content as NoTexto[])) {
     texto.text = texto.text.replace(de, para);
   }
 }

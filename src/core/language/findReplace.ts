@@ -1,4 +1,5 @@
-import type { Documento, Marca, NoConteudo, NoTexto } from "../document/types";
+import { soTexto } from "../document/inline";
+import type { Documento, Marca, NoConteudo, NoInline } from "../document/types";
 import type { LocalCitacao } from "../references/citacoes";
 
 // Localizar e substituir — passo 5.4.2, portado de `findAndReplace()` em
@@ -33,6 +34,11 @@ export type CampoTexto =
   | { tipo: "titulo" }
   // Parágrafo ou citação longa: `no` é o índice em `content`.
   | { tipo: "no"; no: number }
+  // Nota de rodapé dentro do parágrafo ou da citação longa `no` (passo
+  // 6.1.3c): `nota` é a ordem dela entre as notas daquele nó, não no
+  // documento. O texto da nota é um campo à parte porque não faz parte do
+  // texto do parágrafo (conta zero caracteres nele, ver `NoNotaRodape`).
+  | { tipo: "nota"; no: number; nota: number }
   | { tipo: "celula"; no: number; linha: number; celula: number }
   | { tipo: "legenda"; no: number }
   | { tipo: "fonte"; no: number };
@@ -117,7 +123,18 @@ function camposDoNo(onde: LocalCitacao, no: NoConteudo, indice: number): CampoDo
   switch (no.type) {
     case "paragraph":
     case "citacao_longa":
-      return [{ onde, campo: { tipo: "no", no: indice }, texto: juntar(no.content) }];
+      // A nota logo depois do parágrafo em que está: é onde quem lê a
+      // encontra, no pé da mesma página.
+      return [
+        { onde, campo: { tipo: "no", no: indice }, texto: juntar(no.content) },
+        ...(no.content ?? [])
+          .filter((inline) => inline.type === "nota_rodape")
+          .map((nota, ordem) => ({
+            onde,
+            campo: { tipo: "nota" as const, no: indice, nota: ordem },
+            texto: nota.texto,
+          })),
+      ];
     case "tabela":
       return [
         { onde, campo: { tipo: "legenda", no: indice }, texto: no.legenda },
@@ -140,8 +157,10 @@ function camposDoNo(onde: LocalCitacao, no: NoConteudo, indice: number): CampoDo
   }
 }
 
-function juntar(trechos: readonly NoTexto[] | undefined): string {
-  return (trechos ?? []).map((trecho) => trecho.text).join("");
+function juntar(trechos: readonly NoInline[] | undefined): string {
+  return soTexto(trechos)
+    .map((trecho) => trecho.text)
+    .join("");
 }
 
 // Todas as ocorrências no documento, na ordem de leitura.
@@ -178,16 +197,25 @@ function trocarEmTexto(
 // fica com as marcas que tinha. Trecho vazio sai, porque o editor não aceita
 // nó de texto vazio, e trechos vizinhos com as mesmas marcas se juntam, como
 // o editor os grava.
+//
+// A nota de rodapé passa intacta, no mesmo lugar: tem zero caracteres, então
+// nenhuma faixa a cobre, nem uma ocorrência que a atravesse ("pala¹vra"
+// achado como "palavra" troca o texto dos dois lados e deixa a nota logo
+// depois do substituto). Perder uma nota numa substituição seria perder
+// trabalho do aluno sem ele ver.
 function trocarEmTrechos(
-  trechos: readonly NoTexto[],
+  trechos: readonly NoInline[],
   faixas: readonly { inicio: number; fim: number }[],
   substituto: string,
-): NoTexto[] {
-  const saida: NoTexto[] = [];
+): NoInline[] {
+  const saida: NoInline[] = [];
   const empurrar = (text: string, marks: Marca[] | undefined) => {
     if (!text) return;
     const anterior = saida.at(-1);
-    if (anterior && JSON.stringify(anterior.marks ?? []) === JSON.stringify(marks ?? [])) {
+    if (
+      anterior?.type === "text" &&
+      JSON.stringify(anterior.marks ?? []) === JSON.stringify(marks ?? [])
+    ) {
       saida[saida.length - 1] = { ...anterior, text: anterior.text + text };
       return;
     }
@@ -197,6 +225,10 @@ function trocarEmTrechos(
   let faixa = 0;
   let posicao = 0;
   for (const trecho of trechos) {
+    if (trecho.type === "nota_rodape") {
+      saida.push(trecho);
+      continue;
+    }
     const inicioTrecho = posicao;
     const fimTrecho = posicao + trecho.text.length;
     let cursor = inicioTrecho;
@@ -253,10 +285,12 @@ function trocarNoNo(
     const faixas = faixasDe(campo);
     return faixas.length ? trocarEmTexto(texto, faixas, substituto) : texto;
   };
-  const emTrechos = (trechos: NoTexto[] | undefined, campo: CampoTexto) => {
+  const emTrechos = <T extends NoInline>(trechos: T[] | undefined, campo: CampoTexto) => {
     const faixas = faixasDe(campo);
     if (!faixas.length || !trechos) return trechos;
-    const trocados = trocarEmTrechos(trechos, faixas, substituto);
+    // Célula só tem `NoTexto`, e `trocarEmTrechos()` só devolve nota onde
+    // recebeu nota: o tipo de saída é o de entrada.
+    const trocados = trocarEmTrechos(trechos, faixas, substituto) as T[];
     // Parágrafo esvaziado fica como o editor grava um parágrafo vazio: sem
     // `content`.
     return trocados.length ? trocados : undefined;
@@ -266,7 +300,16 @@ function trocarNoNo(
     case "paragraph":
     case "citacao_longa": {
       const { content, ...resto } = no;
-      const novo = emTrechos(content, { tipo: "no", no: indice });
+      let ordem = 0;
+      const comNotas = content?.map((inline) =>
+        inline.type === "nota_rodape"
+          ? {
+              ...inline,
+              texto: emTexto(inline.texto, { tipo: "nota", no: indice, nota: ordem++ }),
+            }
+          : inline,
+      );
+      const novo = emTrechos(comNotas, { tipo: "no", no: indice });
       return novo ? { ...resto, content: novo } : resto;
     }
     case "tabela":

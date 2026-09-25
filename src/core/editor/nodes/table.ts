@@ -108,11 +108,14 @@ export const LinhaTabela = Node.create({
 export const CelulaTabela = Node.create({
   name: "celula_tabela",
 
-  // Inline direto, sem parágrafo por dentro — mesma forma de conteúdo de
-  // `paragrafo` e `citacao_longa`: texto com `negrito`/`italico`. Uma célula
-  // que aceitasse blocos aceitaria uma tabela dentro de outra, que não é
-  // coisa que a v1 queira.
-  content: "inline*",
+  // Inline direto, sem parágrafo por dentro: texto com `negrito`/`italico`.
+  // Uma célula que aceitasse blocos aceitaria uma tabela dentro de outra, que
+  // não é coisa que a v1 queira.
+  //
+  // `text*` e não `inline*` desde o passo 6.1.3c: o único outro nó inline, a
+  // nota de rodapé, não entra na grade. A tabela tem rodapé próprio (fonte,
+  // nota geral e nota específica, IBGE §3.2.3 e §4.10–4.12).
+  content: "text*",
 
   addAttributes() {
     return {

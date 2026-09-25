@@ -19,7 +19,7 @@
 import { chamadaDaCitacao, mesmaCitacao } from "../../references/citacoes";
 import type { OpcoesChamada } from "../../references/format/inText";
 import type { Referencia } from "../../references/types";
-import type { AtributosCitacao, NoCitacaoLonga, NoTexto } from "../types";
+import type { AtributosCitacao, NoCitacaoLonga, NoInline, NoTexto } from "../types";
 
 export type PapelTrecho =
   // Texto do aluno, com as marcas dele.
@@ -27,7 +27,11 @@ export type PapelTrecho =
   // Aspas duplas da citação direta de até três linhas (NBR 10520:2023 §7.1).
   | "aspas"
   // A chamada autor-data, ou o aviso de referência excluída.
-  | "chamada";
+  | "chamada"
+  // Nota de rodapé (passo 6.1.3c): `texto` é o conteúdo da nota, não algo que
+  // saia no meio do parágrafo. Quem converte decide a forma: no `.docx`, a
+  // referência de nota do Word, que desenha o expoente e numera sozinha.
+  | "nota";
 
 export interface Trecho {
   papel: PapelTrecho;
@@ -77,15 +81,35 @@ function fecharCitacao(
 }
 
 // Inline de parágrafo, célula de tabela ou citação longa.
+//
+// A nota de rodapé no meio de uma citação não a parte em duas: se o texto
+// depois dela continua a mesma citação, a faixa segue aberta (mesma leitura
+// de `coletarDoInline()` em references/citacoes.ts). Se não continua, a
+// citação fecha ANTES da nota, e o expoente sai depois da chamada:
+// "(Silva, 2020)¹", não "(Silva, 2020" com a nota no meio.
 export function trechosDoInline(
-  content: readonly NoTexto[] | undefined,
+  content: readonly NoInline[] | undefined,
   references: readonly Referencia[],
   opcoes?: OpcoesChamada,
 ): Trecho[] {
   const trechos: Trecho[] = [];
   let aberta: AtributosCitacao | null = null;
 
-  for (const no of content ?? []) {
+  const nos = content ?? [];
+  for (const [indice, no] of nos.entries()) {
+    if (no.type === "nota_rodape") {
+      if (aberta) {
+        const seguinte = nos.slice(indice + 1).find((item) => item.type === "text");
+        const continua = seguinte?.type === "text" ? atributosDe(seguinte) : null;
+        if (!(continua && mesmaCitacao(aberta, continua))) {
+          trechos.push(...fecharCitacao(aberta, references, opcoes));
+          aberta = null;
+        }
+      }
+      trechos.push({ papel: "nota", texto: no.texto, negrito: false, italico: false });
+      continue;
+    }
+
     const attrs = atributosDe(no);
 
     // Nó vizinho com a MESMA citação continua a faixa: uma palavra em itálico
