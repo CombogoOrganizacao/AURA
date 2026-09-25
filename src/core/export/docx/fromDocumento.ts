@@ -21,7 +21,6 @@ import {
 import type {
   Documento,
   NoCitacaoLonga,
-  NoFormula,
   NoNumeravel,
   NoParagrafo,
   Secao,
@@ -31,6 +30,7 @@ import { ABNT } from "./constants";
 import { paragrafoImagem, type ImagensDoDocumento } from "./media";
 import { paragrafoFonte, paragrafoLegenda } from "./legenda";
 import { criarNotasDeRodape, type NotasDeRodape } from "./notas";
+import { paragrafoFormula } from "./formula";
 import { runsDeTrechos } from "./trechos";
 import { montarDocumento } from "./index";
 import { blocoListaDeAbreviaturas, blocoListaDeFiguras, blocoListaDeTabelas } from "./listas";
@@ -113,32 +113,8 @@ function molduraFigura(): Paragraph {
   });
 }
 
-// Fórmula (passo 3.6.5) — sai como a própria fonte LaTeX, em texto simples e
-// centralizada. **Não é um placeholder**: `texto` É o dado do nó
-// (docs/schema-tiptap.md §4.8 e §6, "OMML em `formula` (texto simples até o
-// passo 6.1.4)"), então o que a pessoa escreveu chega inteiro ao `.docx` em
-// vez de virar uma moldura vazia. Converter para OMML — a equação desenhada
-// de verdade, editável no Word — é o passo 6.1.4, e é reler este mesmo campo.
-//
-// **Corrigido em 18/09/2026, com a NBR 14724:2024 §5.7 na mão.** Este
-// comentário creditava a centralização à norma. Ela não manda centralizar:
-// "recomenda-se que as equações e fórmulas sejam DESTACADAS no texto e, se
-// necessário, numeradas com algarismos arábicos entre parênteses, ALINHADOS À
-// DIREITA". Destacar é a exigência (e centralizar é uma das formas de
-// destacar); centralizar é convenção, como o recuo de parágrafo e o
-// justificado — ver docs/auditoria-abnt.md.
-//
-// Sem número: aqui o texto confirma o que já se supunha — a norma numera
-// equação só "se necessário", e a v1 não numera nenhuma (ver o cabeçalho de
-// `src/core/editor/nodes/formula.ts`). Quando numerar, o número vai entre
-// parênteses e alinhado à direita, não junto da fórmula.
-function paragrafoFormula(no: NoFormula): Paragraph {
-  return new Paragraph({
-    children: [new TextRun(no.texto)],
-    alignment: AlignmentType.CENTER,
-    spacing: { line: ABNT.espacamento15, before: 120, after: 120 },
-  });
-}
+// Fórmula: equação nativa do Word (OMML) desde o passo 6.1.4, em
+// `docx/formula.ts`, que também registra o que a equação do Word não recebe.
 
 // Legenda ACIMA do objeto e "Fonte:" abaixo, tanto em figura quanto em
 // tabela — literal na NBR 14724:2024 §5.8 ("deve ser PRECEDIDO por sua palavra

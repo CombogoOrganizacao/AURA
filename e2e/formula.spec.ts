@@ -1,5 +1,8 @@
+import { readFileSync } from "node:fs";
+
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import JSZip from "jszip";
 
 // Passo 3.6.5 — o critério de aceite é literal e comportamental: "renderiza
 // na tela e sobrevive ao round-trip; restrito ao desktop". Nenhum dos três
@@ -108,4 +111,38 @@ test("o botão de fórmula é restrito ao desktop; a fórmula criada continua ed
   // O que o breakpoint tira é o botão de CRIAR uma fórmula, não a fórmula.
   await expect(page.getByLabel(CAMPO_LATEX)).toHaveValue("a^2 + b^2 = c^2");
   await expect(page.locator(".doc-formula-render .katex")).toBeVisible();
+});
+
+// Passo 6.1.4 — a fórmula sai no `.docx` como equação nativa do Word (OMML),
+// não como o código LaTeX. Como o Word a desenha só se confere abrindo nele.
+test("a fórmula sai no .docx como equação do Word, não como LaTeX", async ({ page }) => {
+  await novoDocumento(page);
+  await page.getByRole("button", { name: BOTAO_FORMULA }).click();
+  await page.getByLabel(CAMPO_LATEX).fill(String.raw`\bar{x} = \frac{1}{n}\sum_{i=1}^{n} x_i`);
+  await expect(page.locator(".doc-formula-render .katex")).toBeVisible();
+  // Fórmula comum: nada fica de fora do Word, e nenhum aviso aparece.
+  await expect(page.getByRole("note")).toHaveCount(0);
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("banner").getByRole("button", { name: "Exportar .docx" }).click();
+  const download = await downloadPromise;
+  const zip = await JSZip.loadAsync(readFileSync((await download.path())!));
+  const xml = await zip.file("word/document.xml")!.async("string");
+
+  expect(xml).toContain("<m:oMath>");
+  expect(xml).toContain("<m:f>");
+  expect(xml).toContain('<m:chr m:val="∑"/>');
+  expect(xml).not.toContain(String.raw`\frac`);
+});
+
+test("o que a equação do Word não recebe é avisado na própria fórmula", async ({ page }) => {
+  await novoDocumento(page);
+  await page.getByRole("button", { name: BOTAO_FORMULA }).click();
+  await page
+    .getByLabel(CAMPO_LATEX)
+    .fill(String.raw`A = \begin{pmatrix} a & b \\ c & d \end{pmatrix}`);
+
+  await expect(page.getByRole("note")).toContainText(
+    "no Word, esta fórmula sai sem: matriz ou equações alinhadas",
+  );
 });

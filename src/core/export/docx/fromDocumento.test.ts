@@ -153,7 +153,10 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
   // existe pra garantir que o que a pessoa escreveu CHEGA ao `.docx`: um nó
   // novo no union `NoConteudo` que caísse no caminho de `paragrafoCorpo()`
   // exportaria um parágrafo vazio, e a fórmula sumiria em silêncio.
-  it("fórmula exporta a fonte LaTeX, centralizada e sem recuo de parágrafo (passo 3.6.5)", async () => {
+  // Até o passo 6.1.4 a fórmula saía como a fonte LaTeX em texto; agora sai
+  // como equação do Word (`docx/formula.ts`, testado em `formula.test.ts`).
+  // O que este teste guarda do 3.6.5 é o destaque: centralizada, sem recuo.
+  it("fórmula sai como equação do Word, centralizada e sem recuo de parágrafo (3.6.5, 6.1.4)", async () => {
     const latex = "x = \\frac{-b \\pm \\sqrt{b^{2} - 4ac}}{2a}";
     const documento = novoDocumento();
     documento.sections = [
@@ -170,12 +173,12 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
     const zip = await JSZip.loadAsync(buffer);
     const xml = await zip.file("word/document.xml")!.async("string");
 
-    // O XML escapa `&` e `<`; a fórmula usada aqui não tem nenhum dos dois,
-    // então a busca literal vale.
-    const posTexto = xml.indexOf(latex);
-    expect(posTexto).toBeGreaterThan(-1);
+    expect(xml).not.toContain(latex);
+    const posEquacao = xml.indexOf("<m:oMath>");
+    expect(posEquacao).toBeGreaterThan(-1);
+    expect(xml).toContain(">±</m:t>");
 
-    const paragrafo = xml.slice(xml.lastIndexOf("<w:p>", posTexto), posTexto);
+    const paragrafo = xml.slice(xml.lastIndexOf("<w:p>", posEquacao), posEquacao);
     expect(paragrafo).toContain('w:val="center"');
     // Equação destacada não leva o recuo de primeira linha do corpo.
     expect(paragrafo).not.toContain("w:firstLine");

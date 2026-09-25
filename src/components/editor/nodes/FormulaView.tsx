@@ -12,6 +12,8 @@ import { useEffect, useMemo, useRef } from "react";
 // (`font-src 'self'`) continua valendo sem exceção nenhuma.
 import "katex/dist/katex.min.css";
 
+import { recursosForaDoWord } from "@/core/export/docx/formula";
+
 // Node view do nó `formula` (passo 3.6.5) — ver docs/schema-tiptap.md §4.8.
 //
 // Fica em `src/components/` e não em `src/core/` de propósito: o nó em si
@@ -85,6 +87,13 @@ export function FormulaView({ node, updateAttributes }: ReactNodeViewProps) {
   const texto = node.attrs.texto as string;
   const destino = useRef<HTMLDivElement>(null);
   const erro = useMemo(() => mensagemDeErro(texto), [texto]);
+  // O que o `.docx` não leva desta fórmula (passo 6.1.4): a equação sai como
+  // equação nativa do Word, e o que ela não recebe é dito aqui, antes de
+  // exportar, e não descoberto depois no Word.
+  const foraDoWord = useMemo(
+    () => (erro || !texto.trim() ? [] : recursosForaDoWord(texto)),
+    [texto, erro],
+  );
 
   useEffect(() => {
     const elemento = destino.current;
@@ -119,6 +128,12 @@ export function FormulaView({ node, updateAttributes }: ReactNodeViewProps) {
         // conhece.
         <p className="doc-formula-aviso" contentEditable={false} title={erro}>
           não foi possível desenhar a fórmula — confira a sintaxe LaTeX
+        </p>
+      )}
+      {foraDoWord.length > 0 && (
+        <p className="doc-formula-aviso" contentEditable={false} role="note">
+          no Word, esta fórmula sai sem: {foraDoWord.join("; ")}. O resto sai como
+          equação editável.
         </p>
       )}
       <div className="doc-formula-fonte" contentEditable={false}>
