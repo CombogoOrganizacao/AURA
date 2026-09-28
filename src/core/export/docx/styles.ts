@@ -32,10 +32,17 @@ import { ABNT } from "./constants";
 // dele na página seguinte, é o defeito que o Word evita nos títulos dele de
 // fábrica. Não é regra da norma; é o comportamento que o aluno espera ao
 // continuar no Word.
+//
+// Espaço antes e depois do título de subseção: `ABNT.espacoTitulo`, pela NBR
+// 14724:2024 §5.2.2 (passo 6.1.5; ver constants.ts). Até ali eram 18 pt antes
+// e 12 pt depois, herdados da PoC sem base na norma.
 function estiloTitulo(extra: Record<string, boolean>) {
   return {
     run: { font: ABNT.fonte, size: ABNT.tamanhoCorpo, color: "000000", ...extra },
-    paragraph: { keepNext: true, spacing: { before: 360, after: 240, line: ABNT.espacamento15 } },
+    paragraph: {
+      keepNext: true,
+      spacing: { before: ABNT.espacoTitulo, after: ABNT.espacoTitulo, line: ABNT.espacamento15 },
+    },
   };
 }
 
@@ -95,9 +102,14 @@ export const ESTILOS_DOCUMENTO: IStylesOptions = {
         allCaps: true,
         color: "000000",
       },
+      // NBR 14724:2024 §5.2.2 (passo 6.1.5): a seção primária abre página nova
+      // e figura "na parte superior da mancha gráfica", por isso nada antes;
+      // depois, o mesmo `espacoTitulo` da subseção. A quebra de página não
+      // está aqui: fica no parágrafo (`fromDocumento.ts`), porque a primeira
+      // seção já abre a seção OOXML numa página nova.
       paragraph: {
         keepNext: true,
-        spacing: { before: 480, after: 240, line: ABNT.espacamento15 },
+        spacing: { before: 0, after: ABNT.espacoTitulo, line: ABNT.espacamento15 },
       },
     },
     heading2: estiloTitulo({ bold: true }),

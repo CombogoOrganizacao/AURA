@@ -20,6 +20,14 @@ export const ABNT = {
   tamanhoMenor: 20, // meio-pontos -> 10pt
   espacamento15: 360, // 240 = simples; 360 = 1,5 linhas
   espacamento1: 240,
+  // Espaço entre título e texto (passo 6.1.5). A NBR 14724:2024 §5.2.2 separa
+  // a seção primária do texto que a sucede, e a subseção do texto que a
+  // precede e que a sucede, "por um espaço de 1,5 entre as linhas". Leitura
+  // decidida em 28/09/2026: uma linha em branco em entrelinha 1,5
+  // (docs/latex-abntex.md §1.4). **18 pt (12 × 1,5) é a medida do AURA**, não
+  // da norma: a linha em branco de verdade depende da métrica da fonte, e um
+  // número fixo sai igual no `.docx` e no `.tex`.
+  espacoTitulo: 360, // twips -> 18pt
   recuoParagrafo: cm(1.25),
   recuoCitacao: cm(4),
   // Recuo deslocado da nota de rodapé (passo 6.1.3c). A NBR 14724:2024 §5.2.1

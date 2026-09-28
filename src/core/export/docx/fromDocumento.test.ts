@@ -78,6 +78,49 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
     expect(xml.indexOf("Introdução")).toBeLessThan(xml.indexOf("Metodologia"));
   });
 
+  // Passo 6.1.5 — NBR 14724:2024 §5.2.2: "os títulos das seções primárias
+  // devem começar em nova página" (trabalho só no anverso). A primeira não
+  // leva quebra: a seção OOXML do corpo já começa numa página nova.
+  it("cada seção primária, menos a primeira, abre página nova; subseção não", async () => {
+    const documento = documentoComDuasSecoes();
+    documento.sections.push({
+      id: "s3",
+      ordem: 2,
+      nivel: 2,
+      titulo: "Coleta de dados",
+      content: [],
+    });
+
+    const buffer = await empacotar(documento);
+    const zip = await JSZip.loadAsync(buffer);
+    const xml = await zip.file("word/document.xml")!.async("string");
+    const paragrafoCom = (texto: string) => {
+      const fim = xml.indexOf(texto);
+      return xml.slice(xml.lastIndexOf("<w:p>", fim), fim);
+    };
+
+    expect(paragrafoCom("1 Introdução")).not.toContain("<w:pageBreakBefore/>");
+    expect(paragrafoCom("2 Metodologia")).toContain("<w:pageBreakBefore/>");
+    expect(paragrafoCom("2.1 Coleta de dados")).not.toContain("<w:pageBreakBefore/>");
+  });
+
+  // §5.2.2: título de mais de uma linha continua "abaixo da primeira letra
+  // da primeira palavra do título". O recuo deslocado tem a largura de
+  // "2.1 " na Times New Roman 12: 2 algarismos × 120 + ponto 60 + espaço 60.
+  it("recuo deslocado do título com a largura do indicativo", async () => {
+    const documento = documentoComDuasSecoes();
+    documento.sections.push({ id: "s3", ordem: 2, nivel: 2, titulo: "Coleta", content: [] });
+
+    const buffer = await empacotar(documento);
+    const zip = await JSZip.loadAsync(buffer);
+    const xml = await zip.file("word/document.xml")!.async("string");
+    const fim = xml.indexOf("2.1 Coleta");
+    const paragrafo = xml.slice(xml.lastIndexOf("<w:p>", fim), fim);
+
+    expect(paragrafo).toMatch(/<w:ind [^>]*w:left="360"/);
+    expect(paragrafo).toMatch(/<w:ind [^>]*w:hanging="360"/);
+  });
+
   // Passo 3.4.2: citação longa exporta com o estilo nomeado `CitacaoLonga`
   // (docx/styles.ts), não um parágrafo comum sem recuo fingindo ser citação.
   it("citação longa exporta com o estilo nomeado CitacaoLonga (passo 3.4.2)", async () => {

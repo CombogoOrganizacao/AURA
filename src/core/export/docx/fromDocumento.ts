@@ -95,11 +95,39 @@ const NIVEL_PARA_HEADING = [
 // 6027 pede que o sumário reproduza os títulos como aparecem no texto. Era
 // o que `docs/porte-poc.md` registrava como pendente ("até lá, títulos de
 // seção no exportador continuam sem indicativo numérico").
-function paragrafoTitulo(secao: Secao, numero: string | null): Paragraph {
+//
+// **NBR 14724:2024 §5.2.2 (passo 6.1.5).** Duas regras do mesmo item moram no
+// parágrafo, não no estilo:
+//
+// - A seção primária "deve começar em nova página" (trabalho só no anverso).
+//   `pageBreakBefore` em toda seção de nível 1, menos a primeira, que já abre a
+//   seção OOXML numa página nova. É o que `poc/docx/gerar.js` fazia e o porte
+//   tinha perdido.
+// - Título de mais de uma linha: "a partir da segunda linha, alinhados abaixo
+//   da primeira letra da primeira palavra do título". Recuo deslocado com a
+//   largura do indicativo e do espaço que o separa, que muda de título para
+//   título ("1 " ou "2.3.1 ").
+function paragrafoTitulo(secao: Secao, numero: string | null, abrePagina: boolean): Paragraph {
+  const recuo = numero === null ? 0 : larguraIndicativo(numero);
   return new Paragraph({
     text: textoItemSumario({ numero, titulo: secao.titulo }),
     heading: NIVEL_PARA_HEADING[secao.nivel - 1],
+    pageBreakBefore: abrePagina,
+    ...(recuo > 0 ? { indent: { left: recuo, hanging: recuo } } : {}),
   });
+}
+
+// Largura, em twips, do indicativo mais o espaço que o separa do título
+// ("2.3.1 "). O indicativo só tem algarismos e pontos (`numerarSecoes()`). Na
+// Times New Roman (`ABNT.fonte`), normal, negrito e itálico, o algarismo tem
+// meio eme e o ponto e o espaço, um quarto: com 12 pt, 120 e 60 twips. A caixa
+// alta do nível 1 não muda algarismo nem ponto. Trocar a fonte exige refazer
+// esta conta.
+export function larguraIndicativo(numero: string): number {
+  const eme = ABNT.tamanhoCorpo * 10; // meio-pontos -> twips
+  let largura = eme / 4; // o espaço separador
+  for (const caractere of numero) largura += caractere === "." ? eme / 4 : eme / 2;
+  return largura;
 }
 
 // Placeholder honesto da figura sem imagem, igual ao de `poc/docx/gerar.js`.
@@ -202,7 +230,8 @@ function paragrafosDoCorpo(
     // `?? null` pelo mesmo motivo de `gerarSumario()`: o `Map` é indexado
     // por `id`, e uma seção ausente dele sai sem indicativo em vez de com
     // `undefined` no meio do título.
-    corpo.push(paragrafoTitulo(secao, numeracao.get(secao.id) ?? null));
+    const abrePagina = secao.nivel === 1 && secao !== secoesEmOrdem[0];
+    corpo.push(paragrafoTitulo(secao, numeracao.get(secao.id) ?? null, abrePagina));
     for (const no of secao.content) {
       if (no.type === "figura" || no.type === "tabela") {
         // `?? 0` nunca acontece com um documento consistente: os dois `Map`

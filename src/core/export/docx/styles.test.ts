@@ -93,6 +93,24 @@ describe("ESTILOS_DOCUMENTO — estilos nomeados completos (passo 6.1.1)", () =>
     expect(corpo).toMatch(new RegExp(`<w:ind [^>]*w:firstLine="${ABNT.recuoParagrafo}"`));
   });
 
+  // Passo 6.1.5 — NBR 14724:2024 §5.2.2: título separado do texto por "um
+  // espaço de 1,5 entre as linhas", lido como uma linha em branco em 1,5
+  // (`ABNT.espacoTitulo`, 18 pt). A seção primária encosta no alto da mancha.
+  it("Heading1: nada antes (topo da mancha) e uma linha de 1,5 depois", async () => {
+    const heading1 = blocoDeEstilo(await estilosGerados(), "Heading1");
+    expect(heading1).toMatch(/<w:spacing [^>]*w:before="0"/);
+    expect(heading1).toMatch(new RegExp(`<w:spacing [^>]*w:after="${ABNT.espacoTitulo}"`));
+  });
+
+  it("Heading2 e Heading3: uma linha de 1,5 antes e depois", async () => {
+    const xml = await estilosGerados();
+    for (const id of ["Heading2", "Heading3"]) {
+      const bloco = blocoDeEstilo(xml, id);
+      expect(bloco).toMatch(new RegExp(`<w:spacing [^>]*w:before="${ABNT.espacoTitulo}"`));
+      expect(bloco).toMatch(new RegExp(`<w:spacing [^>]*w:after="${ABNT.espacoTitulo}"`));
+    }
+  });
+
   it("títulos 1–3 não ficam sozinhos no pé da página (keepNext)", async () => {
     const xml = await estilosGerados();
     for (const id of ["Heading1", "Heading2", "Heading3"]) {
