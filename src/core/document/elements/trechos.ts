@@ -92,8 +92,40 @@ export function trechosDoInline(
   references: readonly Referencia[],
   opcoes?: OpcoesChamada,
 ): Trecho[] {
-  const trechos: Trecho[] = [];
-  let aberta: AtributosCitacao | null = null;
+  return partesDoInline(content, references, opcoes).flatMap((parte) =>
+    parte.tipo === "citacao" ? parte.trechos : [parte.trecho],
+  );
+}
+
+// O mesmo inline de `trechosDoInline()`, com cada citação ainda agrupada:
+// os trechos dela (aspas, excerto, notas no meio, chamada) junto dos
+// atributos da marca. O `.docx` não precisa do grupo e usa a lista achatada;
+// o `.tex` precisa, porque escreve a citação como um comando só,
+// `\auracite`, com os atributos que a reimportação lê de volta (passo 6.2.1,
+// docs/latex-abntex.md §1.5). Uma função só para os dois, para a citação não
+// poder começar ou terminar em lugares diferentes conforme o formato.
+export type ParteInline =
+  | { tipo: "trecho"; trecho: Trecho }
+  | { tipo: "citacao"; attrs: AtributosCitacao; trechos: Trecho[] };
+
+export function partesDoInline(
+  content: readonly NoInline[] | undefined,
+  references: readonly Referencia[],
+  opcoes?: OpcoesChamada,
+): ParteInline[] {
+  const partes: ParteInline[] = [];
+  let aberta: { attrs: AtributosCitacao; trechos: Trecho[] } | null = null;
+
+  const fechar = () => {
+    if (!aberta) return;
+    aberta.trechos.push(...fecharCitacao(aberta.attrs, references, opcoes));
+    partes.push({ tipo: "citacao", attrs: aberta.attrs, trechos: aberta.trechos });
+    aberta = null;
+  };
+  const acrescentar = (trecho: Trecho) => {
+    if (aberta) aberta.trechos.push(trecho);
+    else partes.push({ tipo: "trecho", trecho });
+  };
 
   const nos = content ?? [];
   for (const [indice, no] of nos.entries()) {
@@ -101,12 +133,9 @@ export function trechosDoInline(
       if (aberta) {
         const seguinte = nos.slice(indice + 1).find((item) => item.type === "text");
         const continua = seguinte?.type === "text" ? atributosDe(seguinte) : null;
-        if (!(continua && mesmaCitacao(aberta, continua))) {
-          trechos.push(...fecharCitacao(aberta, references, opcoes));
-          aberta = null;
-        }
+        if (!(continua && mesmaCitacao(aberta.attrs, continua))) fechar();
       }
-      trechos.push({ papel: "nota", texto: no.texto, negrito: false, italico: false });
+      acrescentar({ papel: "nota", texto: no.texto, negrito: false, italico: false });
       continue;
     }
 
@@ -114,19 +143,15 @@ export function trechosDoInline(
 
     // Nó vizinho com a MESMA citação continua a faixa: uma palavra em itálico
     // no meio do excerto parte o texto em dois nós, e não em duas citações.
-    if (aberta && !(attrs && mesmaCitacao(aberta, attrs))) {
-      trechos.push(...fecharCitacao(aberta, references, opcoes));
-      aberta = null;
-    }
+    if (aberta && !(attrs && mesmaCitacao(aberta.attrs, attrs))) fechar();
     if (attrs && !aberta) {
-      if (attrs.modo === "direta_curta") trechos.push(sinal("aspas", "“"));
-      aberta = attrs;
+      aberta = { attrs, trechos: attrs.modo === "direta_curta" ? [sinal("aspas", "“")] : [] };
     }
-    trechos.push(doAluno(no));
+    acrescentar(doAluno(no));
   }
 
-  if (aberta) trechos.push(...fecharCitacao(aberta, references, opcoes));
-  return trechos;
+  fechar();
+  return partes;
 }
 
 // Citação longa: a ligação é do bloco, e a chamada vai no fim do conteúdo

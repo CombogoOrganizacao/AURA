@@ -8,8 +8,9 @@ import {
   WidthType,
 } from "docx";
 
+import { linhasDeCabecalho } from "../../document/elements/tabela";
 import { trechosDoInline } from "../../document/elements/trechos";
-import type { CelulaTabela, LinhaTabela, NoTabela } from "../../document/types";
+import type { CelulaTabela, NoTabela } from "../../document/types";
 import type { Referencia } from "../../references/types";
 import { ABNT } from "./constants";
 import { runsDeTrechos } from "./trechos";
@@ -66,13 +67,9 @@ import { runsDeTrechos } from "./trechos";
 const TRACO: IBorderOptions = { style: BorderStyle.SINGLE, size: 4, color: "000000" };
 const SEM_TRACO: IBorderOptions = { style: BorderStyle.NONE, size: 0, color: "auto" };
 
-// Quantas linhas, do começo da tabela, formam o espaço do cabeçalho.
-export function linhasDeCabecalho(linhas: readonly LinhaTabela[]): number {
-  const primeiraDoCorpo = linhas.findIndex(
-    (linha) => linha.celulas.length === 0 || !linha.celulas.every((celula) => celula.cabecalho),
-  );
-  return primeiraDoCorpo === -1 ? linhas.length : primeiraDoCorpo;
-}
+// Quantas linhas formam o cabeçalho: `document/elements/tabela.ts`, desde o
+// passo 6.2.1, porque o `.tex` usa a mesma divisão.
+export { linhasDeCabecalho };
 
 function celulaDocx(
   celula: CelulaTabela,

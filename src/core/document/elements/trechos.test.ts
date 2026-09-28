@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { chamadaDaCitacao } from "../../references/citacoes";
 import type { Referencia } from "../../references/types";
 import type { AtributosCitacao, NoCitacaoLonga, NoTexto } from "../types";
-import { trechosDaCitacaoLonga, trechosDoInline, type Trecho } from "./trechos";
+import { partesDoInline, trechosDaCitacaoLonga, trechosDoInline, type Trecho } from "./trechos";
 
 // Passo 4B.2 — o inline como sai no documento final: marcas do aluno, aspas
 // da citação direta (NBR 10520:2023 §7.1) e a chamada autor-data.
@@ -201,5 +201,59 @@ describe("trechosDaCitacaoLonga (NBR 10520:2023 §7.1.1)", () => {
   it("órfã termina com o aviso", () => {
     const trechos = trechosDaCitacaoLonga(longa({ refId: "sumiu" }), REFS);
     expect(trechos.at(-1)).toMatchObject({ texto: " (referência excluída)", orfa: true });
+  });
+});
+
+// Passo 6.2.1 — o mesmo inline com cada citação agrupada, para o `.tex`
+// escrever `uracite` com os atributos. `trechosDoInline()` é a versão
+// achatada destes grupos, e os dois formatos não podem discordar de onde a
+// citação começa e termina.
+describe("partesDoInline — citação agrupada com os atributos", () => {
+  const direta = { type: "citacao" as const, attrs: citacao({ modo: "direta_curta", pagina: "35" }) };
+  const conteudo = [
+    texto("Antes, "),
+    texto("ensinar ", [direta]),
+    texto("exige", [direta, { type: "italico" }]),
+    { type: "nota_rodape" as const, texto: "no meio" },
+    texto(" risco", [direta]),
+    texto(" depois."),
+  ];
+
+  it("texto solto, uma citação só (itálico e nota no meio não a partem) e texto solto", () => {
+    const partes = partesDoInline(conteudo, REFS);
+    expect(partes.map((parte) => parte.tipo)).toEqual(["trecho", "citacao", "trecho"]);
+
+    const grupo = partes[1];
+    if (grupo.tipo !== "citacao") throw new Error("esperava a citação");
+    expect(grupo.attrs).toMatchObject({ modo: "direta_curta", pagina: "35" });
+    expect(grupo.trechos.map((trecho) => trecho.papel)).toEqual([
+      "aspas",
+      "texto",
+      "texto",
+      "nota",
+      "texto",
+      "aspas",
+      "chamada",
+    ]);
+  });
+
+  it("achatada, é exatamente trechosDoInline()", () => {
+    const achatada = partesDoInline(conteudo, REFS).flatMap((parte) =>
+      parte.tipo === "citacao" ? parte.trechos : [parte.trecho],
+    );
+    expect(achatada).toEqual(trechosDoInline(conteudo, REFS));
+  });
+
+  it("nota depois da citação que não continua fica fora do grupo", () => {
+    const partes = partesDoInline(
+      [
+        texto("liberdade", [{ type: "citacao", attrs: citacao() }]),
+        { type: "nota_rodape", texto: "fora" },
+        texto("."),
+      ],
+      REFS,
+    );
+    expect(partes.map((parte) => parte.tipo)).toEqual(["citacao", "trecho", "trecho"]);
+    expect(partes[1]).toMatchObject({ tipo: "trecho", trecho: { papel: "nota", texto: "fora" } });
   });
 });
