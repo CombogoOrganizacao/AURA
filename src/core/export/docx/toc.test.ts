@@ -78,6 +78,21 @@ describe("sumário no .docx como campo TOC (passo 3.6.2)", () => {
     }
   });
 
+  // Caixa alta no texto, e não no estilo: o campo `TOC` copia o texto, e o
+  // sumário precisa sair com a mesma grafia do título (14724 §4.2.3.3 e
+  // §4.2.3.4, exemplos).
+  it("título de apêndice e anexo sai em caixa alta no texto do parágrafo", async () => {
+    const documento = documentoComTresNiveis();
+    documento.apendices = [{ id: "ap1", titulo: "Questionário aplicado", content: [] }];
+    documento.anexos = [{ id: "an1", titulo: "Parecer do comitê", content: [] }];
+
+    const xml = await xmlDe(documento);
+
+    expect(xml).toContain("APÊNDICE A — QUESTIONÁRIO APLICADO");
+    expect(xml).toContain("ANEXO A — PARECER DO COMITÊ");
+    expect(xml).not.toContain("Questionário aplicado");
+  });
+
   it("word/settings.xml traz <w:updateFields/>, para o Word preencher as páginas ao abrir", async () => {
     expect(await xmlDe(documentoComTresNiveis(), "word/settings.xml")).toContain(
       "<w:updateFields/>",

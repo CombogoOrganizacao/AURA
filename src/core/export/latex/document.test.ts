@@ -66,8 +66,8 @@ describe("gerarTex — ordem das partes", () => {
       "\\chapter[",
       "\\postextual",
       "\\pretextualchapter{REFERÊNCIAS}",
-      "\\pretextualchapter{APÊNDICE A — Questionário}",
-      "\\pretextualchapter{ANEXO A — Lei \\& decreto}",
+      "\\pretextualchapter{APÊNDICE A — QUESTIONÁRIO}",
+      "\\pretextualchapter{ANEXO A — LEI \\& DECRETO}",
     ].map((trecho) => tex.indexOf(trecho));
     for (const posicao of posicoes) expect(posicao).toBeGreaterThan(-1);
     expect([...posicoes].sort((a, b) => a - b)).toEqual(posicoes);

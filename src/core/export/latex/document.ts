@@ -474,7 +474,9 @@ function posTextuais(
   return gerar(elementos)
     .map((item, indice) =>
       [
-        tituloPosTextual(textoTituloPosTextual(item)),
+        // Caixa alta como no `.docx` (`blocoDeElemento()`, que explica a
+        // origem): antes do escape, para não mexer nos comandos que ele gera.
+        tituloPosTextual(textoTituloPosTextual(item).toLocaleUpperCase("pt-BR")),
         ...elementos[indice].content.map((no) => conteudoPosTextual(no, references)),
       ].join("\n\n"),
     )
@@ -509,9 +511,10 @@ const GERADORES: Record<ElementoDocumento, Gerador> = {
 };
 
 // Onde cada parte começa na classe: `\textual` liga a numeração arábica das
-// páginas (14724 §5.3); `\postextual` fecha o corpo. No pós-textual, o título
-// de apêndice e anexo sai como o aluno o escreveu, sem a caixa alta que a
-// opção `chapter=TITLE` impõe, como o `TituloPosTextual` do `.docx`.
+// páginas (14724 §5.3); `\postextual` fecha o corpo. No pós-textual, a caixa
+// alta que a opção `chapter=TITLE` impõe fica desligada: o título de apêndice
+// e anexo já chega em maiúsculas (`posTextuais()`), e o texto, e não a classe,
+// decide a grafia, como no `.docx`.
 const ABERTURA_DA_PARTE = {
   textual: "\\textual",
   posTextual: "\\postextual\n\\setboolean{ABNTEXupperchapter}{false}",

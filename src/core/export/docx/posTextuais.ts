@@ -83,6 +83,12 @@ function paragrafoDeConteudo(
   });
 }
 
+// Título em caixa alta, como a seção primária e como os EXEMPLOS da NBR
+// 14724:2024 §4.2.3.3 e §4.2.3.4 (p. 9). O texto da regra só pede o mesmo
+// destaque "(negrito, itálico ou sublinhado)", que o estilo já dá; a caixa
+// alta foi decisão da usuária em 29/09/2026, pelos exemplos. Vai no texto, e
+// não num `allCaps` do estilo, porque o campo `TOC` copia o texto e o sumário
+// precisa sair igual. A tela continua mostrando o que o aluno digitou.
 function blocoDeElemento(
   item: ItemPosTextual,
   elemento: ElementoPosTextual,
@@ -90,7 +96,7 @@ function blocoDeElemento(
   notas: NotasDeRodape,
 ): FileChild[] {
   return [
-    paragrafoTituloPosTextual(textoTituloPosTextual(item)),
+    paragrafoTituloPosTextual(textoTituloPosTextual(item).toLocaleUpperCase("pt-BR")),
     ...elemento.content.map((no) => paragrafoDeConteudo(no, references, notas)),
   ];
 }
