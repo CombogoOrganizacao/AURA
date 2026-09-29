@@ -66,8 +66,8 @@ describe("gerarTex — ordem das partes", () => {
       "\\chapter[",
       "\\postextual",
       "\\pretextualchapter{REFERÊNCIAS}",
-      "\\pretextualchapter{APÊNDICE A — QUESTIONÁRIO}",
-      "\\pretextualchapter{ANEXO A — LEI \\& DECRETO}",
+      "% AURA-APENDICE: ap1",
+      "% AURA-ANEXO: an1",
     ].map((trecho) => tex.indexOf(trecho));
     for (const posicao of posicoes) expect(posicao).toBeGreaterThan(-1);
     expect([...posicoes].sort((a, b) => a - b)).toEqual(posicoes);
@@ -161,12 +161,19 @@ describe("gerarTex — fórmula, figura e tabela", () => {
 describe("gerarTex — pré e pós-textuais", () => {
   it("natureza recuada do meio da mancha à direita, em espaço simples", () => {
     expect(tex).toContain(
-      "\\noindent\\hfill\\begin{minipage}[t]{.5\\textwidth}\\auraespacosimples Trabalho de Conclusão",
+      "\\noindent\\hfill\\begin{minipage}[t]{.5\\textwidth}\\auraespacosimples \\auranatureza",
     );
   });
 
   it("palavras-chave separadas por ponto e vírgula e finalizadas por ponto", () => {
-    expect(tex).toContain("\\textbf{Palavras-chave:} formatação; normas técnicas; LaTeX.");
+    expect(tex).toContain("\\newcommand{\\aurapalavraschave}{formatação; normas técnicas; LaTeX}");
+    expect(tex).toContain("\\textbf{Palavras-chave:} \\aurapalavraschave.");
+  });
+
+  it("título de apêndice e anexo como o aluno escreveu, em caixa alta pelo LaTeX, também no sumário", () => {
+    const titulo = "\\texorpdfstring{\\protect\\MakeUppercase{ANEXO A — Lei \\& decreto}}{ANEXO A — Lei \\& decreto}";
+    expect(tex).toContain(`\\pretextualchapter{${titulo}}`);
+    expect(tex).toContain(`\\addcontentsline{toc}{chapter}{${titulo}}`);
   });
 
   it("referência com o título em negrito, e no sumário", () => {

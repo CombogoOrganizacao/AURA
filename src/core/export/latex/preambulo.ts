@@ -4,6 +4,7 @@ import { TITULO_LISTA_FIGURAS, TITULO_LISTA_TABELAS } from "../../document/eleme
 import { TITULO_SUMARIO } from "../../document/elements/sumario";
 import type { Metadados } from "../../document/types";
 import { escaparLatex } from "./escape";
+import { blocoDeMetadados } from "./markers";
 
 // Preâmbulo do `.tex` (passo 6.2.1). Cada bloco corresponde a uma linha de
 // docs/latex-abntex.md §4: a classe `abntex2` dá a estrutura, e o que ela faz
@@ -170,8 +171,8 @@ function nomes(): string {
 }
 
 // Dados do trabalho para os metadados do PDF (título e autor na aba do
-// leitor). A capa e a folha de rosto não usam estes comandos: são montadas
-// pelas mesmas funções do `.docx` (`document.ts`).
+// leitor). A capa e a folha de rosto não usam estes comandos, e sim os do
+// bloco `AURA-METADADOS` (`markers.ts`); estes não voltam na reimportação.
 function dados(metadados: Metadados): string {
   return [
     `\\titulo{${escaparLatex(tituloComSubtitulo(metadados))}}`,
@@ -188,6 +189,7 @@ export function preambulo(metadados: Metadados): string {
     SOBRESCRITAS,
     nomes(),
     COMANDOS_AURA,
+    blocoDeMetadados(metadados),
     dados(metadados),
   ].join("\n\n");
 }

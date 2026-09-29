@@ -44,6 +44,13 @@ import type {
 import type { Referencia } from "../../references/types";
 import { ABNT } from "../docx/constants";
 import { escaparLatex } from "./escape";
+import {
+  linhaDoDocumento,
+  MACRO,
+  marcadorDeAnexo,
+  marcadorDeApendice,
+  marcadorDeSecao,
+} from "./markers";
 import { preambulo } from "./preambulo";
 
 // Gerador do `.tex` (passo 6.2.1). Irmão de `export/docx/fromDocumento.ts`:
@@ -276,7 +283,7 @@ function corpo(documento: Documento, imagens: ImagensParaTex): string {
   return secoes
     .map((secao) =>
       [
-        tituloDeSecao(secao),
+        `${marcadorDeSecao(secao.id)}\n${tituloDeSecao(secao)}`,
         ...secao.content.map((no) => bloco(no, documento.references, imagens)),
       ].join("\n\n"),
     )
@@ -295,43 +302,87 @@ const ENFASE: Partial<Record<PapelLinhaPreTextual, { negrito?: boolean; caixaAlt
 // Twips (`.docx`) para pontos: 20 twips = 1 pt.
 const pontos = (twips: number) => `${twips / 20}pt`;
 
-function textoDeLinha(linha: LinhaPreTextual): string {
+// Texto da linha com cada campo trocado pelo comando do bloco de metadados
+// (`markers.ts`, passo 6.2.2), e o que sobra ("Orientador: ", ": " entre
+// título e subtítulo) escapado como texto. Campo vazio ou que não está na
+// linha fica como texto: não há onde pôr o comando.
+function comCampos(texto: string, campos: readonly (readonly [string, string])[]): string {
+  let resto = texto;
+  let saida = "";
+  for (const [valor, macro] of campos) {
+    const posicao = valor ? resto.indexOf(valor) : -1;
+    if (posicao < 0) continue;
+    saida += escaparLatex(resto.slice(0, posicao)) + macro;
+    resto = resto.slice(posicao + valor.length);
+  }
+  return saida + escaparLatex(resto);
+}
+
+function fonteDaLinha(linha: LinhaPreTextual, metadados: Metadados): string {
+  switch (linha.papel) {
+    case "autor":
+      // Todos os autores num comando só, um por linha (`linhasComEspacos()`).
+      return MACRO.autores;
+    case "instituicao":
+      return comCampos(linha.texto, [[metadados.instituicao, MACRO.instituicao]]);
+    case "tituloDoTrabalho":
+      return comCampos(linha.texto, [
+        [metadados.titulo, MACRO.titulo],
+        [metadados.subtitulo ?? "", MACRO.subtitulo],
+      ]);
+    case "natureza":
+      return comCampos(linha.texto, [[metadados.naturezaTrabalho, MACRO.naturezaTrabalho]]);
+    case "orientador":
+      return comCampos(linha.texto, [[metadados.orientador, MACRO.orientador]]);
+    case "local":
+      return comCampos(linha.texto, [[metadados.local, MACRO.local]]);
+    case "ano":
+      return comCampos(linha.texto, [[String(metadados.ano), MACRO.ano]]);
+    default:
+      return escaparLatex(linha.texto);
+  }
+}
+
+// A caixa alta vem do LaTeX, e não do texto: o texto é o comando do bloco.
+function textoDeLinha(linha: LinhaPreTextual, metadados: Metadados): string {
   const enfase = linha.papel ? ENFASE[linha.papel] : undefined;
-  let texto = escaparLatex(
-    enfase?.caixaAlta ? linha.texto.toLocaleUpperCase("pt-BR") : linha.texto,
-  );
+  let texto = fonteDaLinha(linha, metadados);
+  if (enfase?.caixaAlta) texto = `\\MakeUppercase{${texto}}`;
   if (enfase?.negrito) texto = `\\textbf{${texto}}`;
   return texto;
 }
 
-// Uma linha pré-textual. Título: capítulo pré-textual da classe (centralizado,
-// sem número, fora do sumário). Recuada: bloco do meio da mancha até a margem
+// Uma linha pré-textual. Recuada: bloco do meio da mancha até a margem
 // direita (14724 §5.2), em espaço simples na natureza.
-function linhaLatex(linha: LinhaPreTextual): string {
-  if (linha.titulo) return `\\pretextualchapter{${escaparLatex(linha.texto)}}`;
+function linhaLatex(linha: LinhaPreTextual, metadados: Metadados): string {
+  const texto = textoDeLinha(linha, metadados);
   if (linha.alinhamento === "recuada-a-direita") {
     const simples = linha.papel === "natureza" ? "\\auraespacosimples " : "";
-    return `\\noindent\\hfill\\begin{minipage}[t]{.5\\textwidth}${simples}${textoDeLinha(linha)}\\end{minipage}\\par`;
+    return `\\noindent\\hfill\\begin{minipage}[t]{.5\\textwidth}${simples}${texto}\\end{minipage}\\par`;
   }
-  if (linha.alinhamento === "centro") return `{\\centering ${textoDeLinha(linha)}\\par}`;
-  return `\\noindent ${textoDeLinha(linha)}\\par`;
+  if (linha.alinhamento === "centro") return `{\\centering ${texto}\\par}`;
+  return `\\noindent ${texto}\\par`;
 }
 
-// Mesmos espaços do `.docx`: antes da primeira linha de cada papel.
+// Mesmos espaços do `.docx`: antes da primeira linha de cada papel. As linhas
+// de autor seguintes à primeira não saem: a primeira já imprime todos
+// (`\auraautores`, um por linha), e os geradores as põem sempre juntas.
 function linhasComEspacos(
   linhas: readonly LinhaPreTextual[],
+  metadados: Metadados,
   espacos: Partial<Record<PapelLinhaPreTextual, number>>,
   espacoSempre: Partial<Record<PapelLinhaPreTextual, number>> = {},
 ): string {
   const vistos = new Set<PapelLinhaPreTextual>();
   return linhas
-    .map((linha) => {
+    .flatMap((linha) => {
       const primeira = linha.papel !== undefined && !vistos.has(linha.papel);
+      if (linha.papel === "autor" && !primeira) return [];
       if (linha.papel) vistos.add(linha.papel);
       const espaco = linha.papel
         ? (espacoSempre[linha.papel] ?? (primeira ? espacos[linha.papel] : undefined))
         : undefined;
-      return `${espaco ? `\\vspace*{${pontos(espaco)}}\n` : ""}${linhaLatex(linha)}`;
+      return [`${espaco ? `\\vspace*{${pontos(espaco)}}\n` : ""}${linhaLatex(linha, metadados)}`];
     })
     .join("\n");
 }
@@ -341,7 +392,7 @@ function capa(metadados: Metadados): string {
   if (linhas.length === 0) return "";
   return [
     "\\begin{capa}",
-    linhasComEspacos(linhas, { autor: 3000, tituloDoTrabalho: 3000, local: 4000 }),
+    linhasComEspacos(linhas, metadados, { autor: 3000, tituloDoTrabalho: 3000, local: 4000 }),
     "\\end{capa}",
   ].join("\n");
 }
@@ -351,7 +402,12 @@ function folhaDeRosto(metadados: Metadados): string {
   if (linhas.length === 0) return "";
   return [
     "\\renewcommand{\\folhaderostocontent}{%",
-    linhasComEspacos(linhas, { tituloDoTrabalho: 2400, natureza: 1200, orientador: 600, local: 2400 }),
+    linhasComEspacos(linhas, metadados, {
+      tituloDoTrabalho: 2400,
+      natureza: 1200,
+      orientador: 600,
+      local: 2400,
+    }),
     "}",
     "\\imprimirfolhaderosto",
   ].join("\n");
@@ -364,6 +420,7 @@ function folhaDeAprovacao(metadados: Metadados): string {
     "\\begin{folhadeaprovacao}",
     linhasComEspacos(
       linhas,
+      metadados,
       { tituloDoTrabalho: 1200, natureza: 600, dataAprovacao: 600 },
       { assinatura: 720 },
     ),
@@ -372,39 +429,49 @@ function folhaDeAprovacao(metadados: Metadados): string {
 }
 
 // Dedicatória e epígrafe: sem título, do meio da mancha à margem direita, na
-// parte inferior da página (14724 §5.2.4).
-function noPeDaPagina(ambiente: string, linhas: readonly LinhaPreTextual[]): string {
+// parte inferior da página (14724 §5.2.4). O texto é o comando do bloco de
+// metadados, com os parágrafos já separados por `\par` (`markers.ts`).
+function noPeDaPagina(ambiente: string, linhas: readonly LinhaPreTextual[], macro: string): string {
   if (linhas.length === 0) return "";
-  const texto = linhas.map((linha) => `${textoDeLinha(linha)}\\par`).join("\n");
   return [
     `\\begin{${ambiente}}`,
     "\\vspace*{\\fill}",
-    `\\noindent\\hfill\\begin{minipage}{.5\\textwidth}\n${texto}\n\\end{minipage}`,
+    `\\noindent\\hfill\\begin{minipage}{.5\\textwidth}\n${macro}\\par\n\\end{minipage}`,
     `\\end{${ambiente}}`,
   ].join("\n");
 }
 
+// Parágrafos sem recuo, como a linha justificada de antes do 6.2.2: o
+// `\parindent` zerado vale para todos os parágrafos do comando.
 function agradecimentos(metadados: Metadados): string {
   const linhas = gerarAgradecimentos(metadados);
-  return linhas.map(linhaLatex).join("\n");
+  const titulo = linhas.find((linha) => linha.titulo);
+  if (!titulo) return "";
+  return [
+    `\\pretextualchapter{${escaparLatex(titulo.texto)}}`,
+    `{\\setlength{\\parindent}{0pt}${MACRO.agradecimentos}\\par}`,
+  ].join("\n");
 }
 
 // Resumo e abstract como no `.docx` (`paragrafosResumo()`): título, texto sem
 // recuo, uma linha e as palavras-chave separadas por ponto e vírgula e
-// finalizadas por ponto (6028:2021 §4.1.7).
+// finalizadas por ponto (6028:2021 §4.1.7). Texto e termos são os comandos do
+// bloco de metadados; se sai ou não, decide o valor no momento da exportação.
 function resumo(
   titulo: string,
   texto: string,
+  macroTexto: string,
   rotulo: string,
   termos: readonly string[],
+  macroTermos: string,
   idioma?: string,
 ): string {
   if (!texto) return "";
-  const partes = [`\\noindent ${escaparLatex(texto)}\\par`];
+  const partes = [`\\noindent ${macroTexto}\\par`];
   if (termos.length > 0) {
     partes.push(
       "\\vspace{\\baselineskip}",
-      `\\noindent\\textbf{${escaparLatex(rotulo)}:} ${escaparLatex(`${termos.join("; ")}.`)}\\par`,
+      `\\noindent\\textbf{${escaparLatex(rotulo)}:} ${macroTermos}.\\par`,
     );
   }
   const conteudo = idioma
@@ -466,17 +533,26 @@ function conteudoPosTextual(no: NoConteudo, references: readonly Referencia[]): 
   return bloco(no, references, new Map());
 }
 
+// Título de apêndice e anexo em caixa alta, como no `.docx`
+// (`blocoDeElemento()`, que explica a origem). Aqui a caixa alta é do LaTeX,
+// e o fonte guarda o título como o aluno o escreveu: é esse texto que a
+// reimportação (6.2.4) lê, depois do marcador.
+function tituloDeApendiceOuAnexo(texto: string): string {
+  const titulo = escaparLatex(texto);
+  const emCaixaAlta = `\\texorpdfstring{\\protect\\MakeUppercase{${titulo}}}{${titulo}}`;
+  return `\\pretextualchapter{${emCaixaAlta}}\n\\phantomsection\\addcontentsline{toc}{chapter}{${emCaixaAlta}}`;
+}
+
 function posTextuais(
   elementos: readonly ElementoPosTextual[],
   gerar: (lista: readonly ElementoPosTextual[]) => ItemPosTextual[],
+  marcador: (id: string) => string,
   references: readonly Referencia[],
 ): string {
   return gerar(elementos)
     .map((item, indice) =>
       [
-        // Caixa alta como no `.docx` (`blocoDeElemento()`, que explica a
-        // origem): antes do escape, para não mexer nos comandos que ele gera.
-        tituloPosTextual(textoTituloPosTextual(item).toLocaleUpperCase("pt-BR")),
+        `${marcador(item.id)}\n${tituloDeApendiceOuAnexo(textoTituloPosTextual(item))}`,
         ...elementos[indice].content.map((no) => conteudoPosTextual(no, references)),
       ].join("\n\n"),
     )
@@ -491,13 +567,30 @@ const GERADORES: Record<ElementoDocumento, Gerador> = {
   capa: (documento) => capa(documento.metadados),
   folhaDeRosto: (documento) => folhaDeRosto(documento.metadados),
   folhaDeAprovacao: (documento) => folhaDeAprovacao(documento.metadados),
-  dedicatoria: (documento) => noPeDaPagina("dedicatoria", gerarDedicatoria(documento.metadados)),
+  dedicatoria: (documento) =>
+    noPeDaPagina("dedicatoria", gerarDedicatoria(documento.metadados), MACRO.dedicatoria),
   agradecimentos: (documento) => agradecimentos(documento.metadados),
-  epigrafe: (documento) => noPeDaPagina("epigrafe", gerarEpigrafe(documento.metadados)),
+  epigrafe: (documento) =>
+    noPeDaPagina("epigrafe", gerarEpigrafe(documento.metadados), MACRO.epigrafe),
   resumo: ({ metadados }) =>
-    resumo("RESUMO", metadados.resumo, "Palavras-chave", metadados.palavrasChave),
+    resumo(
+      "RESUMO",
+      metadados.resumo,
+      MACRO.resumo,
+      "Palavras-chave",
+      metadados.palavrasChave,
+      MACRO.palavrasChave,
+    ),
   abstract: ({ metadados }) =>
-    resumo("ABSTRACT", metadados.abstract, "Keywords", metadados.keywords, "english"),
+    resumo(
+      "ABSTRACT",
+      metadados.abstract,
+      MACRO.abstract,
+      "Keywords",
+      metadados.keywords,
+      MACRO.keywords,
+      "english",
+    ),
   listaDeFiguras: (documento) =>
     gerarListaDeFiguras(documento.sections).length > 0 ? "\\listoffigures*" : "",
   listaDeTabelas: (documento) =>
@@ -506,15 +599,17 @@ const GERADORES: Record<ElementoDocumento, Gerador> = {
   sumario: () => "\\tableofcontents*",
   corpo: corpo,
   referencias: referencias,
-  apendices: (documento) => posTextuais(documento.apendices, gerarApendices, documento.references),
-  anexos: (documento) => posTextuais(documento.anexos, gerarAnexos, documento.references),
+  apendices: (documento) =>
+    posTextuais(documento.apendices, gerarApendices, marcadorDeApendice, documento.references),
+  anexos: (documento) =>
+    posTextuais(documento.anexos, gerarAnexos, marcadorDeAnexo, documento.references),
 };
 
 // Onde cada parte começa na classe: `\textual` liga a numeração arábica das
 // páginas (14724 §5.3); `\postextual` fecha o corpo. No pós-textual, a caixa
 // alta que a opção `chapter=TITLE` impõe fica desligada: o título de apêndice
-// e anexo já chega em maiúsculas (`posTextuais()`), e o texto, e não a classe,
-// decide a grafia, como no `.docx`.
+// e anexo já tem o próprio `\MakeUppercase` (`tituloDeApendiceOuAnexo()`), e
+// REFERÊNCIAS já é escrito em maiúsculas.
 const ABERTURA_DA_PARTE = {
   textual: "\\textual",
   posTextual: "\\postextual\n\\setboolean{ABNTEXupperchapter}{false}",
@@ -541,7 +636,9 @@ export function gerarTex(documento: Documento, imagens: ImagensParaTex = new Map
   }
 
   return [
-    preambulo(documento.metadados),
+    // Primeira linha do arquivo: é por ela que a reimportação reconhece um
+    // `.tex` do AURA (docs/latex-abntex.md §1.5).
+    `${linhaDoDocumento(documento.id)}\n${preambulo(documento.metadados)}`,
     "\\begin{document}",
     partes.join("\n\n"),
     "\\end{document}",
