@@ -157,6 +157,16 @@ describe("importarBibtex — um .bib real (fixtures/exemplo.bib)", () => {
     expect(item.avisos.join(" ")).toContain("organizador");
   });
 
+  // Achado no passo 6.2.3: o livro era separado depois de decodificado, e as
+  // chaves que protegem o dois-pontos já tinham sumido.
+  it("@incollection com o livro entre chaves não separa no dois-pontos", () => {
+    const item = unica(
+      "@incollection{a, title = {Parte}, booktitle = {{Livro: com dois-pontos}}}",
+    );
+    expect(item.referencia).toMatchObject({ "container-title": "Livro: com dois-pontos" });
+    expect(item.referencia).not.toHaveProperty("container-subtitle");
+  });
+
   it("@misc com \\url em howpublished vira site; entidade entre chaves não é invertida", () => {
     expect(porChave.get("abnt")?.referencia).toEqual({
       id: expect.any(String),

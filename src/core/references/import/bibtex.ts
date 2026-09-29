@@ -345,6 +345,11 @@ const SIMBOLOS: Record<string, string> = {
   textquotedblleft: "“",
   textquotedblright: "”",
   S: "§",
+  // Os três que o `.bib` exportado pelo AURA escreve (`export/latex/bib.ts`,
+  // passo 6.2.3) para caracteres que não têm escape de uma letra só.
+  textbackslash: "\\",
+  textasciitilde: "~",
+  textasciicircum: "^",
 };
 
 // `\ı` com acento vira "í", não "ı́": o `\i` existe só para o acento não

@@ -1,5 +1,6 @@
 import { novoDocumento } from "../../../document/factory";
 import type { Documento, NoTexto } from "../../../document/types";
+import type { ImagemArmazenada } from "../../../persistence/types";
 import type { Referencia } from "../../../references/types";
 import type { ImagensParaTex } from "../document";
 
@@ -146,3 +147,14 @@ export const PNG_1X1 = Uint8Array.from(
   ),
   (caractere) => caractere.charCodeAt(0),
 );
+
+// As imagens como a persistência as entrega, com os bytes: o que o `.zip`
+// (passo 6.2.3) recebe.
+export function imagensDoZip(documentoId: string): Map<string, ImagemArmazenada> {
+  return new Map([
+    [
+      "img1",
+      { id: "img1", documentoId, formato: "png", largura: 400, altura: 200, bytes: PNG_1X1 },
+    ],
+  ]);
+}

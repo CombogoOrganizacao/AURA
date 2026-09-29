@@ -147,12 +147,16 @@ export function converterEntrada(entrada: EntradaBibtex, gerarId: () => string):
       // `chapter`; no biblatex, é a parte no `title` e o livro em `booktitle`.
       let parte = titulo;
       let livro = campo("booktitle");
+      // O valor cru, ainda com as chaves: é nele que `{Livro: X}` protege o
+      // dois-pontos. Separar o decodificado dividiria um título protegido.
+      let livroCru = entrada.campos.booktitle;
       if (!livro && entrada.tipo === "inbook" && campo("chapter")) {
         livro = decodificarLatex(entrada.campos.title);
+        livroCru = entrada.campos.title;
         parte = tituloESubtitulo(entrada.campos.chapter, undefined);
       }
       if (!livro) return { motivo: "Capítulo sem o título do livro (booktitle)." };
-      const livroSeparado = tituloESubtitulo(livro, undefined);
+      const livroSeparado = tituloESubtitulo(livroCru, undefined);
 
       const referencia: ReferenciaCapitulo = {
         ...base,

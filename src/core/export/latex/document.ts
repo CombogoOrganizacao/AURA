@@ -278,15 +278,33 @@ function tituloDeSecao(secao: Secao): string {
   return `\\${comando}{${titulo}}`;
 }
 
-function corpo(documento: Documento, imagens: ImagensParaTex): string {
+export interface Capitulo {
+  // A seção de nível 1 que abre o capítulo (ou a primeira seção, se o corpo
+  // começar abaixo do nível 1).
+  secao: Secao;
+  tex: string;
+}
+
+// O corpo em capítulos: cada seção de nível 1 com as subseções que a
+// seguem. No `.tex` avulso eles saem em sequência; no `.zip` (6.2.3), cada um
+// num arquivo de `sections/`.
+export function capitulosDoCorpo(documento: Documento, imagens: ImagensParaTex): Capitulo[] {
   const secoes = [...documento.sections].sort((a, b) => a.ordem - b.ordem);
-  return secoes
-    .map((secao) =>
-      [
-        `${marcadorDeSecao(secao.id)}\n${tituloDeSecao(secao)}`,
-        ...secao.content.map((no) => bloco(no, documento.references, imagens)),
-      ].join("\n\n"),
-    )
+  const capitulos: { secao: Secao; partes: string[] }[] = [];
+  for (const secao of secoes) {
+    const tex = [
+      `${marcadorDeSecao(secao.id)}\n${tituloDeSecao(secao)}`,
+      ...secao.content.map((no) => bloco(no, documento.references, imagens)),
+    ].join("\n\n");
+    if (secao.nivel === 1 || capitulos.length === 0) capitulos.push({ secao, partes: [tex] });
+    else capitulos.at(-1)!.partes.push(tex);
+  }
+  return capitulos.map(({ secao, partes }) => ({ secao, tex: partes.join("\n\n") }));
+}
+
+function corpo(documento: Documento, imagens: ImagensParaTex): string {
+  return capitulosDoCorpo(documento, imagens)
+    .map((capitulo) => capitulo.tex)
     .join("\n\n");
 }
 
@@ -616,6 +634,51 @@ const ABERTURA_DA_PARTE = {
 } as const;
 
 export function gerarTex(documento: Documento, imagens: ImagensParaTex = new Map()): string {
+  return montarTex(documento, imagens, corpo);
+}
+
+export interface ArquivoTex {
+  caminho: string;
+  conteudo: string;
+}
+
+export interface ProjetoTex {
+  main: string;
+  secoes: ArquivoTex[];
+}
+
+// Nome do arquivo do capítulo: posição e título sem acento, para quem abre o
+// projeto no Overleaf se achar. A reimportação não depende dele: a identidade
+// é o marcador de dentro (docs/latex-abntex.md §1.5).
+function nomeDoCapitulo(indice: number, secao: Secao): string {
+  const slug = secao.titulo
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40)
+    .replace(/-+$/, "");
+  return `sections/${String(indice + 1).padStart(2, "0")}-${slug || "secao"}.tex`;
+}
+
+// O `.tex` do projeto (`.zip`, passo 6.2.3): o mesmo arquivo do avulso, com
+// cada capítulo num arquivo de `sections/` e um `\input` no lugar dele.
+export function gerarProjetoTex(
+  documento: Documento,
+  imagens: ImagensParaTex = new Map(),
+): ProjetoTex {
+  const secoes = capitulosDoCorpo(documento, imagens).map((capitulo, indice) => ({
+    caminho: nomeDoCapitulo(indice, capitulo.secao),
+    conteudo: `% Capítulo do trabalho, incluído pelo main.tex (gerado pelo AURA).\n\n${capitulo.tex}\n`,
+  }));
+  const main = montarTex(documento, imagens, () =>
+    secoes.map((arquivo) => `\\input{${arquivo.caminho.replace(/\.tex$/, "")}}`).join("\n"),
+  );
+  return { main, secoes };
+}
+
+function montarTex(documento: Documento, imagens: ImagensParaTex, gerarCorpo: Gerador): string {
   const partes: string[] = [];
   let parteAtual: string | null = null;
   for (const elemento of ORDEM_CANONICA) {
@@ -624,7 +687,7 @@ export function gerarTex(documento: Documento, imagens: ImagensParaTex = new Map
       partes.push(ABERTURA_DA_PARTE[parte]);
     }
     parteAtual = parte;
-    const texto = GERADORES[elemento](documento, imagens);
+    const texto = (elemento === "corpo" ? gerarCorpo : GERADORES[elemento])(documento, imagens);
     if (!texto) continue;
     // Cada elemento pré-textual em página própria, como o `.docx`
     // (`comQuebrasEntreBlocos()`). A quebra vem DEPOIS do elemento: a página

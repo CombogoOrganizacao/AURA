@@ -1,12 +1,14 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
+import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 
-import { documentoCompleto, IMAGENS, PNG_1X1 } from "./__fixtures__/documento";
+import { documentoCompleto, IMAGENS, imagensDoZip, PNG_1X1 } from "./__fixtures__/documento";
 import { gerarTex } from "./document";
+import { gerarZipTex } from "./zip";
 
 // Passo 6.2.1 — o `.tex` compila com pdfLaTeX (docs/latex-abntex.md §1.4).
 //
@@ -42,6 +44,33 @@ describe("gerarTex — compilação com pdfLaTeX", () => {
       writeFileSync(join(pasta, "main.tex"), gerarTex(documentoCompleto(), IMAGENS), "utf8");
 
       // Duas passadas: a segunda resolve sumário e listas.
+      const compilar = () =>
+        spawnSync(pdflatex!, ["-interaction=nonstopmode", "-halt-on-error", "main.tex"], {
+          cwd: pasta,
+          encoding: "utf8",
+        });
+      for (const resultado of [compilar(), compilar()]) {
+        expect(resultado.status, `pdflatex falhou; log em ${join(pasta, "main.log")}`).toBe(0);
+      }
+      expect(existsSync(join(pasta, "main.pdf"))).toBe(true);
+    },
+    300_000,
+  );
+
+  // Passo 6.2.3: o projeto do `.zip`, descompactado como o Overleaf faz, com
+  // os capítulos em `sections/` por `\input`.
+  it.skipIf(!pdflatex)(
+    "o projeto do .zip, descompactado, compila sem erro",
+    async () => {
+      const documento = documentoCompleto();
+      const zip = await JSZip.loadAsync(await gerarZipTex(documento, imagensDoZip(documento.id)));
+      const pasta = mkdtempSync(join(tmpdir(), "aura-zip-"));
+      for (const arquivo of Object.values(zip.files)) {
+        if (arquivo.dir) continue;
+        mkdirSync(dirname(join(pasta, arquivo.name)), { recursive: true });
+        writeFileSync(join(pasta, arquivo.name), await arquivo.async("uint8array"));
+      }
+
       const compilar = () =>
         spawnSync(pdflatex!, ["-interaction=nonstopmode", "-halt-on-error", "main.tex"], {
           cwd: pasta,
