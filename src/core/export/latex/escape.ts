@@ -58,8 +58,9 @@ const PONTUACAO_COBERTA = new Set([
 ]);
 
 // Grego e matemática frequentes em TCC. Modo matemático via `\ensuremath`,
-// que funciona dentro e fora de fórmula.
-const MATEMATICA: Record<string, string> = {
+// que funciona dentro e fora de fórmula. Exportada para a reimportação
+// (`import/latex/inline.ts`) desfazer a troca com a mesma tabela.
+export const MATEMATICA: Readonly<Record<string, string>> = {
   α: "\\alpha", β: "\\beta", γ: "\\gamma", δ: "\\delta", ε: "\\varepsilon", ζ: "\\zeta",
   η: "\\eta", θ: "\\theta", ι: "\\iota", κ: "\\kappa", λ: "\\lambda", μ: "\\mu", ν: "\\nu",
   ξ: "\\xi", π: "\\pi", ρ: "\\rho", σ: "\\sigma", τ: "\\tau", υ: "\\upsilon", φ: "\\varphi",
