@@ -26,7 +26,12 @@ import type { ImagemArmazenada } from "@/core/persistence/types";
 import { substituirDocumento } from "@/core/persistence/versions";
 import { usePersistencia } from "@/lib/persistence-provider";
 
-import { ModalReimportacao, NOME_DA_VERSAO_ANTERIOR, type Destino } from "./ModalReimportacao";
+import {
+  ModalReimportacao,
+  NOME_DA_VERSAO_ANTERIOR,
+  type Alternativa as AlternativaDoModal,
+  type Destino,
+} from "./ModalReimportacao";
 
 interface BotaoReimportarProps {
   // O documento como está na tela: é ele que vira a versão guardada.
@@ -38,33 +43,48 @@ interface BotaoReimportarProps {
   salvarAgora: () => Promise<void>;
 }
 
+// O que o arquivo faria com um destino: o documento resultante, o relatório,
+// as imagens a gravar e os conflitos de referência.
+interface Montado {
+  documento: Documento;
+  relatorio: Relatorio | RelatorioDoProjeto;
+  imagens: ImagemArmazenada[];
+  conflitos: ConflitoDeReferencia[];
+}
+
+interface Alternativa extends Montado, AlternativaDoModal {
+  // O documento de destino como estava ao ler o arquivo (`null` se novo).
+  atual: Documento | null;
+}
+
 interface Previa {
   arquivo: string;
   origem: "tex" | "zip";
-  destino: Destino;
-  // O documento de destino como estava ao ler o arquivo (`null` se novo).
-  atual: Documento | null;
-  documento: Documento;
-  relatorio: Relatorio | RelatorioDoProjeto;
-  // Imagens de figura trocadas ou novas, do `.zip`, a gravar antes do
-  // documento.
-  imagens: ImagemArmazenada[];
-  conflitos: ConflitoDeReferencia[];
+  // Arquivo de fora do AURA (§1.6): duas alternativas, trabalho novo ou
+  // substituir o aberto, e o aluno escolhe.
+  externo: boolean;
+  alternativas: Alternativa[];
+  // `null` enquanto o aluno não escolheu.
+  escolhida: number | null;
   // Conflitos em que o aluno escolheu a versão do arquivo (§1.5: vale a do
   // AURA até ele escolher, entrada por entrada).
   usarDoArquivo: ReadonlySet<string>;
 }
+
+type Montar = (
+  atual: Documento | null,
+) => Promise<{ ok: true; valor: Montado } | { ok: false; mensagem: string }>;
 
 // Assinatura de todo `.zip` ("PK\x03\x04").
 function eZip(bytes: Uint8Array): boolean {
   return bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04;
 }
 
-// "Reimportar LaTeX" (passo 6.2.4): o caminho de volta do Overleaf, pelo
-// `.tex` avulso ou pelo `.zip` do projeto. Lê o arquivo no navegador (nada
-// vai a servidor), monta o relatório, e só grava depois do "Reimportar", com
-// o trabalho de agora guardado antes como versão (docs/latex-abntex.md §1.5,
-// princípio 2).
+// "Reimportar LaTeX" (passos 6.2.4 e 6.2.5): o caminho de volta do Overleaf,
+// e a entrada do TCC que o aluno começou em LaTeX, pelo `.tex` avulso ou
+// pelo `.zip` do projeto. Lê o arquivo no navegador (nada vai a servidor),
+// monta o relatório, e só grava depois da confirmação, com o trabalho de
+// agora guardado antes como versão (docs/latex-abntex.md §1.5 e §1.6).
 export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoReimportarProps) {
   const persistencia = usePersistencia();
   const router = useRouter();
@@ -102,23 +122,54 @@ export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoRei
     else await lerTexAvulso(arquivo.name, bytes);
   }
 
-  // O trabalho de destino, pelo `id` da primeira linha do `.tex` (§1.5): o
-  // aberto, outro desta máquina, ou nenhum (trabalho novo). Sem `id`, fica o
-  // aberto, e a leitura recusa o arquivo com a mensagem certa.
-  async function destinoDe(
+  // Os destinos possíveis, pelo `id` da primeira linha do `.tex` (§1.5 e
+  // §1.6): do AURA, o trabalho aberto, outro desta máquina, ou um novo; de
+  // fora, as duas escolhas.
+  async function destinosDe(
     id: string | null,
-  ): Promise<{ atual: Documento | null; destino: Destino } | null> {
-    if (!id || id === documento.id) return { atual: documento, destino: { tipo: "este" } };
+  ): Promise<{ destino: Destino; atual: Documento | null }[] | null> {
+    const aberto = { tipo: "este", titulo: documento.metadados.titulo } as const;
+    if (id === null) {
+      return [
+        { destino: { tipo: "novo" }, atual: null },
+        { destino: aberto, atual: documento },
+      ];
+    }
+    if (id === documento.id) return [{ destino: aberto, atual: documento }];
     try {
       const atual = await persistencia!.carregarDocumento(id);
-      return {
-        atual,
-        destino: atual ? { tipo: "outro", titulo: atual.metadados.titulo } : { tipo: "novo" },
-      };
+      return [
+        {
+          destino: atual ? { tipo: "outro", titulo: atual.metadados.titulo } : { tipo: "novo" },
+          atual,
+        },
+      ];
     } catch {
       setFalhaAoLer("Não foi possível abrir os trabalhos salvos neste navegador.");
       return null;
     }
+  }
+
+  async function preparar(nome: string, origem: "tex" | "zip", id: string | null, montar: Montar) {
+    const destinos = await destinosDe(id);
+    if (!destinos) return;
+    const alternativas: Alternativa[] = [];
+    for (const { destino, atual } of destinos) {
+      const montado = await montar(atual);
+      if (!montado.ok) {
+        setFalhaAoLer(montado.mensagem);
+        return;
+      }
+      alternativas.push({ destino, atual, ...montado.valor });
+    }
+    setPrevia({
+      arquivo: nome,
+      origem,
+      externo: id === null,
+      alternativas,
+      escolhida: alternativas.length === 1 ? 0 : null,
+      usarDoArquivo: new Set(),
+    });
   }
 
   async function lerTexAvulso(nome: string, bytes: Uint8Array) {
@@ -127,27 +178,15 @@ export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoRei
       setFalhaAoLer(texto.erro.mensagem);
       return;
     }
-    const alvo = await destinoDe(idDoDocumento(texto.texto));
-    if (!alvo) return;
-    // O `\cite` do aluno se resolve contra as referências do destino.
-    const lido = lerTex(texto.texto, {
-      arquivo: nome,
-      chavesDeReferencia: new Set((alvo.atual?.references ?? []).map((item) => item.id)),
-    });
-    if (!lido.ok) {
-      setFalhaAoLer(lido.erro.mensagem);
-      return;
-    }
-    const { documento: novo, relatorio } = montarReimportacao(alvo.atual, lido.tex);
-    setPrevia({
-      arquivo: nome,
-      origem: "tex",
-      ...alvo,
-      documento: novo,
-      relatorio,
-      imagens: [],
-      conflitos: [],
-      usarDoArquivo: new Set(),
+    await preparar(nome, "tex", idDoDocumento(texto.texto), async (atual) => {
+      // O `\cite` do aluno se resolve contra as referências do destino.
+      const lido = lerTex(texto.texto, {
+        arquivo: nome,
+        chavesDeReferencia: new Set((atual?.references ?? []).map((item) => item.id)),
+      });
+      if (!lido.ok) return { ok: false, mensagem: lido.erro.mensagem };
+      const { documento: novo, relatorio } = montarReimportacao(atual, lido.tex);
+      return { ok: true, valor: { documento: novo, relatorio, imagens: [], conflitos: [] } };
     });
   }
 
@@ -157,37 +196,31 @@ export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoRei
       setFalhaAoLer(projeto.erro.mensagem);
       return;
     }
-    const alvo = await destinoDe(idDoDocumento(projeto.valor.main));
-    if (!alvo) return;
-
-    // As imagens salvas das figuras que vieram no `.zip`, para comparar os
-    // bytes: igual, nada muda.
-    const imagensSalvas = new Map<string, ImagemArmazenada>();
-    if (alvo.atual) {
-      for (const id of projeto.valor.figuras.keys()) {
-        const imagem = await persistencia!.carregarImagem(alvo.atual.id, id).catch(() => null);
-        if (imagem) imagensSalvas.set(id, imagem);
+    await preparar(nome, "zip", idDoDocumento(projeto.valor.main), async (atual) => {
+      // As imagens salvas das figuras que vieram no `.zip`, para comparar os
+      // bytes: igual, nada muda.
+      const imagensSalvas = new Map<string, ImagemArmazenada>();
+      if (atual) {
+        for (const id of projeto.valor.figuras.keys()) {
+          const imagem = await persistencia!.carregarImagem(atual.id, id).catch(() => null);
+          if (imagem) imagensSalvas.set(id, imagem);
+        }
       }
-    }
-
-    const resultado = montarReimportacaoDoProjeto({
-      atual: alvo.atual,
-      projeto: projeto.valor,
-      imagensSalvas,
-    });
-    if (!resultado.ok) {
-      setFalhaAoLer(resultado.erro.mensagem);
-      return;
-    }
-    setPrevia({
-      arquivo: nome,
-      origem: "zip",
-      ...alvo,
-      documento: resultado.valor.documento,
-      relatorio: resultado.valor.relatorio,
-      imagens: resultado.valor.imagens,
-      conflitos: resultado.valor.relatorio.referencias.conflitos,
-      usarDoArquivo: new Set(),
+      const resultado = montarReimportacaoDoProjeto({
+        atual,
+        projeto: projeto.valor,
+        imagensSalvas,
+      });
+      if (!resultado.ok) return { ok: false, mensagem: resultado.erro.mensagem };
+      return {
+        ok: true,
+        valor: {
+          documento: resultado.valor.documento,
+          relatorio: resultado.valor.relatorio,
+          imagens: resultado.valor.imagens,
+          conflitos: resultado.valor.relatorio.referencias.conflitos,
+        },
+      };
     });
   }
 
@@ -202,13 +235,15 @@ export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoRei
   }
 
   async function confirmar() {
-    if (!previa || !persistencia) return;
-    const { destino, atual, imagens } = previa;
-    const final = comReferenciasEscolhidas(
-      previa.documento,
-      previa.conflitos,
-      previa.usarDoArquivo,
-    );
+    if (!previa || !persistencia || previa.escolhida === null) return;
+    const {
+      destino,
+      atual,
+      imagens,
+      documento: montado,
+      conflitos,
+    } = previa.alternativas[previa.escolhida];
+    const final = comReferenciasEscolhidas(montado, conflitos, previa.usarDoArquivo);
     setGravando(true);
     setFalhaAoGravar(null);
     try {
@@ -250,7 +285,7 @@ export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoRei
         disabled={!persistencia}
         onClick={() => entradaArquivo.current?.click()}
       >
-        Reimportar LaTeX
+        Importar LaTeX
       </Button>
       <input
         ref={entradaArquivo}
@@ -258,13 +293,13 @@ export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoRei
         accept=".tex,.zip,text/x-tex,application/x-tex,application/zip"
         className="sr-only"
         tabIndex={-1}
-        aria-label="Arquivo .tex ou .zip exportado pelo AURA"
+        aria-label="Arquivo .tex ou .zip"
         onChange={aoEscolherArquivo}
       />
 
       {falhaAoLer && (
         <div className="fixed top-16 right-4 z-40 w-[min(420px,calc(100vw-2rem))]">
-          <Alert tone="danger" title="Reimportação recusada" onDismiss={() => setFalhaAoLer(null)}>
+          <Alert tone="danger" title="Importação recusada" onDismiss={() => setFalhaAoLer(null)}>
             {falhaAoLer}
           </Alert>
         </div>
@@ -274,8 +309,12 @@ export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoRei
         <ModalReimportacao
           arquivo={previa.arquivo}
           origem={previa.origem}
-          destino={previa.destino}
-          relatorio={previa.relatorio}
+          externo={previa.externo}
+          alternativas={previa.alternativas}
+          escolhida={previa.escolhida}
+          onEscolher={(indice) =>
+            setPrevia((atual) => atual && { ...atual, escolhida: indice, usarDoArquivo: new Set() })
+          }
           usarDoArquivo={previa.usarDoArquivo}
           onAlternarReferencia={alternarReferencia}
           gravando={gravando}

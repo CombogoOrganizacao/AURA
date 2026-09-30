@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import JSZip from "jszip";
 
 import { gerarTex } from "../src/core/export/latex/document";
@@ -17,7 +20,7 @@ import { abrirDocumento, documentoSalvo, tresSecoes } from "./apoio";
 // gravado no IndexedDB, como em `busca.spec.ts`.
 
 async function reimportar(page: Page, conteudo: string) {
-  await page.getByLabel("Arquivo .tex ou .zip exportado pelo AURA").setInputFiles({
+  await page.getByLabel("Arquivo .tex ou .zip").setInputFiles({
     name: "trabalho.tex",
     mimeType: "application/x-tex",
     buffer: Buffer.from(conteudo),
@@ -63,7 +66,7 @@ test("capítulo solto, sem \\begin{document}, é recusado com mensagem clara", a
 
   await reimportar(page, "\\chapter{Introdução}\nTexto de um capítulo solto.\n");
 
-  await expect(page.getByRole("status").filter({ hasText: "Reimportação recusada" })).toContainText(
+  await expect(page.getByRole("status").filter({ hasText: "Importação recusada" })).toContainText(
     "parece um capítulo solto",
   );
   await expect(page.getByRole("dialog")).toBeHidden();
@@ -125,7 +128,7 @@ test("o .zip traz a edição do capítulo e a referência escolhida do .bib", as
   zip.file(capitulo, texto.replace("Aplicamos o questionário em campo.", "Aplicamos duas vezes."));
   const bib = await zip.file("referencias.bib")!.async("string");
   zip.file("referencias.bib", bib.replace("Pedagogia do oprimido", "Pedagogia da autonomia"));
-  await page.getByLabel("Arquivo .tex ou .zip exportado pelo AURA").setInputFiles({
+  await page.getByLabel("Arquivo .tex ou .zip").setInputFiles({
     name: "projeto.zip",
     mimeType: "application/zip",
     buffer: Buffer.from(await zip.generateAsync({ type: "uint8array" })),
@@ -148,4 +151,51 @@ test("o .zip traz a edição do capítulo e a referência escolhida do .bib", as
   await expect
     .poll(async () => (await documentoSalvo(page, documento.id)).references[0].title)
     .toBe("Pedagogia da autonomia");
+});
+
+// Passo 6.2.5 — o TCC que o aluno começou em LaTeX, sem nada do AURA.
+const TCC_DE_FORA = readFileSync(
+  join(__dirname, "../src/core/import/latex/__fixtures__/tcc-abntex2.tex"),
+  "utf8",
+);
+
+test("TCC de fora: o destino é perguntado, e criar um trabalho novo o abre", async ({ page }) => {
+  const aberto = tresSecoes();
+  await abrirDocumento(page, aberto);
+  await reimportar(page, TCC_DE_FORA);
+
+  const dialogo = page.getByRole("dialog", { name: "Importar do LaTeX" });
+  await expect(dialogo).toContainText("Este arquivo não foi exportado pelo AURA");
+  // Nada vem marcado: sem escolha, não há o que confirmar.
+  await expect(dialogo.getByRole("button", { name: "Importar" })).toBeDisabled();
+
+  await dialogo.getByRole("radio", { name: /Criar um trabalho novo/ }).check({ force: true });
+  await expect(dialogo.getByRole("region", { name: "Seções" })).toContainText("Introdução");
+  await dialogo.getByRole("button", { name: "Criar trabalho" }).click();
+
+  await page.waitForURL((url) => !url.pathname.endsWith(aberto.id));
+  await expect(page.getByRole("banner")).toContainText("Educação e diálogo na escola pública");
+  await expect(page.locator(".ProseMirror p").first()).toContainText(
+    "A escola é espaço de diálogo",
+  );
+});
+
+test("TCC de fora: substituir o aberto troca o conteúdo e guarda o de antes", async ({ page }) => {
+  const aberto = tresSecoes();
+  await abrirDocumento(page, aberto);
+  await reimportar(page, TCC_DE_FORA);
+
+  const dialogo = page.getByRole("dialog", { name: "Importar do LaTeX" });
+  await dialogo.getByRole("radio", { name: /Substituir o conteúdo de/ }).check({ force: true });
+  await expect(dialogo.getByRole("region", { name: "Seções" })).toContainText(
+    "Removidos no arquivo (3)",
+  );
+  await dialogo.getByRole("button", { name: "Substituir" }).click();
+  await expect(dialogo).toBeHidden();
+
+  await expect(page.locator(".ProseMirror p").first()).toContainText(
+    "A escola é espaço de diálogo",
+  );
+  await page.getByRole("tab", { name: /Histórico/ }).click();
+  await expect(page.getByRole("list", { name: "Versões" })).toContainText("Antes da reimportação");
 });

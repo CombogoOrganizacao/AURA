@@ -5,6 +5,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Dialog } from "@/components/ui/Dialog";
+import { Radio } from "@/components/ui/Radio";
 import type { Aviso } from "@/core/import/latex/fonte";
 import type {
   CampoReimportado,
@@ -14,16 +15,27 @@ import type {
 } from "@/core/import/latex/reimport";
 import type { RelatorioDoProjeto } from "@/core/import/latex/reimportZip";
 
-// Para onde a reimportação vai (docs/latex-abntex.md §1.5, "Identidade do
-// arquivo"): o trabalho aberto, outro trabalho desta máquina, ou um novo.
-export type Destino = { tipo: "este" } | { tipo: "outro"; titulo: string } | { tipo: "novo" };
+// Para onde o arquivo vai (docs/latex-abntex.md §1.5 e §1.6): o trabalho
+// aberto, outro trabalho desta máquina, ou um novo.
+export type Destino =
+  { tipo: "este"; titulo: string } | { tipo: "outro"; titulo: string } | { tipo: "novo" };
+
+// Um destino possível e o relatório do que o arquivo faria com ele.
+export interface Alternativa {
+  destino: Destino;
+  // Do `.zip`, o relatório traz também referências, imagens e ignorados.
+  relatorio: Relatorio | RelatorioDoProjeto;
+}
 
 interface ModalReimportacaoProps {
   arquivo: string;
   origem: "tex" | "zip";
-  destino: Destino;
-  // Do `.zip`, o relatório traz também referências, imagens e ignorados.
-  relatorio: Relatorio | RelatorioDoProjeto;
+  // Arquivo de fora do AURA (§1.6): o aluno escolhe o destino.
+  externo: boolean;
+  alternativas: readonly Alternativa[];
+  // `null` enquanto o aluno não escolheu.
+  escolhida: number | null;
+  onEscolher: (indice: number) => void;
   // Conflitos de referência em que o aluno escolheu a versão do arquivo.
   usarDoArquivo: ReadonlySet<string>;
   onAlternarReferencia: (id: string, usar: boolean) => void;
@@ -60,15 +72,26 @@ const ROTULO_MUDANCA: Record<Mudanca, string> = {
   posicao: "posição",
 };
 
-// Relatório da reimportação (passo 6.2.4) antes de qualquer gravação: nada
-// muda no trabalho até o "Reimportar" (§1.5, princípio 2). Tudo o que o
+function eDoProjeto(relatorio: Relatorio | RelatorioDoProjeto): relatorio is RelatorioDoProjeto {
+  return "referencias" in relatorio;
+}
+
+function rotuloDoConfirmar(destino: Destino, externo: boolean): string {
+  if (destino.tipo === "novo") return "Criar trabalho";
+  return externo ? "Substituir" : "Reimportar";
+}
+
+// Relatório da importação (passos 6.2.4 e 6.2.5) antes de qualquer gravação:
+// nada muda no trabalho até a confirmação (§1.5, princípio 2). Tudo o que o
 // arquivo trouxe de diferente aparece, e os avisos dizem a linha, para o
-// aluno achar no Overleaf.
+// aluno achar no arquivo.
 export function ModalReimportacao({
   arquivo,
   origem,
-  destino,
-  relatorio,
+  externo,
+  alternativas,
+  escolhida,
+  onEscolher,
   usarDoArquivo,
   onAlternarReferencia,
   gravando,
@@ -76,13 +99,16 @@ export function ModalReimportacao({
   onConfirmar,
   onFechar,
 }: ModalReimportacaoProps) {
-  const nadaAGravar = relatorio.semMudancas && destino.tipo === "este";
+  const alternativa = escolhida === null ? null : alternativas[escolhida];
+  const destino = alternativa?.destino ?? null;
+  const relatorio = alternativa?.relatorio ?? null;
+  const nadaAGravar = Boolean(relatorio?.semMudancas && destino?.tipo === "este");
 
   return (
     <Dialog
       open
       width={720}
-      title="Reimportar do LaTeX"
+      title={externo ? "Importar do LaTeX" : "Reimportar do LaTeX"}
       subtitle={arquivo}
       onClose={gravando ? undefined : onFechar}
       footer={
@@ -93,8 +119,8 @@ export function ModalReimportacao({
             <Button variant="ghost" disabled={gravando} onClick={onFechar}>
               Cancelar
             </Button>
-            <Button loading={gravando} onClick={onConfirmar}>
-              {destino.tipo === "novo" ? "Criar trabalho" : "Reimportar"}
+            <Button loading={gravando} disabled={!destino} onClick={onConfirmar}>
+              {destino ? rotuloDoConfirmar(destino, externo) : "Importar"}
             </Button>
           </>
         )
@@ -106,65 +132,128 @@ export function ModalReimportacao({
             {falha}
           </Alert>
         )}
-        <AvisoDeDestino destino={destino} origem={origem} />
-        {relatorio.semMudancas && (
+        {externo && (
+          <EscolhaDeDestino
+            alternativas={alternativas}
+            escolhida={escolhida}
+            onEscolher={onEscolher}
+            origem={origem}
+          />
+        )}
+        {destino && !externo && <AvisoDeDestino destino={destino} origem={origem} />}
+        {relatorio?.semMudancas && (
           <Alert tone="success" title="Nada mudou">
             O arquivo diz o mesmo que o trabalho no AURA.
           </Alert>
         )}
 
-        <GrupoDeComparacao
-          titulo="Seções"
-          comparacao={relatorio.secoes}
-          novo={destino.tipo === "novo"}
-        />
-        <GrupoDeComparacao
-          titulo="Apêndices"
-          comparacao={relatorio.apendices}
-          novo={destino.tipo === "novo"}
-        />
-        <GrupoDeComparacao
-          titulo="Anexos"
-          comparacao={relatorio.anexos}
-          novo={destino.tipo === "novo"}
-        />
+        {relatorio && destino && (
+          <>
+            <GrupoDeComparacao
+              titulo="Seções"
+              comparacao={relatorio.secoes}
+              novo={destino.tipo === "novo"}
+            />
+            <GrupoDeComparacao
+              titulo="Apêndices"
+              comparacao={relatorio.apendices}
+              novo={destino.tipo === "novo"}
+            />
+            <GrupoDeComparacao
+              titulo="Anexos"
+              comparacao={relatorio.anexos}
+              novo={destino.tipo === "novo"}
+            />
 
-        {relatorio.metadados.length > 0 && (
-          <section aria-label="Dados do trabalho alterados" className="flex flex-col gap-2">
-            <h3 className="text-xs font-semibold text-title">
-              Dados do trabalho ({relatorio.metadados.length})
-            </h3>
-            <ul className="flex flex-col gap-2">
-              {relatorio.metadados.map(({ campo, antes, depois }) => (
-                <li key={campo} className="flex flex-col gap-0.5 text-xs text-body">
-                  <span className="font-semibold">{ROTULO_CAMPO[campo]}</span>
-                  <span className="line-clamp-2 text-muted line-through">{antes || "(vazio)"}</span>
-                  <span className="line-clamp-3">{depois || "(vazio)"}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+            {relatorio.metadados.length > 0 && (
+              <section aria-label="Dados do trabalho alterados" className="flex flex-col gap-2">
+                <h3 className="text-xs font-semibold text-title">
+                  Dados do trabalho ({relatorio.metadados.length})
+                </h3>
+                <ul className="flex flex-col gap-2">
+                  {relatorio.metadados.map(({ campo, antes, depois }) => (
+                    <li key={campo} className="flex flex-col gap-0.5 text-xs text-body">
+                      <span className="font-semibold">{ROTULO_CAMPO[campo]}</span>
+                      <span className="line-clamp-2 text-muted line-through">
+                        {antes || "(vazio)"}
+                      </span>
+                      <span className="line-clamp-3">{depois || "(vazio)"}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
 
-        {"referencias" in relatorio && (
-          <DoProjeto
-            relatorio={relatorio}
-            novo={destino.tipo === "novo"}
-            usarDoArquivo={usarDoArquivo}
-            onAlternarReferencia={onAlternarReferencia}
-          />
-        )}
+            {eDoProjeto(relatorio) && (
+              <DoProjeto
+                relatorio={relatorio}
+                novo={destino.tipo === "novo"}
+                usarDoArquivo={usarDoArquivo}
+                onAlternarReferencia={onAlternarReferencia}
+              />
+            )}
 
-        {relatorio.avisos.length > 0 && <ListaDeAvisos avisos={relatorio.avisos} />}
+            {relatorio.avisos.length > 0 && <ListaDeAvisos avisos={relatorio.avisos} />}
 
-        {!nadaAGravar && destino.tipo !== "novo" && (
-          <p className="text-xs text-muted">
-            Antes de gravar, o trabalho como está agora fica guardado no histórico como “
-            {NOME_DA_VERSAO_ANTERIOR}”, e pode ser restaurado.
-          </p>
+            {!nadaAGravar && destino.tipo !== "novo" && (
+              <p className="text-xs text-muted">
+                Antes de gravar, o trabalho como está agora fica guardado no histórico como “
+                {NOME_DA_VERSAO_ANTERIOR}”, e pode ser restaurado.
+              </p>
+            )}
+          </>
         )}
       </div>
     </Dialog>
+  );
+}
+
+// Arquivo de fora (§1.6): trabalho novo, ou o conteúdo do aberto substituído.
+// Nenhuma das duas vem marcada: o aluno escolhe a cada vez.
+function EscolhaDeDestino({
+  alternativas,
+  escolhida,
+  onEscolher,
+  origem,
+}: {
+  alternativas: readonly Alternativa[];
+  escolhida: number | null;
+  onEscolher: (indice: number) => void;
+  origem: "tex" | "zip";
+}) {
+  return (
+    <section aria-label="Destino" className="flex flex-col gap-3">
+      <Alert tone="info" title="Este arquivo não foi exportado pelo AURA">
+        Ele é lido como um trabalho novo: capítulos, seções e texto entram como estão, e o que não
+        tem equivalente no AURA vem com aviso.{" "}
+        {origem === "tex"
+          ? "Figuras e referências só vêm no .zip do projeto."
+          : "As referências vêm dos arquivos .bib do pacote."}
+      </Alert>
+      <fieldset className="flex flex-col gap-2.5">
+        <legend className="mb-1 text-xs font-semibold text-title">
+          O que fazer com este arquivo?
+        </legend>
+        {alternativas.map(({ destino }, indice) => (
+          <Radio
+            key={destino.tipo}
+            name="destino-da-importacao"
+            checked={escolhida === indice}
+            onChange={() => onEscolher(indice)}
+            label={
+              destino.tipo === "novo"
+                ? "Criar um trabalho novo"
+                : `Substituir o conteúdo de “${destino.titulo || "Documento sem título"}”`
+            }
+            description={
+              destino.tipo === "novo"
+                ? "O trabalho aberto não muda."
+                : "O conteúdo de agora sai do trabalho e fica guardado no histórico, e pode ser restaurado."
+            }
+          />
+        ))}
+      </fieldset>
+    </section>
   );
 }
 
