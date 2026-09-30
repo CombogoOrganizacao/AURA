@@ -446,7 +446,10 @@ export function montarReimportacaoDoProjeto({
     chavesDeReferencia: new Set(referencias.map((referencia) => referencia.id)),
   });
   if (!lido.ok) return { ok: false, erro: lido.erro };
-  const { documento: base, relatorio } = montarReimportacao(atual, lido.tex, gerarId, referencias);
+  const { documento: base, relatorio } = montarReimportacao(atual, lido.tex, {
+    gerarId,
+    referencias,
+  });
 
   // Figuras: arquivo igual ao salvo, nada muda; diferente, ou imagem que o
   // AURA não tem, vira imagem nova, com `id` novo (a loja de imagens é por

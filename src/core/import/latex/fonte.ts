@@ -267,3 +267,32 @@ export function fimDosArgumentos(texto: string, depois: number, fim = texto.leng
     pos = grupo.depois;
   }
 }
+
+// Divide `texto[inicio, fim)` em `\\` e nos comandos de `nomes` (`\par`,
+// `\and`), só fora de chaves: os autores de `\author{A \and B}`, os
+// parágrafos de um campo do bloco de metadados.
+export function dividirEmComandos(
+  texto: string,
+  inicio: number,
+  fim: number,
+  nomes: ReadonlySet<string>,
+): { inicio: number; fim: number }[] {
+  const partes: { inicio: number; fim: number }[] = [];
+  let parte = inicio;
+  let profundidade = 0;
+  for (let i = inicio; i < fim; i++) {
+    const c = texto[i];
+    if (c === "{") profundidade++;
+    else if (c === "}") profundidade--;
+    else if (c === "\\") {
+      const { nome, depois } = lerNomeDeComando(texto, i);
+      if (profundidade === 0 && (nome === "\\" || nomes.has(nome))) {
+        partes.push({ inicio: parte, fim: i });
+        parte = depois;
+      }
+      i = depois - 1;
+    }
+  }
+  partes.push({ inicio: parte, fim });
+  return partes;
+}

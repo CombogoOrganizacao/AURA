@@ -57,14 +57,14 @@ test("a edição feita fora volta na seção certa, e o texto de antes fica no h
   await expect(page.getByRole("list", { name: "Versões" })).toContainText("Antes da reimportação");
 });
 
-test("arquivo sem os marcadores do AURA é recusado com mensagem clara", async ({ page }) => {
+test("capítulo solto, sem \\begin{document}, é recusado com mensagem clara", async ({ page }) => {
   const documento = tresSecoes();
   await abrirDocumento(page, documento);
 
-  await reimportar(page, "\\documentclass{article}\n\\begin{document}\nOi.\n\\end{document}\n");
+  await reimportar(page, "\\chapter{Introdução}\nTexto de um capítulo solto.\n");
 
   await expect(page.getByRole("status").filter({ hasText: "Reimportação recusada" })).toContainText(
-    "não foi gerado pelo AURA",
+    "parece um capítulo solto",
   );
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(page.locator(".ProseMirror p").first()).toHaveText("Texto da introdução.");

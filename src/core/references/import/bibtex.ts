@@ -304,7 +304,7 @@ function contadorDeLinhas(fonte: string): (posicao: number) => number {
 // referência é decisão do formatador (§6.7), não do arquivo importado.
 
 // Acento → marca combinante Unicode, recomposta por `normalize("NFC")`.
-const ACENTOS: Record<string, string> = {
+export const ACENTOS: Readonly<Record<string, string>> = {
   "'": "́",
   "`": "̀",
   "^": "̂",
@@ -322,7 +322,7 @@ const ACENTOS: Record<string, string> = {
   b: "̱",
 };
 
-const SIMBOLOS: Record<string, string> = {
+export const SIMBOLOS: Readonly<Record<string, string>> = {
   ss: "ß",
   o: "ø",
   O: "Ø",
@@ -436,7 +436,7 @@ export function decodificarLatex(valor: string): string {
     .normalize("NFC");
 }
 
-function acentuar(texto: string, marca: string): string {
+export function acentuar(texto: string, marca: string): string {
   if (!texto) return marca.normalize("NFC");
   const primeiro = SEM_PINGO[texto[0]] ?? texto[0];
   return (primeiro + marca + texto.slice(1)).normalize("NFC");

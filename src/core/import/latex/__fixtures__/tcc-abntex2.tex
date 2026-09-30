@@ -1,0 +1,136 @@
+% TCC de teste no modelo do abnTeX2, escrito à mão, sem nada do AURA
+% (passo 6.2.5, docs/latex-abntex.md §1.6).
+\documentclass[12pt,openright,oneside,a4paper,chapter=TITLE,english,brazil]{abntex2}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+
+\titulo{Educação e diálogo na escola p\'ublica}
+\autor{Maria da Silva \and João Souza}
+\local{Vit\'oria}
+\data{2025}
+\orientador[Orientadora:]{Profa. Dra. Ana Lima}
+\coorientador{Prof. Dr. Beto Reis}
+\instituicao{Universidade Federal do Espírito Santo\par Centro de Educação\par Curso de Pedagogia}
+\tipotrabalho{Trabalho de Conclusão de Curso}
+\preambulo{Trabalho de Conclusão de Curso apresentado ao Curso de Pedagogia como requisito parcial.}
+
+\begin{document}
+\pretextual
+\imprimircapa
+\imprimirfolhaderosto
+
+\begin{dedicatoria}
+   \vspace*{\fill}
+   \centering
+   \noindent
+   \textit{Aos meus pais.} \vspace*{\fill}
+\end{dedicatoria}
+
+\begin{agradecimentos}
+Agradeço à orientadora.
+
+E à banca.
+\end{agradecimentos}
+
+\begin{epigrafe}
+    \vspace*{\fill}
+	\begin{flushright}
+		\textit{``Ensinar exige risco.''\\
+		(Paulo Freire)}
+	\end{flushright}
+\end{epigrafe}
+
+\begin{resumo}
+ Este trabalho discute o diálogo na escola.
+
+ \textbf{Palavras-chave}: educação. diálogo. escola.
+\end{resumo}
+
+\begin{resumo}[Abstract]
+ \begin{otherlanguage*}{english}
+   This work discusses dialogue at school.
+
+   \vspace{\onelineskip}
+   \noindent
+   \textbf{Keywords}: education. dialogue.
+ \end{otherlanguage*}
+\end{resumo}
+
+\begin{siglas}
+  \item[ABNT] Associação Brasileira de Normas Técnicas
+\end{siglas}
+
+\tableofcontents*
+\cleardoublepage
+
+\textual
+
+\chapter{Introdução}
+\label{cap:intro}
+A escola é espaço de diálogo \cite{freire}. Segundo Freire, ``ensinar exige risco'' \cite[p.~35]{freire}.
+
+Os objetivos são:
+\begin{itemize}
+  \item compreender o diálogo;
+  \item analisar a prática\footnote{Nota de rodapé.}.
+\end{itemize}
+
+\section{Metodologia}
+Usamos $n = 30$ participantes, como mostra a Tabela~\ref{tab:dados}.
+
+\begin{table}[htb]
+\caption{Participantes por grupo}
+\label{tab:dados}
+\centering
+\begin{tabular}{lc}
+\toprule
+Grupo & Total \\
+\midrule
+A & 12 \\
+B & 18 \\
+\bottomrule
+\end{tabular}
+\legend{Fonte: Dados da pesquisa.}
+\end{table}
+
+\begin{figure}[htb]
+\caption{Fluxo da pesquisa}
+\label{fig:fluxo}
+\begin{center}
+\includegraphics[width=0.8\textwidth]{imagens/fluxo}
+\end{center}
+\legend{Fonte: Elaborado pela autora.}
+\end{figure}
+
+\begin{citacao}
+Citação longa de teste com mais de três linhas que a norma manda recuar \cite[p.~181]{freire}.
+\end{citacao}
+
+\begin{equation}
+E = mc^2 \label{eq:einstein}
+\end{equation}
+
+\subsection{Análise}
+Texto com \textsc{versalete} e acentos \'a \c{c}\~ao.
+
+\chapter{Conclusão}
+Conclusão do trabalho.
+
+\postextual
+\bibliography{referencias}
+
+\begin{apendicesenv}
+\partapendices
+\chapter{Questionário}
+Perguntas aplicadas.
+\end{apendicesenv}
+
+\begin{anexosenv}
+\partanexos
+\chapter{Lei de Diretrizes}
+Texto da lei.
+\end{anexosenv}
+
+\printindex
+\end{document}

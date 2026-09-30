@@ -14,7 +14,7 @@ function reimportar(atual: Documento | null, tex: string) {
   const lido = lerTex(tex, { chavesDeReferencia: new Set(["freire"]) });
   if (!lido.ok) throw new Error(lido.erro.mensagem);
   let proximo = 0;
-  return montarReimportacao(atual, lido.tex, () => `novo-${++proximo}`);
+  return montarReimportacao(atual, lido.tex, { gerarId: () => `novo-${++proximo}` });
 }
 
 describe("montarReimportacao", () => {
@@ -230,5 +230,49 @@ describe("montarReimportacao", () => {
     const editado = tex.replace("Perguntas aplicadas.", "");
     const { documento } = reimportar(original, editado);
     expect(documento.apendices[0].content).toEqual([{ type: "paragraph" }]);
+  });
+});
+
+describe("montarReimportacao de um .tex de fora (§1.6)", () => {
+  const externo = [
+    "\\documentclass{abntex2}",
+    "\\titulo{Trabalho de fora}",
+    "\\begin{document}",
+    "\\textual",
+    "\\chapter{Um}",
+    "Texto.",
+    "\\begin{figure}\\caption{Foto}\\includegraphics{img/foto.jpg}\\end{figure}",
+    "\\end{document}",
+  ].join("\n");
+
+  it("sem destino, vira documento novo com id novo", () => {
+    const { documento, relatorio } = reimportar(null, externo);
+    expect(relatorio.documentoNovo).toBe(true);
+    expect(documento.id).toBe("novo-1");
+    expect(documento.metadados.titulo).toBe("Trabalho de fora");
+    expect(documento.sections.map((secao) => secao.titulo)).toEqual(["Um"]);
+  });
+
+  it("sobre o trabalho aberto, tudo o que ele tinha sai e o do arquivo entra", () => {
+    const { relatorio } = reimportar(documentoCompleto(), externo);
+    expect(relatorio.secoes.removidas.map((secao) => secao.id)).toEqual([
+      "s-intro",
+      "s-obj",
+      "s-dev",
+    ]);
+    expect(relatorio.secoes.novas.map((secao) => secao.titulo)).toEqual(["Um"]);
+  });
+
+  it("figura com imagem fora do .tex avulso entra sem imagem, com aviso", () => {
+    const { documento, relatorio } = reimportar(null, externo);
+    expect(documento.sections[0].content[1]).toMatchObject({
+      type: "figura",
+      legenda: "Foto",
+      imagem: null,
+    });
+    expect(documento.sections[0].content[1]).not.toHaveProperty("caminho");
+    expect(relatorio.avisos.map((aviso) => aviso.mensagem)).toContain(
+      "A figura “Foto” entrou sem imagem: img/foto.jpg não vem no .tex avulso. Importe o .zip do projeto para trazê-la.",
+    );
   });
 });

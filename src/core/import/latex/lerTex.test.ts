@@ -216,6 +216,16 @@ describe("lerTex: arquivo hostil não trava a aba", () => {
     ["ambientes sem \\end", "\\begin{x}\n\n".repeat(50_000)],
     ["opcionais sem fechamento", "\\foo[".repeat(50_000)],
     ["cifrões sem par", "$ ".repeat(100_000)],
+    [
+      "ambientes aninhados",
+      `${"\\begin{center}".repeat(20_000)}x${"\\end{center}".repeat(20_000)}`,
+    ],
+    [
+      "listas aninhadas",
+      `${"\\begin{itemize}\\item ".repeat(5_000)}x${"\\end{itemize}".repeat(5_000)}`,
+    ],
+    ["itens demais", `\\begin{itemize}${"\\item a ".repeat(50_000)}\\end{itemize}`],
+    ["células demais", `\\begin{tabular}{c}${"a & ".repeat(50_000)}\\end{tabular}`],
   ])("%s", (_nome, paragrafo) => {
     const inicio = performance.now();
     const resultado = lerTex(comParagrafo(paragrafo));
@@ -241,10 +251,15 @@ describe("lerTex: arquivo hostil não trava a aba", () => {
 describe("lerTex: recusas", () => {
   const tex = gerarTex(documentoCompleto(), IMAGENS);
 
-  it("recusa arquivo sem a linha de identidade, com mensagem clara", () => {
-    const resultado = lerTex("\\documentclass{article}\n\\begin{document}\nOi\n\\end{document}\n");
-    expect(resultado).toMatchObject({ ok: false, erro: { codigo: "sem-identificacao" } });
-    if (!resultado.ok) expect(resultado.erro.mensagem).toMatch(/não foi gerado pelo AURA/);
+  it("arquivo sem a linha de identidade é de fora: lido, sem id (§1.6)", () => {
+    const lido = ler("\\documentclass{article}\n\\begin{document}\nOi\n\\end{document}\n");
+    expect(lido).toMatchObject({ origem: "externo", documentoId: null, versaoFormato: null });
+  });
+
+  it("capítulo solto, sem \\begin{document}, é recusado com mensagem clara", () => {
+    const resultado = lerTex("\\chapter{Introdução}\nTexto.\n");
+    expect(resultado).toMatchObject({ ok: false, erro: { codigo: "sem-documento" } });
+    if (!resultado.ok) expect(resultado.erro.mensagem).toMatch(/capítulo solto/);
   });
 
   it("recusa versão de formato mais nova e pede para atualizar", () => {
@@ -327,15 +342,15 @@ describe("lerTex: edição feita fora do AURA (§1.5)", () => {
   it("ambiente desconhecido vira parágrafo literal, com aviso", () => {
     const editado = tex.replace(
       "Perguntas aplicadas.",
-      "Perguntas aplicadas.\n\n\\begin{itemize}\n\\item um\n\\end{itemize}",
+      "Perguntas aplicadas.\n\n\\begin{tikzpicture}\n\\draw (0,0);\n\\end{tikzpicture}",
     );
     const lido = ler(editado);
     expect(lido.apendices[0].content[1]).toEqual({
       type: "paragraph",
-      content: [{ type: "text", text: "\\begin{itemize} \\item um \\end{itemize}" }],
+      content: [{ type: "text", text: "\\begin{tikzpicture} \\draw (0,0); \\end{tikzpicture}" }],
     });
     expect(lido.avisos.map((aviso) => aviso.mensagem)).toEqual([
-      "Ambiente itemize não reconhecido: entrou como texto.",
+      "Ambiente tikzpicture não reconhecido: entrou como texto.",
     ]);
   });
 
@@ -420,7 +435,7 @@ describe("lerTex: edição feita fora do AURA (§1.5)", () => {
             marks: [
               {
                 type: "citacao",
-                attrs: { refId: "freire", modo: "indireta", pagina: "p. 35", apud: null },
+                attrs: { refId: "freire", modo: "indireta", pagina: "35", apud: null },
               },
             ],
           },
@@ -429,7 +444,7 @@ describe("lerTex: edição feita fora do AURA (§1.5)", () => {
       },
     ]);
     expect(lido.avisos.map((aviso) => aviso.mensagem)).toEqual([
-      "\\cite{freire} virou citação indireta, página p. 35, sobre o trecho antes dele. Confira o trecho e o modo.",
+      "\\cite{freire} virou citação indireta, página 35, sobre o trecho antes dele. Confira o trecho e o modo.",
     ]);
   });
 
@@ -535,9 +550,12 @@ describe("lerTex: edição feita fora do AURA (§1.5)", () => {
     ]);
   });
 
-  it("figura com imagem trocada por caminho de fora de figuras/ volta sem imagem, com aviso", () => {
-    const lido = ler(tex.replace("{figuras/img1.png}", "{/etc/foto.png}"));
-    expect(lido.secoes[2].content[0]).toMatchObject({ type: "figura", imagem: null });
-    expect(lido.avisos[0].mensagem).toMatch(/não é uma das figuras do AURA/);
+  it("imagem por caminho de fora de figuras/ volta como caminho, para o .zip resolver", () => {
+    const lido = ler(tex.replace("{figuras/img1.png}", "{imagens/foto.png}"));
+    expect(lido.secoes[2].content[0]).toMatchObject({
+      type: "figura",
+      imagem: null,
+      caminho: "imagens/foto.png",
+    });
   });
 });

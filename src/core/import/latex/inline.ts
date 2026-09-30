@@ -6,6 +6,7 @@ import type {
   NoInline,
   NoTexto,
 } from "../../document/types";
+import { ACENTOS, acentuar, SIMBOLOS as SIMBOLOS_DO_BIB } from "../../references/import/bibtex";
 import {
   fechaChave,
   fimDosArgumentos,
@@ -17,14 +18,15 @@ import {
   type Grupo,
 } from "./fonte";
 
-// Inline do `.tex` de volta para o schema (passo 6.2.4): o caminho inverso de
-// `trechoLatex()`/`parteLatex()` e de `escaparLatex()` (export/latex/). Lê só
-// o que o AURA escreve, mais o `\cite` do aluno; as regras estão em
-// docs/latex-abntex.md §1.5.
+// Inline do `.tex` para o schema: o caminho inverso de
+// `trechoLatex()`/`parteLatex()` e de `escaparLatex()` (export/latex/), passo
+// 6.2.4, e o LaTeX comum de um TCC que não saiu do AURA, passo 6.2.5
+// (docs/latex-abntex.md §1.5 e §1.6).
 //
-// **Nada é interpretado além disso.** Comando desconhecido volta como o
+// **Nada é expandido nem executado.** O que o leitor não conhece volta como o
 // texto que estava no arquivo, com aviso e a linha: `\hl{x}` entra no
-// parágrafo como "\hl{x}". Nada é expandido nem executado.
+// parágrafo como "\hl{x}". O que só muda a forma (espaçamento, quebra de
+// página, tamanho de letra) some: a forma do trabalho é do AURA.
 
 // Uma chamada de citação como estava no arquivo. A chamada é derivada e o
 // AURA a recalcula (princípio 3); a lista existe para o relatório dizer
@@ -55,12 +57,15 @@ interface Estado {
   citacao: AtributosCitacao | null;
 }
 
+type TokenTexto = { tipo: "texto"; texto: string; estado: Estado };
+
 type Token =
-  | { tipo: "texto"; texto: string; estado: Estado }
+  | TokenTexto
   | { tipo: "nota"; texto: string }
   | {
       tipo: "cite";
-      chave: string;
+      comando: string;
+      chaves: string[];
       pagina: string | null;
       bruto: string;
       pos: number;
@@ -69,13 +74,35 @@ type Token =
 
 const SEM_MARCA: Estado = { negrito: false, italico: false, citacao: null };
 
-// Os escapes de `escaparLatex()`, de volta para o caractere. O `{}` que vem
-// depois (`\textbackslash{}`) é consumido junto.
+// Símbolos por nome. Os quatro primeiros são os escapes de `escaparLatex()`;
+// o resto, o que um `.tex` escrito à mão costuma trazer. O `{}` que vem
+// depois (`\textbackslash{}`, `\LaTeX{}`) é consumido junto.
 const SIMBOLOS: Record<string, string> = {
+  ...SIMBOLOS_DO_BIB,
   textbackslash: "\\",
   textasciitilde: "~",
   textasciicircum: "^",
   textasciigrave: "`",
+  LaTeX: "LaTeX",
+  TeX: "TeX",
+  LaTeXe: "LaTeX2e",
+  textdegree: "°",
+  textordmasculine: "º",
+  textordfeminine: "ª",
+  textregistered: "®",
+  textcopyright: "©",
+  copyright: "©",
+  texteuro: "€",
+  euro: "€",
+  textbullet: "•",
+  textellipsis: "…",
+  textbar: "|",
+  textless: "<",
+  textgreater: ">",
+  textunderscore: "_",
+  guillemotleft: "«",
+  guillemotright: "»",
+  slash: "/",
 };
 
 const CONTROLE: Record<string, string> = {
@@ -86,10 +113,185 @@ const CONTROLE: Record<string, string> = {
   _: "_",
   "{": "{",
   "}": "}",
-  " ": " ",
   "-": "",
   "/": "",
+  "!": "",
 };
+
+// Espaço, com o nome que tiver: fino, largo, quebra de linha forçada.
+const ESPACO = new Set([
+  " ",
+  ",",
+  ";",
+  ":",
+  "\\",
+  "quad",
+  "qquad",
+  "enspace",
+  "thinspace",
+  "newline",
+  "linebreak",
+  "par",
+  "nobreakspace",
+]);
+
+// Só forma, sem argumento: somem.
+const FORMA_SEM_ARGUMENTO = new Set([
+  "noindent",
+  "indent",
+  "centering",
+  "raggedright",
+  "raggedleft",
+  "clearpage",
+  "newpage",
+  "cleardoublepage",
+  "pagebreak",
+  "nopagebreak",
+  "hfill",
+  "vfill",
+  "smallskip",
+  "medskip",
+  "bigskip",
+  "protect",
+  "relax",
+  "phantomsection",
+  "normalsize",
+  "small",
+  "footnotesize",
+  "scriptsize",
+  "tiny",
+  "large",
+  "Large",
+  "LARGE",
+  "huge",
+  "Huge",
+  "sffamily",
+  "ttfamily",
+  "scshape",
+  "tableofcontents",
+  "listoffigures",
+  "listoftables",
+  "listadesiglas",
+  "listadesimbolos",
+  "imprimircapa",
+  "imprimirfolhaderosto",
+  "maketitle",
+  "pretextual",
+  "textual",
+  "mainmatter",
+  "frontmatter",
+  "printindex",
+  "onehalfspacing",
+  "doublespacing",
+  "singlespacing",
+  "OnehalfSpacing",
+  "SingleSpacing",
+  "DoubleSpacing",
+  "sloppy",
+  "fussy",
+  "null",
+  "strut",
+  "allowbreak",
+]);
+
+// Só forma, ou derivado (a lista de referências), com argumentos: somem
+// junto com eles.
+const FORMA_COM_ARGUMENTOS = new Set([
+  "label",
+  "index",
+  "vspace",
+  "hspace",
+  "addcontentsline",
+  "markboth",
+  "markright",
+  "selectlanguage",
+  "bibliography",
+  "bibliographystyle",
+  "printbibliography",
+  "addbibresource",
+  "nocite",
+  "pagestyle",
+  "thispagestyle",
+  "setlength",
+  "addtolength",
+  "setcounter",
+  "hyphenation",
+  "phantompart",
+  "imprimirfichacatalografica",
+]);
+
+// Formatação declarativa: vale até o fim do grupo (`{\bfseries texto}`).
+const DECLARACOES: Record<string, Partial<Estado>> = {
+  bfseries: { negrito: true },
+  bf: { negrito: true },
+  mdseries: { negrito: false },
+  itshape: { italico: true },
+  it: { italico: true },
+  em: { italico: true },
+  slshape: { italico: true },
+  sl: { italico: true },
+  upshape: { italico: false },
+  normalfont: { negrito: false, italico: false },
+  rm: { negrito: false, italico: false },
+};
+
+// O conteúdo fica, sem perda: o comando não muda o texto.
+const SO_O_CONTEUDO = new Set([
+  "textrm",
+  "textnormal",
+  "textup",
+  "textmd",
+  "mbox",
+  "hbox",
+  "text",
+  "url",
+  "nolinkurl",
+  "MakeUppercase",
+  "MakeLowercase",
+  "uppercase",
+  "lowercase",
+]);
+
+// O conteúdo fica, mas a formatação não tem equivalente no AURA.
+const CONTEUDO_COM_AVISO = new Set([
+  "textsc",
+  "underline",
+  "uline",
+  "texttt",
+  "textsf",
+  "textsl",
+  "sout",
+  "textsuperscript",
+  "textsubscript",
+]);
+
+// Referência cruzada: o AURA ainda não tem.
+const REFERENCIAS_CRUZADAS = new Set([
+  "ref",
+  "autoref",
+  "pageref",
+  "eqref",
+  "cref",
+  "Cref",
+  "nameref",
+  "vref",
+]);
+
+// Citação que o AURA representa: a obra, o modo e a página (§1.6).
+const CITACOES = new Set([
+  "cite",
+  "citeonline",
+  "parencite",
+  "textcite",
+  "autocite",
+  "citep",
+  "citet",
+  "Cite",
+  "Parencite",
+  "Textcite",
+  "Autocite",
+  "footcite",
+]);
 
 const DE_MATEMATICA = new Map(
   Object.entries(MATEMATICA).map(([caractere, comando]) => [comando, caractere]),
@@ -100,10 +302,15 @@ const DE_MATEMATICA = new Map(
 const SO_EM_TITULO = new Set(["protect", "MakeUppercase"]);
 
 // O AURA escreve no máximo uns quatro grupos um dentro do outro.
-const PROFUNDIDADE_MAXIMA = 64;
+export const PROFUNDIDADE_MAXIMA = 64;
 
 export interface OpcoesLeituraInline {
   titulo?: boolean;
+}
+
+// "p. 35", "p.~35", "pp. 12-14", "página 3": o número, que o AURA formata.
+export function paginaDaCitacao(texto: string): string {
+  return texto.replace(/^(?:p{1,2}\.|p[áa]gs?\.|p[áa]ginas?)\s*/i, "").trim();
 }
 
 class LeitorInline {
@@ -154,12 +361,19 @@ class LeitorInline {
     }
   }
 
-  private percorrerFaixa(inicio: number, fim: number, estado: Estado) {
+  private percorrerFaixa(inicio: number, fim: number, estadoInicial: Estado) {
     const t = this.texto;
+    let estado = estadoInicial;
     let i = inicio;
     while (i < fim) {
       const c = t[i];
       if (c === "\\") {
+        const { nome, depois } = lerNomeDeComando(t, i);
+        if (Object.hasOwn(DECLARACOES, nome)) {
+          estado = { ...estado, ...DECLARACOES[nome] };
+          i = pularBrancos(t, depois, fim);
+          continue;
+        }
         i = this.comando(i, fim, estado);
         continue;
       }
@@ -184,12 +398,7 @@ class LeitorInline {
       if (c === "$") {
         const fecha = t.indexOf("$", i + 1);
         const ate = fecha >= 0 && fecha < fim ? fecha + 1 : i + 1;
-        this.escrever(t.slice(i, ate), estado);
-        this.avisar(
-          i,
-          "Matemática no meio do texto ($…$) não existe no AURA: entrou como texto. Use um bloco de fórmula.",
-        );
-        i = ate;
+        i = this.matematica(i, ate, estado);
         continue;
       }
       if (/\s/.test(c)) {
@@ -229,6 +438,16 @@ class LeitorInline {
     }
   }
 
+  // `$…$` e `\(…\)`: o AURA não tem fórmula no meio do texto.
+  private matematica(pos: number, ate: number, estado: Estado): number {
+    this.escrever(this.texto.slice(pos, ate), estado);
+    this.avisar(
+      pos,
+      "Matemática no meio do texto ($…$) não existe no AURA: entrou como texto. Use um bloco de fórmula.",
+    );
+    return ate;
+  }
+
   private comando(pos: number, fim: number, estado: Estado): number {
     const t = this.texto;
     const { nome, depois } = lerNomeDeComando(t, pos);
@@ -238,13 +457,40 @@ class LeitorInline {
       return depois;
     }
 
+    if (ESPACO.has(nome)) {
+      this.escrever(" ", estado);
+      // `\\*` e `\\[2pt]`: a quebra com o espaço extra.
+      let i = depois;
+      if (nome === "\\" && t[i] === "*") i++;
+      if (nome === "\\") i = lerOpcional(t, i, fim)?.depois ?? i;
+      return /[a-zA-Z]/.test(nome) ? pularBrancos(t, i, fim) : i;
+    }
+
     if (Object.hasOwn(SIMBOLOS, nome)) {
       this.escrever(SIMBOLOS[nome], estado);
       if (t.startsWith("{}", depois)) return depois + 2;
-      let i = depois;
-      while (i < fim && (t[i] === " " || t[i] === "\t")) i++;
-      return i;
+      return /[a-zA-Z]/.test(nome) ? pularBrancos(t, depois, fim) : depois;
     }
+
+    // Acento à moda antiga: `\'a`, `\'{a}`, `\c{c}`, `\~{a}`, `\'\i`.
+    if (Object.hasOwn(ACENTOS, nome) && nome.length === 1) {
+      return this.acento(pos, depois, fim, estado, ACENTOS[nome]);
+    }
+
+    if (nome === "(") {
+      const fecha = t.indexOf("\\)", depois);
+      const ate = fecha >= 0 && fecha < fim ? fecha + 2 : depois;
+      return this.matematica(pos, ate, estado);
+    }
+
+    if (FORMA_SEM_ARGUMENTO.has(nome)) {
+      let i = depois;
+      if (t[i] === "*") i++;
+      i = lerOpcional(t, i, fim)?.depois ?? i;
+      if (t.startsWith("{}", i)) return i + 2;
+      return pularBrancos(t, i, fim);
+    }
+    if (FORMA_COM_ARGUMENTOS.has(nome)) return fimDosArgumentos(t, depois, fim);
 
     if (nome === "textbf" || nome === "textit" || nome === "emph") {
       const grupo = lerGrupo(t, depois, fim);
@@ -256,7 +502,8 @@ class LeitorInline {
     }
 
     if (nome === "footnote") {
-      const grupo = lerGrupo(t, depois, fim);
+      const opcional = lerOpcional(t, depois, fim);
+      const grupo = lerGrupo(t, opcional?.depois ?? depois, fim);
       if (!grupo)
         return this.literal(pos, depois, estado, "\\footnote sem argumento: entrou como texto.");
       const texto = textoPlano(this.ctx, grupo.inicio, grupo.fim, "a nota de rodapé");
@@ -266,21 +513,14 @@ class LeitorInline {
 
     if (nome === "auracite") return this.auracite(pos, depois, fim, estado);
 
-    if (nome === "cite") {
-      const opcional = lerOpcional(t, depois, fim);
-      const grupo = lerGrupo(t, opcional?.depois ?? depois, fim);
-      if (!grupo) return this.literal(pos, depois, estado, "\\cite sem chave: entrou como texto.");
-      const chave = t.slice(grupo.inicio, grupo.fim).trim();
-      const pagina = opcional ? t.slice(opcional.inicio, opcional.fim).trim() || null : null;
-      this.tokens.push({
-        tipo: "cite",
-        chave,
-        pagina,
-        bruto: t.slice(pos, grupo.depois),
+    if (CITACOES.has(nome)) return this.citacao(pos, nome, depois, fim, estado);
+    if (nome === "citeauthor" || nome === "citeyear") {
+      return this.literal(
         pos,
+        depois,
         estado,
-      });
-      return grupo.depois;
+        `\\${nome} (só o autor ou só o ano) não tem equivalente no AURA: entrou como texto.`,
+      );
     }
 
     if (nome === "ensuremath") {
@@ -320,6 +560,51 @@ class LeitorInline {
       }
     }
 
+    if (SO_O_CONTEUDO.has(nome) || CONTEUDO_COM_AVISO.has(nome)) {
+      const grupo = lerGrupo(t, depois, fim);
+      if (grupo) {
+        if (CONTEUDO_COM_AVISO.has(nome)) {
+          this.avisar(
+            pos,
+            `\\${nome} não tem equivalente no AURA: ficou o texto, sem essa formatação.`,
+          );
+        }
+        this.percorrer(grupo.inicio, grupo.fim, estado);
+        return grupo.depois;
+      }
+    }
+
+    // `\enquote{x}`: aspas em volta.
+    if (nome === "enquote") {
+      const grupo = lerGrupo(t, depois, fim);
+      if (grupo) {
+        this.escrever("“", estado);
+        this.percorrer(grupo.inicio, grupo.fim, estado);
+        this.escrever("”", estado);
+        return grupo.depois;
+      }
+    }
+
+    // Dois argumentos, fica o segundo: `\href{url}{texto}`,
+    // `\foreignlanguage{english}{texto}`.
+    if (nome === "href" || nome === "foreignlanguage") {
+      const primeiro = lerGrupo(t, lerOpcional(t, depois, fim)?.depois ?? depois, fim);
+      const segundo = primeiro && lerGrupo(t, primeiro.depois, fim);
+      if (segundo) {
+        this.percorrer(segundo.inicio, segundo.fim, estado);
+        return segundo.depois;
+      }
+    }
+
+    if (REFERENCIAS_CRUZADAS.has(nome)) {
+      return this.literal(
+        pos,
+        depois,
+        estado,
+        `Referência cruzada (\\${nome}) não existe no AURA: entrou como texto. Escreva o número (por exemplo, “Figura 2”).`,
+      );
+    }
+
     if (nome === "newcommand" || nome === "renewcommand" || nome === "def") {
       return this.literal(
         pos,
@@ -349,6 +634,65 @@ class LeitorInline {
       estado,
       `Comando \\${nome} não reconhecido: entrou como texto.`,
     );
+  }
+
+  private acento(pos: number, depois: number, fim: number, estado: Estado, marca: string) {
+    const t = this.texto;
+    const { nome } = lerNomeDeComando(t, pos);
+    let i = /[a-zA-Z]/.test(nome) ? pularBrancos(t, depois, fim) : depois;
+    let base = "";
+    if (t[i] === "{") {
+      const grupo = lerGrupo(t, i, fim);
+      if (!grupo)
+        return this.literal(pos, depois, estado, "Acento sem a letra: entrou como texto.");
+      const dentro = t.slice(grupo.inicio, grupo.fim).trim();
+      base = dentro.startsWith("\\") ? (SIMBOLOS_DO_BIB[dentro.slice(1)] ?? dentro) : dentro;
+      i = grupo.depois;
+    } else if (t[i] === "\\") {
+      const letra = lerNomeDeComando(t, i);
+      base = SIMBOLOS_DO_BIB[letra.nome] ?? "";
+      i = letra.depois;
+    } else if (i < fim) {
+      base = t[i];
+      i++;
+    }
+    this.escrever(acentuar(base, marca), estado);
+    return i;
+  }
+
+  // `\cite[p.~35]{chave}` e as variantes (§1.6). Até dois opcionais (o
+  // biblatex e o natbib aceitam antes e depois); a página é o último.
+  private citacao(pos: number, nome: string, depois: number, fim: number, estado: Estado) {
+    const t = this.texto;
+    let i = t[depois] === "*" ? depois + 1 : depois;
+    const opcionais: Grupo[] = [];
+    for (let k = 0; k < 2; k++) {
+      const opcional = lerOpcional(t, i, fim);
+      if (!opcional) break;
+      opcionais.push(opcional);
+      i = opcional.depois;
+    }
+    const grupo = lerGrupo(t, i, fim);
+    if (!grupo) return this.literal(pos, depois, estado, `\\${nome} sem chave: entrou como texto.`);
+    const chaves = t
+      .slice(grupo.inicio, grupo.fim)
+      .split(",")
+      .map((chave) => chave.trim())
+      .filter(Boolean);
+    const ultimo = opcionais.at(-1);
+    const pagina = ultimo
+      ? paginaDaCitacao(textoPlano(this.ctx, ultimo.inicio, ultimo.fim, "a página")) || null
+      : null;
+    this.tokens.push({
+      tipo: "cite",
+      comando: nome,
+      chaves,
+      pagina,
+      bruto: t.slice(pos, grupo.depois),
+      pos,
+      estado,
+    });
+    return grupo.depois;
   }
 
   // `\auracite[modo={…}, pagina={…}, apud={…}]{refId}{trecho}{chamada}`
@@ -410,6 +754,12 @@ class LeitorInline {
   }
 }
 
+// Espaço e tabulação depois de um comando-palavra: o TeX os come.
+function pularBrancos(texto: string, pos: number, fim: number): number {
+  while (pos < fim && (texto[pos] === " " || texto[pos] === "\t")) pos++;
+  return pos;
+}
+
 function mesmoEstado(a: Estado, b: Estado): boolean {
   return a.negrito === b.negrito && a.italico === b.italico && a.citacao === b.citacao;
 }
@@ -445,9 +795,7 @@ export function lerAtributos(texto: string, opcional: Grupo): Map<string, Grupo>
 // As aspas da citação direta são do AURA (`fecharCitacao()`), não do texto
 // do aluno: saem antes de o trecho virar marca.
 function tirarAspas(tokens: Token[]) {
-  const textos = tokens.filter(
-    (token): token is Extract<Token, { tipo: "texto" }> => token.tipo === "texto",
-  );
+  const textos = tokens.filter((token): token is TokenTexto => token.tipo === "texto");
   const primeiro = textos[0];
   const ultimo = textos.at(-1);
   if (primeiro?.texto.startsWith("“")) primeiro.texto = primeiro.texto.slice(1);
@@ -460,8 +808,9 @@ function tirarAspas(tokens: Token[]) {
 // fechamento, e espaço.
 const FIM_DE_FRASE = /[.!?][”"’)]*\s+/g;
 
-// `\cite{chave}` com chave conhecida vira citação indireta sobre o texto
-// logo antes dele, até o começo da frase (§1.5). O aluno confere pelo aviso.
+// `\cite{chave}` com chave conhecida vira citação sobre o texto logo antes
+// dele (§1.5 e §1.6): entre aspas, direta sobre o que está entre elas; sem
+// aspas, indireta até o começo da frase. O aluno confere pelo aviso.
 function resolverCites(ctx: ContextoInline, tokens: Token[]): Token[] {
   const saida: Token[] = [];
   for (const token of tokens) {
@@ -470,57 +819,111 @@ function resolverCites(ctx: ContextoInline, tokens: Token[]): Token[] {
       continue;
     }
     const posicao = ctx.fonte.posicao(token.pos);
-    const conhecida = ctx.chaves.has(token.chave);
-    const marcados = conhecida ? marcarAntes(saida, token) : 0;
-    if (!conhecida || marcados === 0) {
+    const comando = `\\${token.comando}{${token.chaves.join(",")}}`;
+    const chave = token.chaves.find((item) => ctx.chaves.has(item));
+    const modo = chave ? marcarAntes(saida, chave, token.pagina) : null;
+    if (!chave || !modo) {
       saida.push({ tipo: "texto", texto: token.bruto, estado: token.estado });
       ctx.avisos.push({
         ...posicao,
-        mensagem: conhecida
-          ? `\\cite{${token.chave}} sem texto antes dele: entrou como texto.`
-          : `\\cite{${token.chave}}: a chave não está nas referências. Entrou como texto.`,
+        mensagem: chave
+          ? `${comando} sem texto antes dele: entrou como texto.`
+          : `${comando}: a chave não está nas referências. Entrou como texto.`,
       });
       continue;
     }
+    const tipo = modo === "direta_curta" ? "direta" : "indireta";
+    const onde =
+      modo === "direta_curta"
+        ? "sobre o trecho entre aspas antes dele"
+        : "sobre o trecho antes dele";
     ctx.avisos.push({
       ...posicao,
       mensagem: token.pagina
-        ? `\\cite{${token.chave}} virou citação indireta, página ${token.pagina}, sobre o trecho antes dele. Confira o trecho e o modo.`
-        : `\\cite{${token.chave}} virou citação indireta sobre o trecho antes dele. Confira o trecho.`,
+        ? `${comando} virou citação ${tipo}, página ${token.pagina}, ${onde}. Confira o trecho e o modo.`
+        : `${comando} virou citação ${tipo} ${onde}. Confira o trecho.`,
     });
+    if (token.chaves.length > 1) {
+      ctx.avisos.push({
+        ...posicao,
+        mensagem: `Citação de várias obras (${token.chaves.join(", ")}): só ${chave} ficou ligada. Cite as outras à parte no AURA.`,
+      });
+    }
   }
   return saida;
 }
 
-function marcarAntes(tokens: Token[], cite: Extract<Token, { tipo: "cite" }>): number {
-  const attrs: AtributosCitacao = {
-    refId: cite.chave,
-    modo: "indireta",
-    pagina: cite.pagina,
-    apud: null,
-  };
-  let marcados = 0;
-  for (let j = tokens.length - 1; j >= 0; j--) {
-    const token = tokens[j];
+// Marca o texto antes do `\cite` e devolve o modo, ou `null` se não havia
+// texto. Trabalha sobre os tokens de texto seguidos, sem citação, do fim da
+// lista: juntos, eles são o trecho candidato.
+function marcarAntes(
+  tokens: Token[],
+  chave: string,
+  pagina: string | null,
+): AtributosCitacao["modo"] | null {
+  let k = tokens.length;
+  while (k > 0) {
+    const token = tokens[k - 1];
     if (token.tipo !== "texto" || token.estado.citacao) break;
-    if (j === tokens.length - 1) token.texto = token.texto.replace(/\s+$/, "");
-    let corte = -1;
-    for (const achado of token.texto.matchAll(FIM_DE_FRASE)) {
-      if (achado.index + achado[0].length < token.texto.length)
-        corte = achado.index + achado[0].length;
-    }
-    const estado = { ...token.estado, citacao: attrs };
-    if (corte >= 0) {
-      const marcado: Token = { tipo: "texto", texto: token.texto.slice(corte), estado };
-      token.texto = token.texto.slice(0, corte);
-      tokens.splice(j + 1, 0, marcado);
-      marcados++;
-      break;
-    }
-    if (token.texto.trim()) marcados++;
-    token.estado = estado;
+    k--;
   }
-  return marcados;
+  const candidatos = tokens.slice(k) as TokenTexto[];
+  if (candidatos.length === 0) return null;
+  const ultimo = candidatos.at(-1)!;
+  ultimo.texto = ultimo.texto.replace(/\s+$/, "");
+  const texto = candidatos.map((token) => token.texto).join("");
+
+  let inicio = 0;
+  let fim = texto.length;
+  let modo: AtributosCitacao["modo"] = "indireta";
+  // Posições das aspas que saem: a citação direta ganha as do AURA.
+  const tirar = new Set<number>();
+  const fecha = texto.at(-1);
+  const abre =
+    fecha === "”"
+      ? texto.lastIndexOf("“", texto.length - 2)
+      : fecha === '"'
+        ? texto.lastIndexOf('"', texto.length - 2)
+        : -1;
+  if (abre >= 0 && abre < texto.length - 2) {
+    modo = "direta_curta";
+    inicio = abre + 1;
+    fim = texto.length - 1;
+    tirar.add(abre).add(texto.length - 1);
+  } else {
+    for (const achado of texto.matchAll(FIM_DE_FRASE)) {
+      if (achado.index + achado[0].length < texto.length) inicio = achado.index + achado[0].length;
+    }
+  }
+  while (inicio < fim && /\s/.test(texto[inicio])) inicio++;
+  if (inicio >= fim) return null;
+
+  const attrs: AtributosCitacao = { refId: chave, modo, pagina, apud: null };
+  const novos: TokenTexto[] = [];
+  let deslocamento = 0;
+  for (const token of candidatos) {
+    const a = deslocamento;
+    const b = deslocamento + token.texto.length;
+    deslocamento = b;
+    const pedacos: [number, number, boolean][] = [
+      [a, Math.min(b, inicio), false],
+      [Math.max(a, inicio), Math.min(b, fim), true],
+      [Math.max(a, fim), b, false],
+    ];
+    for (const [de, ate, marcado] of pedacos) {
+      if (de >= ate) continue;
+      let parte = "";
+      for (let p = de; p < ate; p++) if (!tirar.has(p)) parte += texto[p];
+      if (!parte) continue;
+      novos.push({
+        tipo: "texto",
+        texto: parte,
+        estado: marcado ? { ...token.estado, citacao: attrs } : token.estado,
+      });
+    }
+  }
+  tokens.splice(k, candidatos.length, ...novos);
+  return modo;
 }
 
 // --- Saída -------------------------------------------------------------------
@@ -560,7 +963,16 @@ function paraNos(tokens: readonly Token[]): NoInline[] {
 }
 
 // Tira o espaço do começo e do fim do bloco, e os nós que ficarem vazios.
+// Dentro do bloco, espaço repetido (de um comando que sumiu) vira um só.
 function aparar(nos: NoInline[]): NoInline[] {
+  for (const [indice, no] of nos.entries()) {
+    if (no.type !== "text") continue;
+    no.text = no.text.replace(/ {2,}/g, " ");
+    const anterior = nos[indice - 1];
+    if (anterior?.type === "text" && anterior.text.endsWith(" ") && no.text.startsWith(" ")) {
+      no.text = no.text.slice(1);
+    }
+  }
   const primeiro = nos[0];
   if (primeiro?.type === "text") primeiro.text = primeiro.text.trimStart();
   const ultimo = nos.at(-1);
@@ -607,7 +1019,7 @@ export function textoPlano(
       `Formatação, nota ou citação dentro d${onde} não voltam: ficou só o texto.`,
     );
   }
-  return texto.trim();
+  return texto.replace(/ {2,}/g, " ").trim();
 }
 
 // Só os nós de texto, para a célula de tabela, que não tem nota de rodapé

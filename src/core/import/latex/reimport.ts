@@ -72,17 +72,39 @@ export interface Reimportacao {
   relatorio: Relatorio;
 }
 
-// `referencias`: as do documento depois da reimportação, quando o `.zip` traz
-// o `.bib` (`reimportZip.ts`). Sem ela, ficam as do documento salvo.
+// A imagem de uma figura que o `.tex` aponta por um caminho de fora do
+// padrão do AURA (`figuras/<id>.png`): o `id` da imagem, ou por que não veio.
+export type ResolverImagem = (caminho: string) => { imagem: string } | { motivo: string };
+
+export interface OpcoesReimportacao {
+  gerarId?: () => string;
+  // As do documento depois da reimportação, quando o `.zip` traz o `.bib`
+  // (`reimportZip.ts`). Sem elas, ficam as do documento salvo.
+  referencias?: readonly Referencia[];
+  // Quem tem o `.zip` resolve os caminhos das imagens. Sem ele (`.tex`
+  // avulso), a figura entra sem imagem, com aviso.
+  resolverImagem?: ResolverImagem;
+}
+
+interface Montagem {
+  gerarId: () => string;
+  avisos: Aviso[];
+  resolverImagem?: ResolverImagem;
+}
+
 export function montarReimportacao(
   atual: Documento | null,
   lido: TexLido,
-  gerarId: () => string = () => crypto.randomUUID(),
-  referencias?: readonly Referencia[],
+  opcoes: OpcoesReimportacao = {},
 ): Reimportacao {
-  const salvo: Documento = atual ?? { ...novoDocumento(), id: lido.documentoId };
+  const gerarId = opcoes.gerarId ?? (() => crypto.randomUUID());
+  const { referencias } = opcoes;
+  // Sem trabalho de destino: o `id` do arquivo, se ele é do AURA; um novo,
+  // se é de fora.
+  const salvo: Documento = atual ?? { ...novoDocumento(), id: lido.documentoId ?? gerarId() };
   const base: Documento = referencias ? { ...salvo, references: [...referencias] } : salvo;
   const avisos: Aviso[] = [...lido.avisos];
+  const montagem: Montagem = { gerarId, avisos, resolverImagem: opcoes.resolverImagem };
 
   const metadados = lido.metadados
     ? aplicarMetadados(base.metadados, lido.metadados)
@@ -91,8 +113,7 @@ export function montarReimportacao(
   const secoes = compararLista(
     base.sections,
     lido.secoes,
-    gerarId,
-    avisos,
+    montagem,
     (lida, id, content, antiga, indice): Secao => ({
       id,
       ordem: indice,
@@ -101,14 +122,8 @@ export function montarReimportacao(
       content,
     }),
   );
-  const apendices = compararLista(
-    base.apendices,
-    lido.apendices,
-    gerarId,
-    avisos,
-    elementoPosTextual,
-  );
-  const anexos = compararLista(base.anexos, lido.anexos, gerarId, avisos, elementoPosTextual);
+  const apendices = compararLista(base.apendices, lido.apendices, montagem, elementoPosTextual);
+  const anexos = compararLista(base.anexos, lido.anexos, montagem, elementoPosTextual);
 
   const documento: Documento = {
     ...base,
@@ -254,8 +269,7 @@ interface Salvo {
 function compararLista<L extends Lido, S extends Salvo>(
   salvos: readonly S[],
   lidos: readonly L[],
-  gerarId: () => string,
-  avisos: Aviso[],
+  montagem: Montagem,
   montar: (lido: L, id: string, content: NoConteudo[], salvo: S | undefined, indice: number) => S,
 ): { itens: S[]; comparacao: Comparacao } {
   const porId = new Map(salvos.map((salvo) => [salvo.id, salvo]));
@@ -263,10 +277,10 @@ function compararLista<L extends Lido, S extends Salvo>(
   const comparacao: Comparacao = { novas: [], removidas: [], alteradas: [] };
 
   const itens = lidos.map((lido, indice) => {
-    const id = lido.id && !usados.has(lido.id) ? lido.id : gerarId();
+    const id = lido.id && !usados.has(lido.id) ? lido.id : montagem.gerarId();
     usados.add(id);
     const salvo = porId.get(id);
-    const content = conteudoFinal(salvo?.content, lido, gerarId, avisos);
+    const content = conteudoFinal(salvo?.content, lido, montagem);
     const item = montar(lido, id, content, salvo, indice);
     if (!salvo) comparacao.novas.push({ id, titulo: item.titulo });
     return item;
@@ -306,8 +320,7 @@ function compararLista<L extends Lido, S extends Salvo>(
 function conteudoFinal(
   salvo: readonly NoConteudo[] | undefined,
   lido: Lido,
-  gerarId: () => string,
-  avisos: Aviso[],
+  { gerarId, avisos, resolverImagem }: Montagem,
 ): NoConteudo[] {
   const figuras = (salvo ?? []).filter((no) => no.type === "figura");
   const tabelas = (salvo ?? []).filter((no) => no.type === "tabela");
@@ -328,7 +341,23 @@ function conteudoFinal(
       continue;
     }
     if (bloco.type === "figura") {
-      content.push({ ...bloco, id: figuras[figura++]?.id ?? gerarId() });
+      const { caminho, ...figuraLida } = bloco;
+      let imagem = figuraLida.imagem;
+      if (caminho !== undefined) {
+        const resolvida = resolverImagem?.(caminho);
+        imagem = resolvida && "imagem" in resolvida ? resolvida.imagem : null;
+        if (!imagem) {
+          const nome = figuraLida.legenda ? `“${figuraLida.legenda}”` : "sem legenda";
+          avisos.push({
+            arquivo: lido.arquivo,
+            linha: lido.linha,
+            mensagem: resolvida
+              ? `A figura ${nome} entrou sem imagem: ${"motivo" in resolvida ? resolvida.motivo : ""}`
+              : `A figura ${nome} entrou sem imagem: ${caminho} não vem no .tex avulso. Importe o .zip do projeto para trazê-la.`,
+          });
+        }
+      }
+      content.push({ ...figuraLida, imagem, id: figuras[figura++]?.id ?? gerarId() });
       continue;
     }
     if (bloco.type === "tabela") {
