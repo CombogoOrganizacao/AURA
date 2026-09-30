@@ -6,6 +6,7 @@ import { join } from "node:path";
 import JSZip from "jszip";
 
 import { gerarTex } from "../src/core/export/latex/document";
+import { PNG_1X1 } from "../src/core/export/latex/__fixtures__/documento";
 import { gerarZipTex } from "../src/core/export/latex/zip";
 
 import { abrirDocumento, documentoSalvo, tresSecoes } from "./apoio";
@@ -198,4 +199,47 @@ test("TCC de fora: substituir o aberto troca o conteúdo e guarda o de antes", a
   );
   await page.getByRole("tab", { name: /Histórico/ }).click();
   await expect(page.getByRole("list", { name: "Versões" })).toContainText("Antes da reimportação");
+});
+
+test("projeto de fora em .zip, com quaisquer nomes, vira trabalho novo com a figura", async ({
+  page,
+}) => {
+  const aberto = tresSecoes();
+  await abrirDocumento(page, aberto);
+
+  const zip = new JSZip();
+  zip.file(
+    "tcc.tex",
+    [
+      "\\documentclass{abntex2}",
+      "\\graphicspath{{imagens/}}",
+      "\\titulo{Projeto do Overleaf}",
+      "\\begin{document}",
+      "\\textual",
+      "\\include{capitulos/introducao}",
+      "\\end{document}",
+    ].join("\n"),
+  );
+  zip.file(
+    "capitulos/introducao.tex",
+    "\\chapter{Introdução}\nTexto do capítulo.\n\n\\begin{figure}\\caption{Fluxo}\\includegraphics{fluxo}\\end{figure}",
+  );
+  zip.file("imagens/fluxo.png", PNG_1X1);
+  await page.getByLabel("Arquivo .tex ou .zip").setInputFiles({
+    name: "Projeto.zip",
+    mimeType: "application/zip",
+    buffer: Buffer.from(await zip.generateAsync({ type: "uint8array" })),
+  });
+
+  const dialogo = page.getByRole("dialog", { name: "Importar do LaTeX" });
+  await dialogo.getByRole("radio", { name: /Criar um trabalho novo/ }).check({ force: true });
+  await expect(dialogo.getByRole("region", { name: "Imagens" })).toContainText(
+    "1 imagem vem do pacote.",
+  );
+  await dialogo.getByRole("button", { name: "Criar trabalho" }).click();
+
+  await page.waitForURL((url) => !url.pathname.endsWith(aberto.id));
+  await expect(page.getByRole("banner")).toContainText("Projeto do Overleaf");
+  await expect(page.locator(".ProseMirror p").first()).toHaveText("Texto do capítulo.");
+  await expect(page.locator(".ProseMirror img")).toHaveCount(1);
 });

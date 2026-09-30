@@ -66,7 +66,7 @@ describe("lerProjetoZip e montarReimportacaoDoProjeto", () => {
 
   it("o .zip exportado volta sem mudança nenhuma", async () => {
     const projeto = await projetoDe(await gerarZipTex(original, imagensDoZip(original.id)));
-    expect([...projeto.secoes.keys()]).toHaveLength(2);
+    expect([...projeto.arquivos.keys()]).toHaveLength(2);
     expect(projeto.bib).toContain("@book{freire,");
     expect([...projeto.figuras.keys()]).toEqual(["img1"]);
 
@@ -301,5 +301,109 @@ describe("lerProjetoZip e montarReimportacaoDoProjeto", () => {
         erro: { codigo: "nao-utf8" },
       });
     });
+  });
+});
+
+describe("projeto de fora do AURA, com quaisquer nomes (§1.6)", () => {
+  async function projetoDeFora(extras: (zip: JSZip) => void = () => {}) {
+    const zip = new JSZip();
+    zip.file(
+      "tcc.tex",
+      [
+        "\\documentclass{abntex2}",
+        "\\graphicspath{{imagens/}}",
+        "\\titulo{Meu TCC}",
+        "\\begin{document}",
+        "\\textual",
+        "\\include{capitulos/introducao}",
+        "\\input{capitulos/metodo.tex}",
+        "\\postextual",
+        "\\bibliography{bib/refs}",
+        "\\end{document}",
+      ].join("\n"),
+    );
+    zip.file(
+      "capitulos/introducao.tex",
+      "\\chapter{Introdução}\nA escola dialoga \\cite{freire}.\n\n\\begin{figure}\\caption{Fluxo}\\includegraphics{fluxo}\\end{figure}",
+    );
+    zip.file(
+      "capitulos/metodo.tex",
+      "\\chapter{Método}\n\\begin{figure}\\caption{Logo}\\includegraphics{logo}\\end{figure}",
+    );
+    zip.file("capitulos/rascunho.tex", "\\chapter{Rascunho}\nNão incluído.");
+    zip.file(
+      "bib/refs.bib",
+      "@book{freire,\n  author = {Freire, Paulo},\n  title = {Pedagogia do oprimido},\n  publisher = {Paz e Terra},\n  address = {Rio de Janeiro},\n  year = {1987}\n}\n",
+    );
+    zip.file("imagens/fluxo.png", PNG_1X1);
+    zip.file("imagens/logo.pdf", "%PDF-1.4");
+    zip.file("abntex2.cls", "% classe");
+    extras(zip);
+    return projetoDe(await bytesDe(zip));
+  }
+
+  it("acha o principal pelo \\documentclass e segue os \\include de outra pasta", async () => {
+    const projeto = await projetoDeFora();
+    expect(projeto.caminhoDoMain).toBe("tcc.tex");
+    const { documento, relatorio } = reimportar(null, projeto);
+    expect(documento.metadados.titulo).toBe("Meu TCC");
+    expect(documento.sections.map((secao) => secao.titulo)).toEqual(["Introdução", "Método"]);
+    expect(relatorio.ignorados.sort()).toEqual([
+      "abntex2.cls",
+      "capitulos/rascunho.tex",
+      "imagens/logo.pdf",
+    ]);
+  });
+
+  it("as referências vêm do .bib de qualquer nome, e o \\cite liga nelas", async () => {
+    const { documento, relatorio } = reimportar(null, await projetoDeFora());
+    expect(relatorio.referencias.novas.map((referencia) => referencia.id)).toEqual(["freire"]);
+    expect(documento.sections[0].content[0]).toMatchObject({
+      content: [
+        {
+          text: "A escola dialoga",
+          marks: [{ type: "citacao", attrs: { refId: "freire", modo: "indireta" } }],
+        },
+        { text: "." },
+      ],
+    });
+  });
+
+  it("a imagem vem pelo \\graphicspath e pela extensão deduzida; PDF fica de fora com o motivo", async () => {
+    const { documento, relatorio, imagens } = reimportar(null, await projetoDeFora());
+    expect(imagens).toHaveLength(1);
+    expect(documento.sections[0].content[1]).toMatchObject({
+      type: "figura",
+      legenda: "Fluxo",
+      imagem: imagens[0].id,
+    });
+    expect(documento.sections[1].content[0]).toMatchObject({ legenda: "Logo", imagem: null });
+    expect(relatorio.avisos.map((aviso) => aviso.mensagem)).toContain(
+      "A figura “Logo” entrou sem imagem: imagens/logo.pdf está em PDF, e o AURA só aceita PNG e JPEG. Converta a imagem e inclua na figura.",
+    );
+    expect(relatorio.imagens.novas).toBe(1);
+  });
+
+  it("dois arquivos principais sem main.tex: recusa, dizendo quais", async () => {
+    const zip = new JSZip();
+    zip.file("a.tex", "\\documentclass{article}\\begin{document}A\\end{document}");
+    zip.file("b.tex", "\\documentclass{article}\\begin{document}B\\end{document}");
+    expect(await lerProjetoZip(await bytesDe(zip))).toMatchObject({
+      ok: false,
+      erro: {
+        codigo: "zip-sem-main",
+        mensagem: expect.stringMatching(/mais de um arquivo principal \(a\.tex, b\.tex\)/),
+      },
+    });
+  });
+
+  it(".bib que não é UTF-8 não impede o resto, e avisa", async () => {
+    const projeto = await projetoDeFora((zip) =>
+      zip.file("bib/latin1.bib", Uint8Array.from([0x40, 0x62, 0xe9])),
+    );
+    expect(projeto.avisos.map((aviso) => aviso.mensagem)).toContain(
+      "O .bib não está em UTF-8 e não foi lido: as referências dele não vêm.",
+    );
+    expect(projeto.bib).toContain("@book{freire");
   });
 });

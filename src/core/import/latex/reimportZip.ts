@@ -8,12 +8,13 @@ import { importarBibtex, TAMANHO_MAXIMO_BIB } from "../../references/import/bibt
 import type { Referencia } from "../../references/types";
 import type { Aviso } from "./fonte";
 import { decodificarUtf8, lerTex, TAMANHO_MAXIMO_TEX, type CodigoErro } from "./lerTex";
-import { montarReimportacao, type Relatorio } from "./reimport";
+import { montarReimportacao, type Relatorio, type ResolverImagem } from "./reimport";
 
-// Reimportação do `.zip` do projeto LaTeX (passo 6.2.4, terceiro commit): o
-// pacote que `gerarZipTex()` escreve, de volta, depois de passar pelo
-// Overleaf. Regras em docs/latex-abntex.md §1.5, "Referências", "Figuras" e
-// "Limites de segurança do `.zip`".
+// Importação do `.zip` de um projeto LaTeX: o pacote que `gerarZipTex()`
+// escreve, de volta depois de passar pelo Overleaf (passo 6.2.4), e o projeto
+// de um TCC que o aluno começou fora do AURA, com quaisquer nomes (6.2.5).
+// Regras em docs/latex-abntex.md §1.5 ("Referências", "Figuras", "Limites de
+// segurança do `.zip`") e §1.6.
 //
 // **O arquivo vem de fora e é lido na memória da aba.** Tudo o que pode
 // custar caro é conferido antes: o diretório central do `.zip` é lido aqui,
@@ -46,13 +47,21 @@ export interface FiguraDoZip {
   dados: DadosImagem;
 }
 
+// Os caminhos são a partir da pasta do arquivo principal, como na compilação.
 export interface ProjetoZip {
+  // O `.tex` principal (o que tem `\documentclass`) e o caminho dele.
   main: string;
-  // `sections/<nome>.tex` → conteúdo.
-  secoes: Map<string, string>;
+  caminhoDoMain: string;
+  // Os outros `.tex`, para o `\input` e o `\include`.
+  arquivos: Map<string, string>;
+  // Os `.bib` do pacote, juntos.
   bib: string | null;
-  // `id` da imagem (o nome do arquivo em `figuras/`, sem a extensão) → arquivo.
+  // As imagens PNG e JPEG.
+  imagens: Map<string, FiguraDoZip>;
+  // As do padrão do AURA, pelo `id` (o nome do arquivo em `figuras/`).
   figuras: Map<string, FiguraDoZip>;
+  // Imagens que o AURA não aceita (PDF, EPS, SVG), para o aviso dizer o motivo.
+  outrasImagens: Set<string>;
   // Caminhos que o AURA não lê, para o relatório listar.
   ignorados: string[];
   avisos: Aviso[];
@@ -181,8 +190,51 @@ function lerComLimite(objeto: JSZip.JSZipObject, limite: number): Promise<Uint8A
 
 // --- Pacote ------------------------------------------------------------------
 
-const FIGURA = /^figuras\/([^/]+)\.(png|jpe?g)$/i;
-const CAPITULO = /^sections\/[^/]+\.tex$/;
+// Figura no padrão do AURA: o nome do arquivo é o `id` da imagem.
+const FIGURA_DO_AURA = /^figuras\/([^/]+)\.(png|jpe?g)$/i;
+const EXTENSOES_DE_IMAGEM = new Set(["png", "jpg", "jpeg"]);
+// Imagens que um projeto LaTeX costuma ter e o AURA não aceita.
+const OUTRAS_IMAGENS = new Set(["pdf", "eps", "svg"]);
+
+function extensao(nome: string): string {
+  return /\.([^./]+)$/.exec(nome)?.[1].toLowerCase() ?? "";
+}
+
+function pastaDe(nome: string): string {
+  const barra = nome.lastIndexOf("/");
+  return barra < 0 ? "" : nome.slice(0, barra + 1);
+}
+
+// `\documentclass` fora de comentário: é o arquivo principal.
+const DOCUMENTCLASS = /^[^%\n]*\\documentclass/m;
+
+// O arquivo principal: o `.tex` com `\documentclass`. Vários: o `main.tex`
+// mais perto da raiz (o nome do AURA e o padrão do Overleaf).
+function escolherPrincipal(textos: ReadonlyMap<string, string>): Resultado<string> {
+  const candidatos = [...textos.entries()]
+    .filter(([, texto]) => DOCUMENTCLASS.test(texto))
+    .map(([nome]) => nome);
+  if (candidatos.length === 0) {
+    return falha(
+      "zip-sem-main",
+      "O .zip não tem o arquivo principal do projeto (o .tex com \\documentclass).",
+    );
+  }
+  if (candidatos.length === 1) return { ok: true, valor: candidatos[0] };
+  const mains = candidatos
+    .filter((nome) => /(^|\/)main\.tex$/.test(nome))
+    .sort((a, b) => a.split("/").length - b.split("/").length);
+  if (
+    mains.length > 0 &&
+    (mains.length === 1 || mains[0].split("/").length < mains[1].split("/").length)
+  ) {
+    return { ok: true, valor: mains[0] };
+  }
+  return falha(
+    "zip-sem-main",
+    `O .zip tem mais de um arquivo principal (${candidatos.join(", ")}). Deixe só um, ou chame o principal de main.tex.`,
+  );
+}
 
 export async function lerProjetoZip(bytes: Uint8Array): Promise<Resultado<ProjetoZip>> {
   const declaradas = lerDiretorioCentral(bytes);
@@ -193,14 +245,14 @@ export async function lerProjetoZip(bytes: Uint8Array): Promise<Resultado<Projet
   if (declaradas.length > LIMITES_ZIP.arquivos) {
     return falha(
       "zip-muitos-arquivos",
-      `O .zip tem ${declaradas.length} arquivos. O projeto exportado pelo AURA tem poucos; o limite é ${LIMITES_ZIP.arquivos}.`,
+      `O .zip tem ${declaradas.length} arquivos, e o limite é ${LIMITES_ZIP.arquivos}. Deixe no pacote só o projeto do trabalho.`,
     );
   }
   const total = declaradas.reduce((soma, entrada) => soma + entrada.tamanho, 0);
   if (total > LIMITES_ZIP.bytesDescompactados) {
     return falha(
       "zip-grande-demais",
-      "Descompactado, o .zip passa de 100 MB. Confira se é o projeto exportado pelo AURA.",
+      "Descompactado, o .zip passa de 100 MB. Deixe no pacote só o projeto do trabalho.",
     );
   }
   const inseguro = declaradas.find((entrada) => caminhoInseguro(entrada.nome));
@@ -217,66 +269,43 @@ export async function lerProjetoZip(bytes: Uint8Array): Promise<Resultado<Projet
   } catch {
     return falha("zip-invalido", "O arquivo não é um .zip legível.");
   }
-
-  // Projeto compactado de novo à mão, dentro de uma pasta: a pasta vira a raiz.
-  const nomes = declaradas.map((entrada) => entrada.nome);
-  let raiz = "";
-  if (!nomes.includes("main.tex")) {
-    const candidatos = nomes.filter((nome) => /^[^/]+\/main\.tex$/.test(nome));
-    if (candidatos.length !== 1) {
-      return falha(
-        "zip-sem-main",
-        "O .zip não tem o main.tex do projeto. Reimporte o .zip exportado pelo AURA (ou baixado do Overleaf).",
-      );
-    }
-    raiz = candidatos[0].slice(0, -"main.tex".length);
-  }
   const declarado = new Map(declaradas.map((entrada) => [entrada.nome, entrada.tamanho]));
 
-  const projeto: ProjetoZip = {
-    main: "",
-    secoes: new Map(),
-    bib: null,
-    figuras: new Map(),
-    ignorados: [],
-    avisos: [],
-  };
+  // Tudo o que pode ser do trabalho é lido: os `.tex` (qual é o principal e
+  // o que ele inclui só se sabe lendo), os `.bib` e as imagens.
+  const textos = new Map<string, string>();
+  const bibs: string[] = [];
+  const imagens = new Map<string, FiguraDoZip>();
+  const outrasImagens = new Set<string>();
+  const ignorados: string[] = [];
+  const avisos: Aviso[] = [];
   let bytesDeTexto = 0;
+  let bytesDeBib = 0;
 
   for (const objeto of Object.values(zip.files)) {
     if (objeto.dir) continue;
     const nome = objeto.unsafeOriginalName ?? objeto.name;
-    if (!nome.startsWith(raiz)) {
-      projeto.ignorados.push(nome);
-      continue;
-    }
-    const caminho = nome.slice(raiz.length);
     const tamanho = declarado.get(nome) ?? 0;
-    const eTexto = caminho === "main.tex" || CAPITULO.test(caminho);
-    const figura = FIGURA.exec(caminho);
+    const tipo = extensao(nome);
+    const aviso = (mensagem: string) => avisos.push({ arquivo: nome, linha: 0, mensagem });
 
-    if (!eTexto && caminho !== "referencias.bib" && !figura) {
-      projeto.ignorados.push(caminho);
+    if (OUTRAS_IMAGENS.has(tipo)) {
+      outrasImagens.add(nome);
       continue;
     }
-    if (caminho === "referencias.bib" && tamanho > TAMANHO_MAXIMO_BIB) {
-      projeto.avisos.push({
-        arquivo: caminho,
-        linha: 0,
-        mensagem:
-          "O referencias.bib passa de 2 MB e não foi lido: as referências ficam como estão.",
-      });
+    if (tipo !== "tex" && tipo !== "bib" && !EXTENSOES_DE_IMAGEM.has(tipo)) {
+      ignorados.push(nome);
       continue;
     }
-    if (figura && tamanho > TAMANHO_MAXIMO_IMAGEM) {
-      projeto.avisos.push({
-        arquivo: caminho,
-        linha: 0,
-        mensagem: "A imagem passa de 5 MB e não foi lida: a figura fica com a imagem que já tinha.",
-      });
+    if (tipo === "bib" && bytesDeBib + tamanho > TAMANHO_MAXIMO_BIB) {
+      aviso("Os .bib passam de 2 MB juntos, e este não foi lido: as referências dele não vêm.");
       continue;
     }
-    if (eTexto) {
+    if (EXTENSOES_DE_IMAGEM.has(tipo) && tamanho > TAMANHO_MAXIMO_IMAGEM) {
+      aviso("A imagem passa de 5 MB e não foi lida. Reduza a imagem e inclua na figura.");
+      continue;
+    }
+    if (tipo === "tex") {
       bytesDeTexto += tamanho;
       // UTF-8 tem no máximo 4 bytes por caractere.
       if (bytesDeTexto > TAMANHO_MAXIMO_TEX * 4) {
@@ -290,38 +319,133 @@ export async function lerProjetoZip(bytes: Uint8Array): Promise<Resultado<Projet
     } catch {
       return falha(
         "zip-invalido",
-        `Não foi possível descompactar ${caminho}: o .zip está corrompido.`,
+        `Não foi possível descompactar ${nome}: o .zip está corrompido.`,
       );
     }
     if (conteudo === null) {
       return falha(
         "zip-invalido",
-        `${caminho} ocupa mais do que o .zip declara. O arquivo foi recusado.`,
+        `${nome} ocupa mais do que o .zip declara. O arquivo foi recusado.`,
       );
     }
 
-    if (figura) {
+    if (EXTENSOES_DE_IMAGEM.has(tipo)) {
       const dados = lerCabecalhoImagem(conteudo);
-      if (!dados) {
-        projeto.avisos.push({
-          arquivo: caminho,
-          linha: 0,
-          mensagem: "A imagem não é um PNG ou JPEG legível e não foi lida.",
-        });
-        continue;
-      }
-      projeto.figuras.set(figura[1], { caminho, bytes: conteudo, dados });
+      if (dados) imagens.set(nome, { caminho: nome, bytes: conteudo, dados });
+      else aviso("A imagem não é um PNG ou JPEG legível e não foi lida.");
       continue;
     }
-
     const texto = decodificarUtf8(conteudo);
-    if (!texto.ok) return falha("nao-utf8", `${caminho}: ${texto.erro.mensagem}`);
-    if (caminho === "main.tex") projeto.main = texto.texto;
-    else if (caminho === "referencias.bib") projeto.bib = texto.texto;
-    else projeto.secoes.set(caminho, texto.texto);
+    if (tipo === "bib") {
+      // `.bib` do JabRef costuma vir em Latin-1: ele não impede o resto.
+      if (texto.ok) {
+        bibs.push(texto.texto);
+        bytesDeBib += tamanho;
+      } else aviso("O .bib não está em UTF-8 e não foi lido: as referências dele não vêm.");
+      continue;
+    }
+    if (!texto.ok) return falha("nao-utf8", `${nome}: ${texto.erro.mensagem}`);
+    textos.set(nome, texto.texto);
   }
 
+  const principal = escolherPrincipal(textos);
+  if (!principal.ok) return principal;
+  // Os caminhos do `\input` e do `\includegraphics` partem da pasta do
+  // principal, como na compilação.
+  const raiz = pastaDe(principal.valor);
+  const relativo = (nome: string) => (nome.startsWith(raiz) ? nome.slice(raiz.length) : null);
+
+  const projeto: ProjetoZip = {
+    main: textos.get(principal.valor)!,
+    caminhoDoMain: principal.valor.slice(raiz.length),
+    arquivos: new Map(),
+    bib: bibs.length > 0 ? bibs.join("\n\n") : null,
+    imagens: new Map(),
+    figuras: new Map(),
+    outrasImagens: new Set(),
+    ignorados,
+    avisos,
+  };
+  for (const [nome, texto] of textos) {
+    const caminho = relativo(nome);
+    if (caminho === null) ignorados.push(nome);
+    else if (nome !== principal.valor) projeto.arquivos.set(caminho, texto);
+  }
+  for (const [nome, imagem] of imagens) {
+    const caminho = relativo(nome);
+    if (caminho === null) {
+      ignorados.push(nome);
+      continue;
+    }
+    const lida = { ...imagem, caminho };
+    projeto.imagens.set(caminho, lida);
+    const doAura = FIGURA_DO_AURA.exec(caminho);
+    if (doAura) projeto.figuras.set(doAura[1], lida);
+  }
+  for (const nome of outrasImagens) {
+    const caminho = relativo(nome);
+    if (caminho !== null) projeto.outrasImagens.add(caminho);
+  }
   return { ok: true, valor: projeto };
+}
+
+// --- Imagens pelo caminho ----------------------------------------------------
+
+// Pastas de `\graphicspath{{imagens/}{fig/}}`, em que o `\includegraphics`
+// procura.
+function pastasDeImagem(main: string): string[] {
+  const achado = /\\graphicspath\s*\{((?:\s*\{[^{}]*\})+)\s*\}/.exec(main);
+  if (!achado) return [];
+  return [...achado[1].matchAll(/\{([^{}]*)\}/g)].map((pasta) => pasta[1].trim());
+}
+
+// Caminho dentro do projeto, sem `..` que saia dele. `null` se sai.
+function normalizar(caminho: string): string | null {
+  const partes: string[] = [];
+  for (const parte of caminho.replace(/\\/g, "/").split("/")) {
+    if (parte === "" || parte === ".") continue;
+    if (parte === "..") {
+      if (partes.length === 0) return null;
+      partes.pop();
+    } else partes.push(parte);
+  }
+  return partes.length > 0 ? partes.join("/") : null;
+}
+
+const PREFIXO_DE_CAMINHO = "caminho:";
+
+// A imagem de um `\includegraphics{…}` de fora (§1.6): o caminho como está e
+// dentro de cada pasta do `\graphicspath`, com a extensão escrita ou
+// deduzida, como o LaTeX faz.
+function resolverImagem(projeto: ProjetoZip, pastas: readonly string[]): ResolverImagem {
+  return (pedido) => {
+    const bases = [pedido, ...pastas.map((pasta) => `${pasta.replace(/\/?$/, "/")}${pedido}`)];
+    for (const base of bases) {
+      const caminho = normalizar(base);
+      if (!caminho) continue;
+      const tentativas = extensao(caminho)
+        ? [caminho]
+        : ["png", "jpg", "jpeg", "PNG", "JPG", "JPEG", "pdf", "eps", "svg"].map(
+            (tipo) => `${caminho}.${tipo}`,
+          );
+      for (const tentativa of tentativas) {
+        if (projeto.imagens.has(tentativa)) return { imagem: `${PREFIXO_DE_CAMINHO}${tentativa}` };
+        if (projeto.outrasImagens.has(tentativa)) {
+          return {
+            motivo: `${tentativa} está em ${extensao(tentativa).toUpperCase()}, e o AURA só aceita PNG e JPEG. Converta a imagem e inclua na figura.`,
+          };
+        }
+      }
+    }
+    return { motivo: `${pedido} não está no pacote.` };
+  };
+}
+
+// A imagem de uma figura: pelo `id` do AURA, ou pelo caminho resolvido.
+function arquivoDaImagem(projeto: ProjetoZip, imagem: string): FiguraDoZip | undefined {
+  return imagem.startsWith(PREFIXO_DE_CAMINHO)
+    ? projeto.imagens.get(imagem.slice(PREFIXO_DE_CAMINHO.length))
+    : projeto.figuras.get(imagem);
 }
 
 // --- Referências -------------------------------------------------------------
@@ -440,15 +564,20 @@ export function montarReimportacaoDoProjeto({
     : { novas: [], conflitos: [], avisos: [] };
   const referencias = [...salvas, ...bib.novas];
 
+  const incluidos = new Set<string>();
   const lido = lerTex(projeto.main, {
-    arquivo: "main.tex",
-    lerArquivo: (caminho) => projeto.secoes.get(caminho) ?? null,
+    arquivo: projeto.caminhoDoMain,
+    lerArquivo: (caminho) => {
+      incluidos.add(caminho);
+      return projeto.arquivos.get(caminho) ?? null;
+    },
     chavesDeReferencia: new Set(referencias.map((referencia) => referencia.id)),
   });
   if (!lido.ok) return { ok: false, erro: lido.erro };
   const { documento: base, relatorio } = montarReimportacao(atual, lido.tex, {
     gerarId,
     referencias,
+    resolverImagem: resolverImagem(projeto, pastasDeImagem(projeto.main)),
   });
 
   // Figuras: arquivo igual ao salvo, nada muda; diferente, ou imagem que o
@@ -464,9 +593,9 @@ export function montarReimportacaoDoProjeto({
     let mudou = false;
     const novo = content.map((no) => {
       if (no.type !== "figura" || !no.imagem) return no;
-      const arquivo = projeto.figuras.get(no.imagem);
+      const arquivo = arquivoDaImagem(projeto, no.imagem);
       if (!arquivo) return no;
-      usadas.add(no.imagem);
+      usadas.add(arquivo.caminho);
       const salva = imagensSalvas.get(no.imagem);
       if (salva && iguais(salva.bytes, arquivo.bytes)) return no;
       let id = trocas.get(no.imagem);
@@ -493,13 +622,20 @@ export function montarReimportacaoDoProjeto({
   // Figura de apêndice e anexo não sai no `.tex` (`conteudoPosTextual()`),
   // mas a imagem dela vai no `.zip`: não é arquivo ignorado.
   for (const elemento of [...documento.apendices, ...documento.anexos]) {
-    for (const no of elemento.content) if (no.type === "figura" && no.imagem) usadas.add(no.imagem);
+    for (const no of elemento.content) {
+      const arquivo =
+        no.type === "figura" && no.imagem ? arquivoDaImagem(projeto, no.imagem) : undefined;
+      if (arquivo) usadas.add(arquivo.caminho);
+    }
   }
+  // Também o que não entrou: imagens que nenhuma figura usa e `.tex` que
+  // nenhum `\input` inclui (um rascunho, um capítulo tirado do trabalho).
   const ignorados = [
     ...projeto.ignorados,
-    ...[...projeto.figuras.entries()]
-      .filter(([id]) => !usadas.has(id))
-      .map(([, arquivo]) => arquivo.caminho),
+    ...[...projeto.imagens.keys(), ...projeto.outrasImagens].filter(
+      (caminho) => !usadas.has(caminho),
+    ),
+    ...[...projeto.arquivos.keys()].filter((caminho) => !incluidos.has(caminho)),
   ];
 
   const relatorioDoProjeto: RelatorioDoProjeto = {
