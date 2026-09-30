@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AppTopBar } from "@/components/app/AppTopBar";
 import { BotaoExportar } from "@/components/editor/BotaoExportar";
+import { BotaoOverleaf } from "@/components/editor/BotaoOverleaf";
 import { BotaoReimportar } from "@/components/editor/BotaoReimportar";
 import { ProvedorImagens } from "@/components/editor/ImagensDoDocumento";
 import { Editor, type IrParaLocal, type MoverSecao } from "@/components/editor/Editor";
@@ -273,6 +274,8 @@ function Carregado({
               substituir={historico.substituir}
               salvarAgora={salvarAgora}
             />
+            {/* A ida para o Overleaf (6.3.1), com o aviso de mão única. */}
+            <BotaoOverleaf documento={documento} salvarAgora={salvarAgora} />
             {botaoExportar}
           </div>
         }

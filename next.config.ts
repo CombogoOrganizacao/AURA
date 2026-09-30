@@ -10,6 +10,10 @@ const isDev = process.env.NODE_ENV === "development";
 // #412). A defesa contra script injetado no conteúdo do usuário é a
 // sanitização do editor, não a CSP — ver invariante em CLAUDE.md. SRI (abaixo)
 // ainda cobre a integridade dos bundles carregados por src.
+//
+// `form-action` libera uma origem de fora, e só uma: o POST do "Abrir no
+// Overleaf" (passo 6.3.1, `components/editor/BotaoOverleaf.tsx`), que leva
+// o projeto dentro do formulário, sem gerar URL do trabalho.
 const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""};
@@ -19,7 +23,7 @@ const cspHeader = `
   connect-src 'self';
   object-src 'none';
   base-uri 'self';
-  form-action 'self';
+  form-action 'self' https://www.overleaf.com;
   frame-ancestors 'none';
   upgrade-insecure-requests;
 `

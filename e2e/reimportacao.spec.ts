@@ -2,10 +2,10 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import JSZip from "jszip";
 
-import { novoDocumento } from "../src/core/document/factory";
-import type { Documento, Secao } from "../src/core/document/types";
 import { gerarTex } from "../src/core/export/latex/document";
 import { gerarZipTex } from "../src/core/export/latex/zip";
+
+import { abrirDocumento, documentoSalvo, tresSecoes } from "./apoio";
 
 // Passo 6.2.4 — reimportar o `.tex` e o `.zip`. O Vitest prova a leitura e o relatório
 // (`core/import/latex/`); aqui, o caminho do aluno: exportar, editar por
@@ -15,64 +15,6 @@ import { gerarZipTex } from "../src/core/export/latex/zip";
 // A tela ainda não tem o botão de exportar `.tex` (passo 6.3.2): o arquivo
 // sai do mesmo `gerarTex()` que o botão vai usar, a partir do documento
 // gravado no IndexedDB, como em `busca.spec.ts`.
-
-function secao(id: string, ordem: number, titulo: string, texto: string): Secao {
-  return {
-    id,
-    ordem,
-    nivel: 1,
-    titulo,
-    content: [{ type: "paragraph", content: [{ type: "text", text: texto }] }],
-  };
-}
-
-function tresSecoes(): Documento {
-  const documento = novoDocumento();
-  documento.metadados.titulo = "Trabalho de teste";
-  documento.sections = [
-    secao("s1", 0, "Introdução", "Texto da introdução."),
-    secao("s2", 1, "Método", "Aplicamos o questionário em campo."),
-    secao("s3", 2, "Resultados", "As respostas do questionário."),
-  ];
-  return documento;
-}
-
-async function abrirDocumento(page: Page, documento: Documento) {
-  // Abre o app primeiro: é ele que cria o banco na versão certa.
-  await page.goto("/documentos");
-  await page.evaluate(
-    (doc) =>
-      new Promise<void>((resolve, reject) => {
-        const tentar = () => {
-          const pedido = indexedDB.open("aura");
-          pedido.onerror = () => reject(pedido.error);
-          pedido.onsuccess = () => {
-            const banco = pedido.result;
-            if (!banco.objectStoreNames.contains("documentos")) {
-              banco.close();
-              setTimeout(tentar, 100);
-              return;
-            }
-            const tr = banco.transaction("documentos", "readwrite");
-            tr.objectStore("documentos").put({
-              id: doc.id,
-              documento: doc,
-              atualizadoEm: new Date(),
-            });
-            tr.oncomplete = () => {
-              banco.close();
-              resolve();
-            };
-            tr.onerror = () => reject(tr.error);
-          };
-        };
-        tentar();
-      }),
-    documento,
-  );
-  await page.goto(`/documento/${documento.id}`);
-  await expect(page.locator(".ProseMirror p").first()).toBeVisible();
-}
 
 async function reimportar(page: Page, conteudo: string) {
   await page.getByLabel("Arquivo .tex ou .zip exportado pelo AURA").setInputFiles({
@@ -161,26 +103,6 @@ test("arquivo de um trabalho que não está no navegador cria um trabalho novo e
   await expect(page.getByRole("banner")).toContainText("Trabalho de outro computador");
   await expect(page.locator(".ProseMirror p").first()).toHaveText("Texto da introdução.");
 });
-
-async function documentoSalvo(page: Page, id: string): Promise<Documento> {
-  return page.evaluate(
-    (idDoc) =>
-      new Promise<Documento>((resolve, reject) => {
-        const pedido = indexedDB.open("aura");
-        pedido.onerror = () => reject(pedido.error);
-        pedido.onsuccess = () => {
-          const banco = pedido.result;
-          const leitura = banco.transaction("documentos").objectStore("documentos").get(idDoc);
-          leitura.onsuccess = () => {
-            banco.close();
-            resolve(leitura.result.documento);
-          };
-          leitura.onerror = () => reject(leitura.error);
-        };
-      }),
-    id,
-  );
-}
 
 test("o .zip traz a edição do capítulo e a referência escolhida do .bib", async ({ page }) => {
   const documento = tresSecoes();
