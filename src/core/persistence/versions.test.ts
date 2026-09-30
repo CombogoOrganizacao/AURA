@@ -11,6 +11,7 @@ import {
   maisRecentePrimeiro,
   registrarVersao,
   restaurarVersao,
+  substituirDocumento,
   versoesExcedentes,
 } from "./versions";
 
@@ -192,5 +193,34 @@ describe.each(ADAPTADORES)("registrarVersao — adaptador %s", (_, criarAdaptado
 
     await expect(registrarVersao(adaptador, documento, "   ")).rejects.toThrow(/em branco/);
     expect(await adaptador.listarVersoes(documento.id)).toEqual([salva]);
+  });
+
+  it("substituir guarda o texto de agora como versão nomeada e grava o novo", async () => {
+    const atual = novoDocumento();
+    atual.metadados.titulo = "Antes do Overleaf";
+    await adaptador.salvarDocumento(atual);
+    const novo = { ...atual, metadados: { ...atual.metadados, titulo: "Depois do Overleaf" } };
+
+    const anterior = await substituirDocumento(adaptador, atual, novo, "Antes da reimportação");
+
+    expect(anterior).toMatchObject({ nome: "Antes da reimportação", automatica: false });
+    expect((await adaptador.carregarVersao(atual.id, anterior.id))?.metadados.titulo).toBe(
+      "Antes do Overleaf",
+    );
+    expect((await adaptador.carregarDocumento(atual.id))?.metadados.titulo).toBe(
+      "Depois do Overleaf",
+    );
+  });
+
+  it("substituir não grava o novo se a versão de agora falhar", async () => {
+    const atual = novoDocumento();
+    atual.metadados.titulo = "Intacto";
+    await adaptador.salvarDocumento(atual);
+    const falha = { ...adaptador, salvarVersao: () => Promise.reject(new Error("disco cheio")) };
+
+    await expect(
+      substituirDocumento(falha, atual, { ...atual, sections: [] }, "Antes da reimportação"),
+    ).rejects.toThrow(/disco cheio/);
+    expect((await adaptador.carregarDocumento(atual.id))?.metadados.titulo).toBe("Intacto");
   });
 });

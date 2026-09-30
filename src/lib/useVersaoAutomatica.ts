@@ -8,7 +8,7 @@ import {
   criarAgendadorDeVersao,
   type AgendadorDeVersao,
 } from "@/core/persistence/versaoAutomatica";
-import { registrarVersao, restaurarVersao } from "@/core/persistence/versions";
+import { registrarVersao, restaurarVersao, substituirDocumento } from "@/core/persistence/versions";
 
 export interface EstadoHistorico {
   // Da mais recente para a mais antiga; `null` enquanto carrega.
@@ -19,6 +19,9 @@ export interface EstadoHistorico {
   // Restaura a versão (passo 5.3.3); o texto de agora vira a versão
   // `nomeDoAnterior`. Quem troca o documento na tela é `aoRestaurar`.
   restaurar: (versaoId: string, nomeDoAnterior: string) => Promise<void>;
+  // Troca o documento aberto por `novo` (reimportação do `.tex`, passo
+  // 6.2.4), com o texto de agora guardado como a versão `nomeDoAnterior`.
+  substituir: (novo: Documento, nomeDoAnterior: string) => Promise<void>;
 }
 
 // Histórico de versões do documento aberto (passo 5.3.2). A regra de quando
@@ -92,6 +95,18 @@ export function useVersaoAutomatica(
     await agendadorRef.current?.salvarNomeada(documentoRef.current, nome);
   }, []);
 
+  // Depois de gravado: a tela passa a mostrar o documento novo.
+  const trocarNaTela = useCallback(
+    async (novo: Documento) => {
+      // Antes de a tela trocar o documento: a troca chega ao agendador como
+      // uma mudança, e ele precisa já saber que é a base.
+      agendadorRef.current?.definirBase(novo);
+      aoRestaurarRef.current(novo);
+      setVersoes(await persistencia.listarVersoes(novo.id));
+    },
+    [persistencia],
+  );
+
   const restaurar = useCallback(
     async (versaoId: string, nomeDoAnterior: string) => {
       const { documento: restaurado } = await restaurarVersao(
@@ -100,14 +115,18 @@ export function useVersaoAutomatica(
         versaoId,
         nomeDoAnterior,
       );
-      // Antes de a tela trocar o documento: a troca chega ao agendador como
-      // uma mudança, e ele precisa já saber que é a base.
-      agendadorRef.current?.definirBase(restaurado);
-      aoRestaurarRef.current(restaurado);
-      setVersoes(await persistencia.listarVersoes(restaurado.id));
+      await trocarNaTela(restaurado);
     },
-    [persistencia],
+    [persistencia, trocarNaTela],
   );
 
-  return { versoes, falhouAutomatica, salvarNomeada, restaurar };
+  const substituir = useCallback(
+    async (novo: Documento, nomeDoAnterior: string) => {
+      await substituirDocumento(persistencia, documentoRef.current, novo, nomeDoAnterior);
+      await trocarNaTela(novo);
+    },
+    [persistencia, trocarNaTela],
+  );
+
+  return { versoes, falhouAutomatica, salvarNomeada, restaurar, substituir };
 }

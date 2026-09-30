@@ -89,8 +89,22 @@ export async function restaurarVersao(
     throw new Error("A versão não existe mais.");
   }
 
-  const anterior = await registrarVersao(adaptador, atual, nomeDoAnterior);
-  await adaptador.salvarDocumento(documento);
-
+  const anterior = await substituirDocumento(adaptador, atual, documento, nomeDoAnterior);
   return { documento, anterior };
+}
+
+// Troca o documento inteiro por outro, com o texto de agora guardado antes
+// como versão nomeada: a restauração (acima) e a reimportação do `.tex`
+// (passo 6.2.4, `import/latex/reimport.ts`). Mesma ordem e mesma garantia
+// da restauração: uma falha ao guardar a versão deixa o documento como
+// estava.
+export async function substituirDocumento(
+  adaptador: AdaptadorPersistencia,
+  atual: Documento,
+  novo: Documento,
+  nomeDoAnterior: string,
+): Promise<ResumoVersao> {
+  const anterior = await registrarVersao(adaptador, atual, nomeDoAnterior);
+  await adaptador.salvarDocumento(novo);
+  return anterior;
 }

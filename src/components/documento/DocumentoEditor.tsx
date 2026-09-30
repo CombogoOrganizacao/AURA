@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AppTopBar } from "@/components/app/AppTopBar";
 import { BotaoExportar } from "@/components/editor/BotaoExportar";
+import { BotaoReimportar } from "@/components/editor/BotaoReimportar";
 import { ProvedorImagens } from "@/components/editor/ImagensDoDocumento";
 import { Editor, type IrParaLocal, type MoverSecao } from "@/components/editor/Editor";
 import { LayoutEdicao, mostrarColunaEsquerda } from "@/components/editor/LayoutEdicao";
@@ -264,7 +265,17 @@ function Carregado({
         mode="editor"
         docTitle={documento.metadados.titulo}
         statusAutosave={TEXTO_STATUS[status]}
-        acoes={botaoExportar}
+        acoes={
+          <div className="flex shrink-0 items-center gap-2">
+            {/* A volta do Overleaf (6.2.4): o documento de agora vira versão. */}
+            <BotaoReimportar
+              documento={documento}
+              substituir={historico.substituir}
+              salvarAgora={salvarAgora}
+            />
+            {botaoExportar}
+          </div>
+        }
       />
       {/* As figuras enviam e carregam imagens por aqui (6.1.2). */}
       <ProvedorImagens documentoId={documentoId} persistencia={persistencia}>
