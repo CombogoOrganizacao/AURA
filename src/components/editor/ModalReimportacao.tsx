@@ -1,7 +1,9 @@
 "use client";
 
+import { nomeDaReferencia, PreviaReferencia } from "@/components/referencias/PreviaReferencia";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Dialog } from "@/components/ui/Dialog";
 import type { Aviso } from "@/core/import/latex/fonte";
 import type {
@@ -10,6 +12,7 @@ import type {
   Mudanca,
   Relatorio,
 } from "@/core/import/latex/reimport";
+import type { RelatorioDoProjeto } from "@/core/import/latex/reimportZip";
 
 // Para onde a reimportação vai (docs/latex-abntex.md §1.5, "Identidade do
 // arquivo"): o trabalho aberto, outro trabalho desta máquina, ou um novo.
@@ -17,8 +20,13 @@ export type Destino = { tipo: "este" } | { tipo: "outro"; titulo: string } | { t
 
 interface ModalReimportacaoProps {
   arquivo: string;
+  origem: "tex" | "zip";
   destino: Destino;
-  relatorio: Relatorio;
+  // Do `.zip`, o relatório traz também referências, imagens e ignorados.
+  relatorio: Relatorio | RelatorioDoProjeto;
+  // Conflitos de referência em que o aluno escolheu a versão do arquivo.
+  usarDoArquivo: ReadonlySet<string>;
+  onAlternarReferencia: (id: string, usar: boolean) => void;
   gravando: boolean;
   falha: string | null;
   onConfirmar: () => void;
@@ -58,8 +66,11 @@ const ROTULO_MUDANCA: Record<Mudanca, string> = {
 // aluno achar no Overleaf.
 export function ModalReimportacao({
   arquivo,
+  origem,
   destino,
   relatorio,
+  usarDoArquivo,
+  onAlternarReferencia,
   gravando,
   falha,
   onConfirmar,
@@ -95,7 +106,7 @@ export function ModalReimportacao({
             {falha}
           </Alert>
         )}
-        <AvisoDeDestino destino={destino} />
+        <AvisoDeDestino destino={destino} origem={origem} />
         {relatorio.semMudancas && (
           <Alert tone="success" title="Nada mudou">
             O arquivo diz o mesmo que o trabalho no AURA.
@@ -135,6 +146,15 @@ export function ModalReimportacao({
           </section>
         )}
 
+        {"referencias" in relatorio && (
+          <DoProjeto
+            relatorio={relatorio}
+            novo={destino.tipo === "novo"}
+            usarDoArquivo={usarDoArquivo}
+            onAlternarReferencia={onAlternarReferencia}
+          />
+        )}
+
         {relatorio.avisos.length > 0 && <ListaDeAvisos avisos={relatorio.avisos} />}
 
         {!nadaAGravar && destino.tipo !== "novo" && (
@@ -148,7 +168,7 @@ export function ModalReimportacao({
   );
 }
 
-function AvisoDeDestino({ destino }: { destino: Destino }) {
+function AvisoDeDestino({ destino, origem }: { destino: Destino; origem: "tex" | "zip" }) {
   if (destino.tipo === "outro") {
     return (
       <Alert tone="info" title={`Este arquivo é do trabalho “${destino.titulo || "sem título"}”`}>
@@ -160,12 +180,125 @@ function AvisoDeDestino({ destino }: { destino: Destino }) {
     return (
       <Alert tone="info" title="Trabalho novo">
         Este arquivo é de um trabalho que não está neste navegador, e a reimportação cria um
-        trabalho novo com ele. As referências não vêm no .tex: as citações ficam sem referência até
-        você cadastrá-las.
+        trabalho novo com ele.{" "}
+        {origem === "zip"
+          ? "As referências vêm do referencias.bib do pacote."
+          : "As referências não vêm no .tex avulso: reimporte o .zip do projeto para trazê-las, ou as citações ficam sem referência até você cadastrá-las."}
       </Alert>
     );
   }
   return null;
+}
+
+// O que só o `.zip` traz: referências do `.bib`, imagens e arquivos que o
+// AURA não lê.
+function DoProjeto({
+  relatorio,
+  novo,
+  usarDoArquivo,
+  onAlternarReferencia,
+}: {
+  relatorio: RelatorioDoProjeto;
+  novo: boolean;
+  usarDoArquivo: ReadonlySet<string>;
+  onAlternarReferencia: (id: string, usar: boolean) => void;
+}) {
+  const { referencias, imagens, ignorados } = relatorio;
+  const totalImagens = imagens.atualizadas.length + imagens.novas;
+
+  return (
+    <>
+      {(referencias.novas.length > 0 || referencias.conflitos.length > 0) && (
+        <section aria-label="Referências" className="flex flex-col gap-2">
+          <h3 className="text-xs font-semibold text-title">Referências</h3>
+          {referencias.novas.length > 0 && (
+            <Lista
+              rotulo={
+                novo
+                  ? `Do arquivo (${referencias.novas.length})`
+                  : `Novas (${referencias.novas.length})`
+              }
+            >
+              {referencias.novas.map((referencia) => (
+                <li key={referencia.id}>{nomeDaReferencia(referencia)}</li>
+              ))}
+            </Lista>
+          )}
+          {referencias.conflitos.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <span className="text-2xs font-semibold tracking-wide text-muted uppercase">
+                Diferentes no arquivo ({referencias.conflitos.length})
+              </span>
+              <p className="text-xs text-muted">
+                Fica a versão do AURA, a menos que você marque a do arquivo.
+              </p>
+              <ul className="flex flex-col gap-3">
+                {referencias.conflitos.map((conflito) => (
+                  <li
+                    key={conflito.id}
+                    className="flex flex-col gap-1.5 border-t border-[var(--border-subtle)] pt-3 first:border-t-0 first:pt-0"
+                  >
+                    <div className="text-xs leading-relaxed text-body">
+                      <span className="font-semibold">No AURA: </span>
+                      <PreviaReferencia referencia={conflito.noAura} />
+                    </div>
+                    <div className="text-xs leading-relaxed text-body">
+                      <span className="font-semibold">No arquivo: </span>
+                      <PreviaReferencia referencia={conflito.noArquivo} />
+                    </div>
+                    <Checkbox
+                      checked={usarDoArquivo.has(conflito.id)}
+                      onChange={(evento) =>
+                        onAlternarReferencia(conflito.id, evento.target.checked)
+                      }
+                      aria-label={`Usar a versão do arquivo de ${nomeDaReferencia(conflito.noAura)}`}
+                      label={<span className="text-xs">Usar a versão do arquivo</span>}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
+
+      {totalImagens > 0 && (
+        <section aria-label="Imagens" className="flex flex-col gap-2">
+          <h3 className="text-xs font-semibold text-title">Imagens ({totalImagens})</h3>
+          {imagens.atualizadas.length > 0 && (
+            <Lista rotulo={`Trocadas (${imagens.atualizadas.length})`}>
+              {imagens.atualizadas.map((imagem) => (
+                <li key={imagem.imagem}>{imagem.legenda || "Figura sem legenda"}</li>
+              ))}
+            </Lista>
+          )}
+          {imagens.novas > 0 && (
+            <p className="text-xs text-body">
+              {imagens.novas === 1
+                ? "1 imagem vem do pacote."
+                : `${imagens.novas} imagens vêm do pacote.`}
+            </p>
+          )}
+          {imagens.atualizadas.length > 0 && (
+            <p className="text-xs text-muted">A imagem de antes continua na versão guardada.</p>
+          )}
+        </section>
+      )}
+
+      {ignorados.length > 0 && (
+        <section aria-label="Arquivos ignorados" className="flex flex-col gap-2">
+          <h3 className="text-xs font-semibold text-title">
+            Arquivos que o AURA não lê ({ignorados.length})
+          </h3>
+          <ul className="flex flex-col gap-0.5 font-mono text-2xs text-muted">
+            {ignorados.map((caminho) => (
+              <li key={caminho}>{caminho}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
+  );
 }
 
 function GrupoDeComparacao({
@@ -234,7 +367,7 @@ function ListaDeAvisos({ avisos }: { avisos: readonly Aviso[] }) {
         {avisos.map((aviso, indice) => (
           <li key={indice} className="text-xs text-body">
             <span className="font-mono text-2xs text-muted">
-              {aviso.arquivo}, linha {aviso.linha}
+              {aviso.linha > 0 ? `${aviso.arquivo}, linha ${aviso.linha}` : aviso.arquivo}
             </span>{" "}
             {aviso.mensagem}
           </li>

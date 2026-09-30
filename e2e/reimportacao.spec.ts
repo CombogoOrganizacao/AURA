@@ -1,11 +1,13 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import JSZip from "jszip";
 
 import { novoDocumento } from "../src/core/document/factory";
 import type { Documento, Secao } from "../src/core/document/types";
 import { gerarTex } from "../src/core/export/latex/document";
+import { gerarZipTex } from "../src/core/export/latex/zip";
 
-// Passo 6.2.4 — reimportar o `.tex`. O Vitest prova a leitura e o relatório
+// Passo 6.2.4 — reimportar o `.tex` e o `.zip`. O Vitest prova a leitura e o relatório
 // (`core/import/latex/`); aqui, o caminho do aluno: exportar, editar por
 // fora, reimportar, ver o relatório, confirmar e achar a edição no lugar
 // certo, com o texto de antes guardado no histórico.
@@ -73,13 +75,11 @@ async function abrirDocumento(page: Page, documento: Documento) {
 }
 
 async function reimportar(page: Page, conteudo: string) {
-  await page
-    .getByLabel("Arquivo .tex exportado pelo AURA")
-    .setInputFiles({
-      name: "trabalho.tex",
-      mimeType: "application/x-tex",
-      buffer: Buffer.from(conteudo),
-    });
+  await page.getByLabel("Arquivo .tex ou .zip exportado pelo AURA").setInputFiles({
+    name: "trabalho.tex",
+    mimeType: "application/x-tex",
+    buffer: Buffer.from(conteudo),
+  });
 }
 
 test("a edição feita fora volta na seção certa, e o texto de antes fica no histórico", async ({
@@ -160,4 +160,70 @@ test("arquivo de um trabalho que não está no navegador cria um trabalho novo e
   await page.waitForURL(`**/documento/${deOutraMaquina.id}`);
   await expect(page.getByRole("banner")).toContainText("Trabalho de outro computador");
   await expect(page.locator(".ProseMirror p").first()).toHaveText("Texto da introdução.");
+});
+
+async function documentoSalvo(page: Page, id: string): Promise<Documento> {
+  return page.evaluate(
+    (idDoc) =>
+      new Promise<Documento>((resolve, reject) => {
+        const pedido = indexedDB.open("aura");
+        pedido.onerror = () => reject(pedido.error);
+        pedido.onsuccess = () => {
+          const banco = pedido.result;
+          const leitura = banco.transaction("documentos").objectStore("documentos").get(idDoc);
+          leitura.onsuccess = () => {
+            banco.close();
+            resolve(leitura.result.documento);
+          };
+          leitura.onerror = () => reject(leitura.error);
+        };
+      }),
+    id,
+  );
+}
+
+test("o .zip traz a edição do capítulo e a referência escolhida do .bib", async ({ page }) => {
+  const documento = tresSecoes();
+  documento.references = [
+    {
+      id: "freire",
+      type: "book",
+      author: [{ family: "Freire", given: "Paulo" }],
+      title: "Pedagogia do oprimido",
+      publisher: "Paz e Terra",
+      "publisher-place": "Rio de Janeiro",
+      issued: { "date-parts": [[1987]] },
+    },
+  ];
+  await abrirDocumento(page, documento);
+
+  const zip = await JSZip.loadAsync(await gerarZipTex(documento));
+  const capitulo = Object.keys(zip.files).find((nome) => nome.startsWith("sections/02-"))!;
+  const texto = await zip.file(capitulo)!.async("string");
+  zip.file(capitulo, texto.replace("Aplicamos o questionário em campo.", "Aplicamos duas vezes."));
+  const bib = await zip.file("referencias.bib")!.async("string");
+  zip.file("referencias.bib", bib.replace("Pedagogia do oprimido", "Pedagogia da autonomia"));
+  await page.getByLabel("Arquivo .tex ou .zip exportado pelo AURA").setInputFiles({
+    name: "projeto.zip",
+    mimeType: "application/zip",
+    buffer: Buffer.from(await zip.generateAsync({ type: "uint8array" })),
+  });
+
+  const dialogo = page.getByRole("dialog", { name: "Reimportar do LaTeX" });
+  await expect(dialogo.getByRole("region", { name: "Seções" })).toContainText("Método — texto");
+  const referencias = dialogo.getByRole("region", { name: "Referências" });
+  await expect(referencias).toContainText("Diferentes no arquivo (1)");
+  await expect(referencias).toContainText("Pedagogia da autonomia");
+  const caixa = referencias.getByRole("checkbox", {
+    name: "Usar a versão do arquivo de Pedagogia do oprimido",
+  });
+  await caixa.press("Space");
+  await expect(caixa).toBeChecked();
+  await dialogo.getByRole("button", { name: "Reimportar" }).click();
+  await expect(dialogo).toBeHidden();
+
+  await expect(page.locator(".ProseMirror p").nth(1)).toHaveText("Aplicamos duas vezes.");
+  await expect
+    .poll(async () => (await documentoSalvo(page, documento.id)).references[0].title)
+    .toBe("Pedagogia da autonomia");
 });

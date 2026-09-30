@@ -139,6 +139,16 @@ export interface OpcoesLeitura {
 
 const PRIMEIRA_LINHA = /^% AURA-DOCUMENTO: (\S+) v(\d+)\s*$/;
 
+// O `id` do documento, só pela primeira linha: quem reimporta precisa saber o
+// destino (e as referências dele) antes da leitura completa.
+export function idDoDocumento(conteudo: string): string | null {
+  const primeira = conteudo
+    .replace(/^﻿/, "")
+    .split(/\r?\n/, 50)
+    .find((linha) => linha.trim() !== "");
+  return primeira ? (PRIMEIRA_LINHA.exec(primeira.trim())?.[1] ?? null) : null;
+}
+
 // Só UTF-8 (§1.5). `fatal` faz o decodificador recusar em vez de trocar o
 // byte inválido por "�" em silêncio.
 export function decodificarUtf8(

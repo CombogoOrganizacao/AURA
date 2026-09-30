@@ -8,7 +8,11 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Dialog } from "@/components/ui/Dialog";
-import { importarBibtex, type ResultadoImportacao } from "@/core/references/import/bibtexToCsl";
+import {
+  importarBibtex,
+  TAMANHO_MAXIMO_BIB,
+  type ResultadoImportacao,
+} from "@/core/references/import/bibtexToCsl";
 import { ROTULO_TIPO, type Referencia } from "@/core/references/types";
 
 import { nomeDaReferencia, PreviaReferencia } from "./PreviaReferencia";
@@ -17,11 +21,8 @@ interface ImportarBibProps {
   onImportar: (referencias: Referencia[]) => void;
 }
 
-// Teto do arquivo lido. Um `.bib` de TCC tem dezenas de KB; 2 MB cobre a
-// biblioteca inteira de um orientador exportada do Zotero. O limite existe
-// porque o arquivo vem de fora e é lido inteiro na memória da aba — sem ele,
-// um arquivo errado de centenas de MB trava o editor com o trabalho aberto.
-const TAMANHO_MAXIMO = 2 * 1024 * 1024;
+// Teto do arquivo lido: `TAMANHO_MAXIMO_BIB`, que explica o valor.
+const TAMANHO_MAXIMO = TAMANHO_MAXIMO_BIB;
 
 interface Previa {
   arquivo: string;

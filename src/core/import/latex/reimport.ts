@@ -11,6 +11,7 @@ import type {
   Secao,
 } from "../../document/types";
 import { chamadaDaCitacao } from "../../references/citacoes";
+import type { Referencia } from "../../references/types";
 import type { Aviso } from "./fonte";
 import type { BlocoLido, MetadadosLidos, PosTextualLido, TexLido } from "./lerTex";
 
@@ -71,12 +72,16 @@ export interface Reimportacao {
   relatorio: Relatorio;
 }
 
+// `referencias`: as do documento depois da reimportação, quando o `.zip` traz
+// o `.bib` (`reimportZip.ts`). Sem ela, ficam as do documento salvo.
 export function montarReimportacao(
   atual: Documento | null,
   lido: TexLido,
   gerarId: () => string = () => crypto.randomUUID(),
+  referencias?: readonly Referencia[],
 ): Reimportacao {
-  const base: Documento = atual ?? { ...novoDocumento(), id: lido.documentoId };
+  const salvo: Documento = atual ?? { ...novoDocumento(), id: lido.documentoId };
+  const base: Documento = referencias ? { ...salvo, references: [...referencias] } : salvo;
   const avisos: Aviso[] = [...lido.avisos];
 
   const metadados = lido.metadados
@@ -420,6 +425,10 @@ function normalizar(content: readonly NoConteudo[]): unknown[] {
 function chamadasEditadas(lido: TexLido, documento: Documento): Aviso[] {
   const avisos: Aviso[] = [];
   for (const chamada of lido.chamadas) {
+    // Citação sem a referência no documento é órfã: quem aponta é a
+    // conferência, e o relatório não repete o aviso a cada chamada.
+    if (!documento.references.some((referencia) => referencia.id === chamada.citacao.refId))
+      continue;
     const calculada = chamadaDaCitacao(chamada.citacao, documento.references).texto;
     if (mesmoTexto(calculada, chamada.texto)) continue;
     avisos.push({

@@ -58,6 +58,13 @@ export interface ResultadoImportacao {
   erros: ErroBibtex[];
 }
 
+// Teto do `.bib` lido. Um `.bib` de TCC tem dezenas de KB; 2 MB cobre a
+// biblioteca inteira de um orientador exportada do Zotero. O arquivo vem de
+// fora e é lido inteiro na memória da aba: sem o teto, um arquivo errado de
+// centenas de MB trava o editor com o trabalho aberto. Vale para a importação
+// (`ImportarBib.tsx`) e para o `.bib` do `.zip` reimportado.
+export const TAMANHO_MAXIMO_BIB = 2 * 1024 * 1024;
+
 // `gerarId` vem de fora pelo mesmo motivo de `novaReferencia(tipo, id)`:
 // `crypto.randomUUID()` é do chamador, e o teste passa um contador.
 export function importarBibtex(fonte: string, gerarId: () => string): ResultadoImportacao {

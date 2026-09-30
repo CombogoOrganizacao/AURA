@@ -15,6 +15,7 @@ export interface Posicao {
   linha: number;
 }
 
+// `linha` 0: o aviso é do arquivo inteiro (uma imagem do `.zip`, por exemplo).
 export interface Aviso extends Posicao {
   mensagem: string;
 }
