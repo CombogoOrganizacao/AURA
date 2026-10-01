@@ -16,6 +16,7 @@ import type { NivelSecao, NoConteudo } from "@/core/document/types";
 import type { Referencia } from "@/core/references/types";
 
 import { MenuCitacao } from "./MenuCitacao";
+import { criarSecaoNoEditor } from "./novaSecao";
 
 // Re-renderiza a toolbar a cada transação do editor — é como o estado
 // "ativo" dos botões (negrito ligado, nível 2 selecionado...) acompanha a
@@ -77,15 +78,15 @@ function Divisor() {
   return <span aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-[var(--border-subtle)]" />;
 }
 
-// "Seção nível N", não "Título de seção nível N": o rótulo acessível não
+// "Mudar para nível N", não "Título de seção nível N": o rótulo acessível não
 // pode conter "Título" — colide por substring com o campo de metadados
 // `FormMetadados` ("Título" do trabalho), que vive na mesma tela
 // (`getByLabel` do Playwright casa por substring, achou os dois — foi assim
 // que a suíte e2e pegou isso).
 const NIVEIS: ReadonlyArray<{ nivel: NivelSecao; nomeIcone: NomeIcone; label: string }> = [
-  { nivel: 1, nomeIcone: "heading-1", label: "Seção nível 1" },
-  { nivel: 2, nomeIcone: "heading-2", label: "Seção nível 2" },
-  { nivel: 3, nomeIcone: "heading-3", label: "Seção nível 3" },
+  { nivel: 1, nomeIcone: "heading-1", label: "Mudar a seção para o nível 1" },
+  { nivel: 2, nomeIcone: "heading-2", label: "Mudar a seção para o nível 2" },
+  { nivel: 3, nomeIcone: "heading-3", label: "Mudar a seção para o nível 3" },
 ];
 
 // Botões desabilitados do passo 2B.12 — controle, ícone, e a fase que liga
@@ -331,6 +332,24 @@ export function Toolbar({ editor, references, onBuscar }: ToolbarProps) {
       ))}
 
       <Divisor />
+
+      {/*
+        Criar seção (passo 6.2.7). Os botões de nível, ao lado, só mudam o
+        nível da seção do cursor — antes disto eram o único controle de
+        seção, e pareciam criar uma.
+      */}
+      <BotaoToolbar
+        label="Nova seção — no mesmo nível da seção atual"
+        onClick={() => criarSecaoNoEditor(editor, false)}
+      >
+        <Icon name="list-plus" size={16} />
+      </BotaoToolbar>
+      <BotaoToolbar
+        label="Nova subseção — um nível abaixo da seção atual"
+        onClick={() => criarSecaoNoEditor(editor, true)}
+      >
+        <Icon name="list-indent-increase" size={16} />
+      </BotaoToolbar>
 
       {NIVEIS.map((item) => (
         <BotaoToolbar

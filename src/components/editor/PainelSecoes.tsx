@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 
 import { PanelHeading } from "@/components/app/PanelHeading";
+import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
 import { numerarSecoes } from "@/core/document/numbering";
 import type { Secao } from "@/core/document/types";
@@ -52,17 +53,15 @@ interface PainelSecoesProps {
   sections: Secao[];
   /** Move `idOrigem` pra antes/depois de `idDestino` — passo 3.2.4. */
   onReorder: (idOrigem: string, idDestino: string, inserirDepois: boolean) => void;
+  /** Cria uma seção depois da seção do cursor, no mesmo nível — passo 6.2.7. */
+  onNovaSecao: () => void;
 }
 
 // Coluna esquerda do editor (passo 2B.10) — lista as seções que existem de
-// verdade. Numeração progressiva (3.2.1/3.2.2), navegação por âncora (3.2.3)
-// e reordenar arrastando (3.2.4, só desktop) já têm código por trás agora.
-//
-// Hoje isso normalmente mostra **uma linha**: a UI ainda não tem "nova
-// seção" (só a seção-semente de `novaSecao()` existe). Refletir com
-// honestidade o que existe é melhor que fabricar uma árvore que a v1 não
-// tem ainda.
-export function PainelSecoes({ sections, onReorder }: PainelSecoesProps) {
+// verdade. Numeração progressiva (3.2.1/3.2.2), navegação por âncora (3.2.3),
+// reordenar arrastando (3.2.4, só desktop) e "Nova seção" no cabeçalho
+// (6.2.7; a subseção fica na barra do editor, junto do cursor).
+export function PainelSecoes({ sections, onReorder, onNovaSecao }: PainelSecoesProps) {
   const numeracao = useMemo(() => numerarSecoes(sections), [sections]);
 
   // "Latest ref" — mesmo padrão de `LayoutEdicao.tsx`/`AlcaRedimensionar`:
@@ -120,7 +119,19 @@ export function PainelSecoes({ sections, onReorder }: PainelSecoesProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0 px-4 pt-4">
-        <PanelHeading>Seções</PanelHeading>
+        <PanelHeading
+          action={
+            <IconButton
+              name="plus"
+              label="Nova seção"
+              size="sm"
+              variant="outline"
+              onClick={onNovaSecao}
+            />
+          }
+        >
+          Seções
+        </PanelHeading>
       </div>
       <nav aria-label="Seções do documento" className="flex-1 overflow-auto px-2 pb-4">
         {sections.length === 0 ? (

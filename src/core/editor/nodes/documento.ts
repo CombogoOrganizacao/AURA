@@ -38,15 +38,18 @@ export const Documento = TiptapDocument.extend({
   addProseMirrorPlugins() {
     return [
       new Plugin({
+        // Todas as seções, não só as de topo: uma subseção aninhada sem id
+        // chegaria ao formato canônico do mesmo jeito (`toDocumento()`
+        // achata em pré-ordem). Só percorre quando o documento mudou.
         filterTransaction(transacao) {
-          const documentoResultante = transacao.doc;
-          for (let i = 0; i < documentoResultante.childCount; i++) {
-            const filho = documentoResultante.child(i);
-            if (filho.type.name === "secao" && !filho.attrs.id) {
-              return false;
-            }
-          }
-          return true;
+          if (!transacao.docChanged) return true;
+          let semId = false;
+          transacao.doc.descendants((no) => {
+            if (semId) return false;
+            if (no.type.name === "secao" && !no.attrs.id) semId = true;
+            return no.type.name === "secao";
+          });
+          return !semId;
         },
       }),
     ];

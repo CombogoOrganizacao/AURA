@@ -5,7 +5,7 @@ import { novoDocumento } from "../src/core/document/factory";
 import type { Documento, Secao } from "../src/core/document/types";
 
 // Apoio dos specs que precisam de um documento pronto (reimportação, 6.2.4;
-// Overleaf, 6.3.1). A interface ainda não cria seções, então o documento é
+// Overleaf, 6.3.1). Semear é mais rápido que criar cada seção pela tela, então o documento é
 // gravado direto no IndexedDB do app, no formato do adaptador
 // (`core/persistence/indexeddb.ts`), como em `busca.spec.ts`.
 

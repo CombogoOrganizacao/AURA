@@ -1,6 +1,7 @@
 "use client";
 
 import type { Editor } from "@tiptap/core";
+import { TextSelection } from "@tiptap/pm/state";
 import { NodeViewContent, NodeViewWrapper } from "@tiptap/react";
 import type { ReactNodeViewProps } from "@tiptap/react";
 import { useCallback, useSyncExternalStore } from "react";
@@ -74,7 +75,7 @@ const ESTILO_TITULO_POR_NIVEL: Record<NivelSecao, string> = {
   3: "italic",
 };
 
-export function SectionView({ node, editor, updateAttributes }: ReactNodeViewProps) {
+export function SectionView({ node, editor, getPos, updateAttributes }: ReactNodeViewProps) {
   const id = node.attrs.id as string | null;
   const nivel = node.attrs.nivel as NivelSecao;
   const titulo = node.attrs.titulo as string;
@@ -99,6 +100,17 @@ export function SectionView({ node, editor, updateAttributes }: ReactNodeViewPro
           type="text"
           value={titulo}
           onChange={(evento) => updateAttributes({ titulo: evento.target.value })}
+          // Enter no título vai para o texto da seção (passo 6.2.7): é o
+          // gesto de quem acabou de criar uma seção e dar nome a ela.
+          onKeyDown={(evento) => {
+            if (evento.key !== "Enter" || evento.nativeEvent.isComposing) return;
+            const pos = getPos();
+            if (typeof pos !== "number") return;
+            evento.preventDefault();
+            const { state, view } = editor;
+            view.dispatch(state.tr.setSelection(TextSelection.near(state.doc.resolve(pos + 1))));
+            view.focus();
+          }}
           placeholder="Título da seção"
           aria-label={rotulo}
           className={[

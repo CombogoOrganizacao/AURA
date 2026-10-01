@@ -7,7 +7,12 @@ import { BotaoExportar } from "@/components/editor/BotaoExportar";
 import { BotaoOverleaf } from "@/components/editor/BotaoOverleaf";
 import { BotaoReimportar } from "@/components/editor/BotaoReimportar";
 import { ProvedorImagens } from "@/components/editor/ImagensDoDocumento";
-import { Editor, type IrParaLocal, type MoverSecao } from "@/components/editor/Editor";
+import {
+  Editor,
+  type CriarSecao,
+  type IrParaLocal,
+  type MoverSecao,
+} from "@/components/editor/Editor";
 import { LayoutEdicao, mostrarColunaEsquerda } from "@/components/editor/LayoutEdicao";
 import { PainelInspetor } from "@/components/editor/PainelInspetor";
 import { PainelSecoes } from "@/components/editor/PainelSecoes";
@@ -220,6 +225,15 @@ function Carregado({
     moverSecaoRef.current?.(idOrigem, idDestino, inserirDepois);
   }, []);
 
+  // "Nova seção" no painel (passo 6.2.7) — mesmo padrão do reordenar.
+  const criarSecaoRef = useRef<CriarSecao | null>(null);
+  const registrarCriarSecao = useCallback((criar: CriarSecao) => {
+    criarSecaoRef.current = criar;
+  }, []);
+  const criarSecao: CriarSecao = useCallback((subsecao) => {
+    criarSecaoRef.current?.(subsecao);
+  }, []);
+
   // Conferência (passo 5.2.3), recalculada na pausa da digitação (5.2.4).
   // A chave "Verificar enquanto escrevo" vale só nesta sessão do editor.
   const [verificarEnquantoEscrevo, setVerificarEnquantoEscrevo] = useState(true);
@@ -395,7 +409,11 @@ function Carregado({
                   />
                 </div>
               </details>
-              <PainelSecoes sections={documento.sections} onReorder={reordenarSecoes} />
+              <PainelSecoes
+                sections={documento.sections}
+                onReorder={reordenarSecoes}
+                onNovaSecao={() => criarSecao(false)}
+              />
             </div>
           }
           inspetor={
@@ -420,6 +438,7 @@ function Carregado({
             onSectionsChange={atualizarSecoes}
             onReorderReady={registrarComandoDeReordenar}
             onIrParaReady={registrarIrPara}
+            onCriarSecaoReady={registrarCriarSecao}
           />
         </LayoutEdicao>
       </ProvedorImagens>

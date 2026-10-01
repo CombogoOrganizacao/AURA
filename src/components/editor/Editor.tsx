@@ -41,6 +41,7 @@ import { FormulaView } from "./nodes/FormulaView";
 import { NotaRodapeView } from "./nodes/NotaRodapeView";
 import { SectionView } from "./nodes/SectionView";
 import { TabelaView } from "./nodes/TabelaView";
+import { criarSecaoNoEditor } from "./novaSecao";
 import { Toolbar } from "./Toolbar";
 
 // `section.ts` (src/core/editor/) fica livre de React — o node view que
@@ -120,6 +121,10 @@ export type MoverSecao = (idOrigem: string, idDestino: string, inserirDepois: bo
 // que fazer, em vez de o clique não ter efeito nenhum.
 export type IrParaLocal = (local: LocalAchado) => boolean;
 
+// Criar seção a partir do painel de seções (passo 6.2.7) — mesmo padrão de
+// `MoverSecao`: o painel recebe só esta capacidade.
+export type CriarSecao = (subsecao: boolean) => void;
+
 interface EditorProps {
   sections: Secao[];
   /**
@@ -138,6 +143,8 @@ interface EditorProps {
   onReorderReady?: (mover: MoverSecao) => void;
   /** Mesmo padrão de `onReorderReady`, para o painel de Conferência (5.2.3). */
   onIrParaReady?: (irPara: IrParaLocal) => void;
+  /** Mesmo padrão de `onReorderReady`, para "Nova seção" no painel (6.2.7). */
+  onCriarSecaoReady?: (criar: CriarSecao) => void;
 }
 
 // Editor com seções (passo 1.3.7), formatação (passo 2.5: negrito, itálico,
@@ -163,6 +170,7 @@ export function Editor({
   onSectionsChange,
   onReorderReady,
   onIrParaReady,
+  onCriarSecaoReady,
 }: EditorProps) {
   // `useState` com inicializador preguiçoso — roda uma vez só, no mount, e
   // ler o valor durante o render é normal (diferente de `ref.current`, que
@@ -276,6 +284,14 @@ export function Editor({
       onReorderReady(() => {});
     };
   }, [editor, onReorderReady]);
+
+  useEffect(() => {
+    if (!editor || !onCriarSecaoReady) return;
+    onCriarSecaoReady((subsecao) => criarSecaoNoEditor(editor, subsecao));
+    return () => {
+      onCriarSecaoReady(() => {});
+    };
+  }, [editor, onCriarSecaoReady]);
 
   // Clicar num achado da conferência (5.2.3). `alvoNoEditor()` traduz o
   // local para uma posição, e `selecaoDoAlvo()` escolhe a seleção
