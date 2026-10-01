@@ -4,6 +4,8 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import JSZip from "jszip";
 
+import { clicarExportar } from "./apoio";
+
 // Passo 3.6.4 — o critério é comportamental: "acompanham inserção e remoção;
 // as abreviaturas saem em ordem alfabética". O Vitest prova os geradores
 // isoladamente; o que só se prova aqui é que cadastrar no painel e escrever
@@ -16,7 +18,7 @@ async function xmlDoDocxExportado(page: Page) {
   await expect(page.locator('span[role="status"]')).toHaveText("Salvo", { timeout: 15_000 });
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("banner").getByRole("button", { name: "Exportar .docx" }).click();
+  await clicarExportar(page);
   const download = await downloadPromise;
   const zip = await JSZip.loadAsync(readFileSync((await download.path())!));
   return zip.file("word/document.xml")!.async("string");

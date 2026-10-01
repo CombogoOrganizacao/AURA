@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import JSZip from "jszip";
 
+import { clicarExportar } from "./apoio";
+
 // Passo 6.1.3c — nota de rodapé pelo caminho do aluno: inserir pela barra,
 // escrever a nota, continuar o texto, exportar. A numeração é derivada da
 // ordem: inserir uma nota antes de outra renumera a de depois. Onde a nota
@@ -34,7 +36,10 @@ test("nota inserida pela barra sai numerada no rodapé do .docx", async ({ page 
   );
 
   // Uma nota antes da primeira renumera: a de antes vira 1, a outra, 2.
-  await page.locator(".ProseMirror p").first().click({ position: { x: 5, y: 5 } });
+  await page
+    .locator(".ProseMirror p")
+    .first()
+    .click({ position: { x: 5, y: 5 } });
   await page.keyboard.press("Home");
   await page.keyboard.press("End");
   await page.keyboard.press("Home");
@@ -46,7 +51,7 @@ test("nota inserida pela barra sai numerada no rodapé do .docx", async ({ page 
   await expect(expoentes.nth(1)).toHaveAttribute("title", "Lei nº 8.069, de 13 de julho de 1990.");
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("banner").getByRole("button", { name: "Exportar .docx" }).click();
+  await clicarExportar(page);
   const download = await downloadPromise;
 
   const zip = await JSZip.loadAsync(readFileSync((await download.path())!));

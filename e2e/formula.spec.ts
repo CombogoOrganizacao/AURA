@@ -4,6 +4,8 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import JSZip from "jszip";
 
+import { clicarExportar } from "./apoio";
+
 // Passo 3.6.5 — o critério de aceite é literal e comportamental: "renderiza
 // na tela e sobrevive ao round-trip; restrito ao desktop". Nenhum dos três
 // cabe no Vitest: o KaTeX só desenha com DOM de verdade, o round-trip que
@@ -124,7 +126,7 @@ test("a fórmula sai no .docx como equação do Word, não como LaTeX", async ({
   await expect(page.getByRole("note")).toHaveCount(0);
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("banner").getByRole("button", { name: "Exportar .docx" }).click();
+  await clicarExportar(page);
   const download = await downloadPromise;
   const zip = await JSZip.loadAsync(readFileSync((await download.path())!));
   const xml = await zip.file("word/document.xml")!.async("string");

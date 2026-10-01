@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import JSZip from "jszip";
 
+import { clicarExportar } from "./apoio";
+
 // Passo 6.1.3 — a grade da tabela no `.docx`, pelo caminho que o aluno faz:
 // inserir a tabela pela barra, digitar nas células e exportar. O Vitest
 // (`src/core/export/docx/table.test.ts`) confere traço a traço contra o IBGE;
@@ -31,7 +33,7 @@ test("tabela digitada na tela sai como grade no .docx", async ({ page }) => {
   }
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("banner").getByRole("button", { name: "Exportar .docx" }).click();
+  await clicarExportar(page);
   const download = await downloadPromise;
 
   const zip = await JSZip.loadAsync(readFileSync((await download.path())!));
@@ -73,7 +75,7 @@ test("tabela criada 2×2 vira 3×3 pela barra de grade e sai assim no .docx", as
   await expect(celulas.nth(8)).toHaveText("novo");
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("banner").getByRole("button", { name: "Exportar .docx" }).click();
+  await clicarExportar(page);
   const download = await downloadPromise;
 
   const zip = await JSZip.loadAsync(readFileSync((await download.path())!));

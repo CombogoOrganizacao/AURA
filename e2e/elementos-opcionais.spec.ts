@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import JSZip from "jszip";
 
+import { clicarExportar } from "./apoio";
+
 // Passo 3.5.3 — o critério de aceite é literal: "Playwright liga a epígrafe,
 // exporta, e ela está lá na posição correta". Por isso este spec fica no
 // repositório, ao contrário dos scripts descartáveis de 3.4.2/3.5.2: a
@@ -16,7 +18,7 @@ const RESUMO = "Este trabalho investiga a formatação automática.";
 
 async function xmlDoDocxExportado(page: import("@playwright/test").Page) {
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("banner").getByRole("button", { name: "Exportar .docx" }).click();
+  await clicarExportar(page);
   const download = await downloadPromise;
   const caminho = await download.path();
   const zip = await JSZip.loadAsync(readFileSync(caminho!));
@@ -71,7 +73,10 @@ test("liga a epígrafe, exporta, e ela sai na posição correta", async ({ page 
   // Do meio da mancha à margem direita, no pé da página (NBR 14724:2024
   // §5.2.4): desde o passo 4B.4 é um quadro da largura da metade direita da
   // mancha (`larguraUtil` / 2 = 4535 twips), alinhado embaixo.
-  const paragrafo = xml.slice(xml.lastIndexOf("<w:p>", xml.indexOf(EPIGRAFE)), xml.indexOf(EPIGRAFE));
+  const paragrafo = xml.slice(
+    xml.lastIndexOf("<w:p>", xml.indexOf(EPIGRAFE)),
+    xml.indexOf(EPIGRAFE),
+  );
   expect(paragrafo).toContain('w:w="4535"');
   expect(paragrafo).toContain('w:yAlign="bottom"');
 });

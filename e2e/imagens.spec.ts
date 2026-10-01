@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import JSZip from "jszip";
 
+import { clicarExportar } from "./apoio";
+
 // Passo 6.1.2 — imagem de verdade na figura, na tela e no `.docx`. O Vitest
 // prova a leitura dos bytes, a persistência e o pacote (`word/media/` e os
 // relacionamentos); aqui, o caminho do aluno. **Ver as duas figuras no Word
@@ -66,7 +68,7 @@ test("duas figuras com imagem: aparecem na tela, voltam ao recarregar e saem no 
   await expect(imagens).toHaveCount(2);
 
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Exportar .docx" }).first().click();
+  await clicarExportar(page, page.getByRole("button", { name: "Exportar .docx" }).first());
   const caminho = await (await download).path();
   const zip = await JSZip.loadAsync(readFileSync(caminho!));
 

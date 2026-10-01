@@ -12,7 +12,7 @@ import type { Verificacao } from "../compliance";
 // folha de rosto), o subtítulo ("se houver") e o volume (a v1 não tem
 // trabalho em mais de um volume). O curso não é elemento de nenhuma das duas.
 
-type CampoExigido = "autores" | "titulo" | "naturezaTrabalho" | "orientador" | "local" | "ano";
+export type CampoExigido = "autores" | "titulo" | "naturezaTrabalho" | "orientador" | "local" | "ano";
 
 const EXIGIDOS: {
   campo: CampoExigido;
@@ -57,6 +57,16 @@ const EXIGIDOS: {
     vazio: (m) => !Number.isInteger(m.ano) || m.ano <= 0,
   },
 ];
+
+// O que falta, na ordem da capa e da folha de rosto. Também é o que o botão de
+// exportar mostra antes de gerar o `.docx` (passo 6.2.12): a mesma lista da
+// conferência, para os dois não discordarem.
+export function dadosFaltando(metadados: Metadados): { campo: CampoExigido; nome: string }[] {
+  return EXIGIDOS.filter((exigido) => exigido.vazio(metadados)).map(({ campo, nome }) => ({
+    campo,
+    nome,
+  }));
+}
 
 export const dadosDeIdentificacao: Verificacao = {
   regra: "dados-de-identificacao",

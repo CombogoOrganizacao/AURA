@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import { novoDocumento } from "../src/core/document/factory";
 import type { Documento, Secao } from "../src/core/document/types";
@@ -85,4 +85,22 @@ export async function documentoSalvo(page: Page, id: string): Promise<Documento>
       }),
     id,
   );
+}
+
+// Clica em "Exportar .docx" (6.2.12). Com dado da capa faltando, o botão
+// pergunta antes; aqui a resposta é "Exportar assim mesmo", porque o que estes
+// specs conferem é o arquivo, não a capa. Quem chama espera o download como
+// antes (`page.waitForEvent("download")` antes do clique).
+export async function clicarExportar(page: Page, botao?: Locator) {
+  await (botao ?? page.getByRole("banner").getByRole("button", { name: "Exportar .docx" })).click();
+  const confirmar = page.getByRole("button", { name: "Exportar assim mesmo" });
+  const baixou = page
+    .waitForEvent("download", { timeout: 15_000 })
+    .then(() => false)
+    .catch(() => false);
+  const perguntou = confirmar
+    .waitFor({ timeout: 15_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (await Promise.race([baixou, perguntou])) await confirmar.click();
 }

@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import JSZip from "jszip";
 
+import { clicarExportar } from "./apoio";
+
 // Caminho completo da fatia vertical (passo 1.4.5) — a mesma pergunta que
 // motivou o passo 1.3.7: o que a pessoa digita realmente sobrevive a um
 // recarregamento de página e sai no .docx exportado? Cobre título
@@ -59,7 +61,7 @@ test("criar, digitar, recarregar, persistir e exportar", async ({ page }) => {
   await expect(editor).toContainText(corpo);
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("banner").getByRole("button", { name: "Exportar .docx" }).click();
+  await clicarExportar(page);
   const download = await downloadPromise;
 
   const caminho = await download.path();
@@ -92,7 +94,7 @@ test("exportar logo depois de digitar leva o que está na tela, e grava", async 
   const statusAutosave = page.locator('span[role="status"]');
   await expect(statusAutosave).toHaveText("Alterações não salvas…");
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("banner").getByRole("button", { name: "Exportar .docx" }).click();
+  await clicarExportar(page);
   const download = await downloadPromise;
 
   const zip = await JSZip.loadAsync(readFileSync((await download.path())!));

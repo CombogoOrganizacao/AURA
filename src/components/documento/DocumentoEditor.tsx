@@ -198,7 +198,13 @@ function Carregado({
   );
   // Os dois botões de exportar (barra superior e rodapé do inspetor) exportam
   // o documento da tela e gravam na hora — ver `BotaoExportar.tsx`.
-  const botaoExportar = <BotaoExportar documento={documento} salvarAgora={salvarAgora} />;
+  const botaoExportar = (
+    <BotaoExportar
+      documento={documento}
+      salvarAgora={salvarAgora}
+      onPreencherDados={(campo) => abrirPainel(PAINEL_DO_CAMPO[campo] ?? "dados", campo)}
+    />
+  );
 
   function atualizarMetadados(atualizador: (atual: Metadados) => Metadados) {
     setDocumento((atual) => ({ ...atual, metadados: atualizador(atual.metadados) }));

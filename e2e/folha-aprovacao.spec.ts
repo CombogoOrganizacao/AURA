@@ -4,6 +4,8 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import JSZip from "jszip";
 
+import { clicarExportar } from "./apoio";
+
 // Passo 4B.3 — a banca cadastrada no painel chega à folha de aprovação do
 // `.docx` e sobrevive a um recarregamento. O conteúdo e a ordem da folha são
 // provados no Vitest (`elements/folhaDeAprovacao.test.ts`); aqui, o caminho
@@ -15,7 +17,7 @@ async function xmlDoDocxExportado(page: Page) {
   await expect(page.locator('span[role="status"]')).toHaveText("Salvo", { timeout: 15_000 });
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("banner").getByRole("button", { name: "Exportar .docx" }).click();
+  await clicarExportar(page);
   const download = await downloadPromise;
   const zip = await JSZip.loadAsync(readFileSync((await download.path())!));
   return zip.file("word/document.xml")!.async("string");

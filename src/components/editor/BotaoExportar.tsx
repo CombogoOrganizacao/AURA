@@ -3,9 +3,13 @@
 import { Packer } from "docx";
 import { useState } from "react";
 
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Dialog } from "@/components/ui/Dialog";
 import { fromDocumento } from "@/core/export/docx/fromDocumento";
 import { carregarImagensDoDocumento } from "@/core/export/docx/media";
 import type { Documento } from "@/core/document/types";
+import { dadosFaltando, type CampoExigido } from "@/core/rules/checks/dadosDeIdentificacao";
 import { usePersistencia } from "@/lib/persistence-provider";
 
 interface BotaoExportarProps {
@@ -13,6 +17,8 @@ interface BotaoExportarProps {
   documento: Documento;
   // Grava já, sem esperar o autosave.
   salvarAgora: () => Promise<void>;
+  // Leva ao campo que falta, nos dados do trabalho (6.2.12).
+  onPreencherDados?: (campo: CampoExigido) => void;
 }
 
 type Status = "pronto" | "exportando" | "erro";
@@ -34,11 +40,26 @@ type Status = "pronto" | "exportando" | "erro";
 // gravação o prenderia assim, justo quando exportar é o jeito de não
 // perder o trabalho. Se a gravação falhar, a exportação segue com o que está
 // na tela, e o status do autosave mostra o erro.
-export function BotaoExportar({ documento, salvarAgora }: BotaoExportarProps) {
+//
+// **Dado de capa faltando avisa antes, sem impedir** (passo 6.2.12). Um TCC
+// importado de fora do AURA chega sem título, autor nem orientador, e o
+// `.docx` sairia com a capa só com o ano e "Orientador:" sem nome. O diálogo
+// lista o que falta (a mesma regra da conferência, `dadosFaltando()`) e
+// oferece ir aos dados ou exportar assim mesmo: exportar um rascunho é
+// legítimo, e bloquear tiraria do aluno o jeito de salvar o trabalho fora.
+export function BotaoExportar({ documento, salvarAgora, onPreencherDados }: BotaoExportarProps) {
   const persistencia = usePersistencia();
   const [status, setStatus] = useState<Status>("pronto");
+  const [faltando, setFaltando] = useState<ReturnType<typeof dadosFaltando> | null>(null);
+
+  function pedirExportacao() {
+    const lista = dadosFaltando(documento.metadados);
+    if (lista.length > 0) setFaltando(lista);
+    else void exportar();
+  }
 
   async function exportar() {
+    setFaltando(null);
     if (!persistencia) return;
     setStatus("exportando");
     try {
@@ -58,18 +79,61 @@ export function BotaoExportar({ documento, salvarAgora }: BotaoExportarProps) {
   }
 
   return (
-    <button
-      type="button"
-      onClick={exportar}
-      disabled={!persistencia || status === "exportando"}
-      className="rounded-sm bg-bordo-700 px-4 py-2 text-sm font-medium text-on-bordo hover:bg-bordo-800 disabled:opacity-50"
-    >
-      {status === "exportando"
-        ? "Exportando…"
-        : status === "erro"
-          ? "Erro ao exportar — tentar de novo"
-          : "Exportar .docx"}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={pedirExportacao}
+        disabled={!persistencia || status === "exportando"}
+        className="rounded-sm bg-bordo-700 px-4 py-2 text-sm font-medium text-on-bordo hover:bg-bordo-800 disabled:opacity-50"
+      >
+        {status === "exportando"
+          ? "Exportando…"
+          : status === "erro"
+            ? "Erro ao exportar — tentar de novo"
+            : "Exportar .docx"}
+      </button>
+
+      {faltando && (
+        <Dialog
+          open
+          width={480}
+          title="Faltam dados da capa"
+          subtitle="A capa e a folha de rosto vão sair incompletas"
+          onClose={() => setFaltando(null)}
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => void exportar()}>
+                Exportar assim mesmo
+              </Button>
+              {onPreencherDados && (
+                <Button
+                  onClick={() => {
+                    const primeiro = faltando[0].campo;
+                    setFaltando(null);
+                    onPreencherDados(primeiro);
+                  }}
+                >
+                  Preencher dados
+                </Button>
+              )}
+            </>
+          }
+        >
+          <div className="flex flex-col gap-3 text-sm text-body">
+            <Alert tone="warning" title="Elementos obrigatórios (NBR 14724) ainda vazios">
+              <ul className="list-disc pl-5">
+                {faltando.map((item) => (
+                  <li key={item.campo}>{item.nome}</li>
+                ))}
+              </ul>
+            </Alert>
+            <p className="text-xs text-muted">
+              Dá para exportar agora e completar depois: o arquivo sai com esses lugares vazios.
+            </p>
+          </div>
+        </Dialog>
+      )}
+    </>
   );
 }
 
