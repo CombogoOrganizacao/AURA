@@ -1,5 +1,5 @@
 import type { NoInline } from "../../document/types";
-import { lerItens, type ItensLidos, type QualPosTextual } from "./blocos";
+import { lerItens, type Item, type ItensLidos, type QualPosTextual } from "./blocos";
 import {
   dividirEmComandos,
   fimDoAmbiente,
@@ -244,6 +244,9 @@ const ROTULO_POS_TEXTUAL = /^(ap[êe]ndice|anexo)(?:\s+[a-z]{1,3})?\s*(?:(?:—|
 // `\backmatter` ou `\appendix`, cada título do nível mais alto é um apêndice
 // ou anexo, conforme o contexto.
 export function montarExterno({ fonte, itens }: ItensLidos, avisos: Aviso[]) {
+  // A seção que cada título do texto virou: é por ela que um `\label` logo
+  // depois do título acha o número (`alvosDosRotulos()`, rotulos.ts).
+  const secaoDoTitulo = new Map<Item, SecaoLida>();
   const temCapitulo = itens.some((item) => item.tipo === "titulo" && item.comando === "chapter");
   const niveis: Record<string, 1 | 2 | 3> = temCapitulo
     ? { chapter: 1, section: 2, subsection: 3, subsubsection: 3 }
@@ -336,6 +339,7 @@ export function montarExterno({ fonte, itens }: ItensLidos, avisos: Aviso[]) {
           content: [],
           ...fonte.posicao(item.pos),
         });
+        secaoDoTitulo.set(item, secoes.at(-1)!);
         break;
       case "bloco":
         if (!noTexto) {
@@ -371,5 +375,5 @@ export function montarExterno({ fonte, itens }: ItensLidos, avisos: Aviso[]) {
         break;
     }
   }
-  return { secoes, apendices, anexos };
+  return { secoes, apendices, anexos, secaoDoTitulo };
 }

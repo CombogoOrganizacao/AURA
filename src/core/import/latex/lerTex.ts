@@ -15,6 +15,7 @@ import {
   type LinhaFonte,
 } from "./fonte";
 import { textoPlano, type ChamadaLida, type ContextoInline } from "./inline";
+import { alvosDosRotulos, resolverReferencias, type ReferenciaCruzadaLida } from "./rotulos";
 
 export type { BlocoLido, FiguraLida, NaoExportado, TabelaLida } from "./blocos";
 
@@ -192,11 +193,13 @@ function ler(conteudo: string, opcoes: OpcoesLeitura): ResultadoLeitura {
   const avisos: Aviso[] = [];
   const chamadas: ChamadaLida[] = [];
   const chaves = opcoes.chavesDeReferencia ?? new Set<string>();
+  const referencias: ReferenciaCruzadaLida[] = [];
   const contexto = (fonte: Fonte): ContextoInline => ({
     fonte,
     avisos,
     chamadas,
     chaves,
+    referencias,
     profundidade: 0,
   });
 
@@ -222,24 +225,21 @@ function ler(conteudo: string, opcoes: OpcoesLeitura): ResultadoLeitura {
       Fonte.deLinhas(expandido.slice(0, comeco)),
       contexto,
     );
-    const { secoes, apendices, anexos } = montarExterno(
-      lerItens(contexto(Fonte.deLinhas(expandido.slice(comeco))), "externo"),
+    const lidos = lerItens(contexto(Fonte.deLinhas(expandido.slice(comeco))), "externo");
+    const { secoes, apendices, anexos, secaoDoTitulo } = montarExterno(lidos, avisos);
+    const tex: TexLido = {
+      origem: "externo",
+      documentoId: null,
+      versaoFormato: null,
+      metadados,
+      secoes,
+      apendices,
+      anexos,
+      chamadas,
       avisos,
-    );
-    return {
-      ok: true,
-      tex: {
-        origem: "externo",
-        documentoId: null,
-        versaoFormato: null,
-        metadados,
-        secoes,
-        apendices,
-        anexos,
-        chamadas,
-        avisos,
-      },
     };
+    resolverReferencias(tex, referencias, alvosDosRotulos(lidos, secoes, secaoDoTitulo), avisos);
+    return { ok: true, tex };
   }
 
   const metadados = lerMetadados(preambulo, contexto, avisos);
@@ -255,20 +255,21 @@ function ler(conteudo: string, opcoes: OpcoesLeitura): ResultadoLeitura {
     avisos,
   );
 
-  return {
-    ok: true,
-    tex: {
-      origem: "aura",
-      documentoId: identidade[1],
-      versaoFormato,
-      metadados,
-      secoes,
-      apendices,
-      anexos,
-      chamadas,
-      avisos,
-    },
+  const tex: TexLido = {
+    origem: "aura",
+    documentoId: identidade[1],
+    versaoFormato,
+    metadados,
+    secoes,
+    apendices,
+    anexos,
+    chamadas,
+    avisos,
   };
+  // O `.tex` do AURA não escreve `\ref`; um que o aluno tenha posto fica como
+  // texto, com o aviso.
+  resolverReferencias(tex, referencias, new Map(), avisos);
+  return { ok: true, tex };
 }
 
 function posicaoDe(linha: LinhaFonte) {

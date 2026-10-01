@@ -167,12 +167,12 @@ describe("TCC no modelo do abnTeX2", () => {
         expect.stringMatching(/não foram trazidos: siglas\. Cadastre as siglas/),
         "Lista (itemize) virou um parágrafo por item: o AURA ainda não tem lista.",
         expect.stringMatching(/^Matemática no meio do texto/),
-        expect.stringMatching(/^Referência cruzada \(\\ref\)/),
+        expect.stringMatching(/^Uma referência cruzada \(\\ref\) virou o número fixo/),
         "\\textsc não tem equivalente no AURA: ficou o texto, sem essa formatação.",
         expect.stringMatching(/^\\cite\{freire\} virou citação direta, página 35/),
       ]),
     );
-    const ref = lido.avisos.find((aviso) => aviso.mensagem.startsWith("Referência cruzada"))!;
+    const ref = lido.avisos.find((aviso) => aviso.mensagem.startsWith("Uma referência cruzada"))!;
     expect(ref.linha).toBe(
       TCC.split("\n").findIndex((linha) => linha.includes("Tabela~\\ref")) + 1,
     );
@@ -414,5 +414,46 @@ describe("fonte solta em figura e tabela (6.2.8)", () => {
     expect(lido.avisos.map((aviso) => aviso.mensagem)).toContain(
       "Conteúdo não reconhecido dentro da figura: entrou como parágrafo logo depois dela.",
     );
+  });
+});
+
+describe("referência cruzada vira o número (6.2.9)", () => {
+  const tex = [
+    "\\documentclass{abntex2}",
+    "\\begin{document}",
+    "\\chapter{Introdução}",
+    "\\label{cap:intro}",
+    "Ver a Figura~\\ref{fig:b}, a Tabela \\ref{tab:a} e a \\autoref{fig:a}.",
+    "\\section{Detalhe}\\label{sec:detalhe}",
+    "\\begin{figure}\\caption{A}\\label{fig:a}\\end{figure}",
+    "\\begin{table}\\caption{T}\\label{tab:a}\\begin{tabular}{l}x\\\\\\end{tabular}\\end{table}",
+    "\\begin{figure}\\label{fig:b}\\caption{B}\\end{figure}",
+    "\\begin{equation}E=mc^2\\label{eq:e}\\end{equation}",
+    "\\chapter{Método}",
+    "Como na Seção~\\ref{sec:detalhe} e no Capítulo \\ref{cap:intro}; \\ref{eq:e} e \\ref{nada}.",
+    "\\begin{longtable}{l}\\caption{Longa}\\label{tab:longa}\\\\ y \\\\\\end{longtable}",
+    "Ver \\cref{tab:longa}.",
+    "\\end{document}",
+  ].join("\n");
+  const lido = ler(tex);
+  const texto = (secao: number, bloco = 0) =>
+    (lido.secoes[secao].content[bloco] as { content: { text: string }[] }).content
+      .map((no) => no.text)
+      .join("");
+
+  it("figura, tabela e seção viram o número que o AURA dá", () => {
+    expect(texto(0)).toBe("Ver a Figura 2, a Tabela 1 e a Figura 1.");
+    expect(texto(2)).toBe("Como na Seção 1.1 e no Capítulo 1; \\ref{eq:e} e \\ref{nada}.");
+    expect(texto(2, 2)).toBe("Ver Tabela 2.");
+  });
+
+  it("um aviso para as resolvidas; um por ocorrência das que ficaram como texto", () => {
+    const mensagens = lido.avisos.map((aviso) => aviso.mensagem);
+    expect(mensagens).toContain(
+      "6 referências cruzadas (\\ref) viraram o número fixo: se mudar a ordem das figuras, tabelas ou seções, confira.",
+    );
+    expect(
+      mensagens.filter((mensagem) => mensagem.startsWith("Referência cruzada (\\ref) sem")),
+    ).toHaveLength(2);
   });
 });

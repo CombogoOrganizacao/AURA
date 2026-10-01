@@ -17,6 +17,11 @@ import {
   type Fonte,
   type Grupo,
 } from "./fonte";
+import {
+  marcadorDeReferencia,
+  REFERENCIAS_RESOLUVEIS,
+  type ReferenciaCruzadaLida,
+} from "./rotulos";
 
 // Inline do `.tex` para o schema: o caminho inverso de
 // `trechoLatex()`/`parteLatex()` e de `escaparLatex()` (export/latex/), passo
@@ -44,6 +49,9 @@ export interface ContextoInline {
   chamadas: ChamadaLida[];
   // Chaves de referência que o `\cite` do aluno pode usar.
   chaves: ReadonlySet<string>;
+  // `\ref` e parentes lidos, na ordem: o texto leva um marcador no lugar de
+  // cada um, trocado pelo número no fim da leitura (`rotulos.ts`, 6.2.9).
+  referencias: ReferenciaCruzadaLida[];
   // Grupos abertos agora, entre todos os leitores do contexto: `textoPlano()`
   // abre outro leitor no meio de um grupo.
   profundidade: number;
@@ -593,6 +601,21 @@ class LeitorInline {
       if (segundo) {
         this.percorrer(segundo.inicio, segundo.fim, estado);
         return segundo.depois;
+      }
+    }
+
+    if (REFERENCIAS_RESOLUVEIS.has(nome)) {
+      const grupo = lerGrupo(t, depois, fim);
+      if (grupo) {
+        const indice =
+          this.ctx.referencias.push({
+            comando: nome,
+            rotulo: t.slice(grupo.inicio, grupo.fim).trim(),
+            bruto: t.slice(pos, grupo.depois),
+            ...this.ctx.fonte.posicao(pos),
+          }) - 1;
+        this.escrever(marcadorDeReferencia(indice), estado);
+        return grupo.depois;
       }
     }
 
