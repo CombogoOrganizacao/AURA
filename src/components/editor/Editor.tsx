@@ -365,18 +365,12 @@ export function Editor({
       )}
       <AvisoPaginacao />
       {/*
-        Folha A4 real (passo 2B.10, `PaperSheet` do passo 2B.4) — mesma
-        moldura da amostra estática, agora com o `EditorContent` de
-        verdade dentro. `PaperSheet` recorta o que passa da altura da
-        folha (`overflow: hidden`, correto para uma página impressa sem
-        paginação real ainda) — o aviso de que a paginação real só existe
-        no `.docx` (passo 3.3.3, `AvisoPaginacao`, acima) fica fora deste
-        recorte de propósito: teria sumido rolando a folha; para o texto
-        curto que a v1 produz hoje (a v1 não tem "nova seção" nem rolagem de
-        páginas), o limite não aparece na prática.
+        Folha A4 contínua: cresce com o texto e o contêiner rola. O editor não
+        simula quebra de página — a paginação real só existe no `.docx`, e o
+        `AvisoPaginacao`, acima, fica fora da rolagem para não sumir.
       */}
       <div className="flex min-h-0 flex-1 flex-col items-center gap-6 overflow-auto bg-ink-100 p-8">
-        <PaperSheet>
+        <PaperSheet continua>
           {/*
             Clicar no vazio da folha, abaixo do texto, põe o cursor na última
             linha — criando-a se o documento terminar em tabela, figura ou
@@ -385,14 +379,14 @@ export function Editor({
             ProseMirror: abaixo do último bloco não há nó nenhum sob o
             ponteiro.
 
-            `h-full` para que a área clicável seja a folha inteira, e não só a
+            `flex-1` para que a área clicável seja a folha inteira, e não só a
             altura do texto já escrito. `target !== currentTarget` deixa
             passar o clique que caiu no conteúdo de verdade — esse o
             ProseMirror trata sozinho, e roubá-lo moveria o cursor para o fim
             a cada clique no meio do texto.
           */}
           <div
-            className="h-full cursor-text"
+            className="flex-1 cursor-text"
             onMouseDown={(evento) => {
               if (evento.target !== evento.currentTarget) return;
               evento.preventDefault();

@@ -5,8 +5,8 @@ import { useSyncExternalStore } from "react";
 import { Alert } from "@/components/ui/Alert";
 
 // Aviso de que o editor não simula quebra de página (passo 3.3.3) — a folha
-// A4 (`PaperSheet.tsx`) recorta o que passa da altura (`overflow: hidden`),
-// mas não quebra em página 2 nem numera: a paginação de verdade só existe no
+// A4 (`PaperSheet.tsx`, modo `continua`) cresce com o texto, mas não quebra
+// em página 2 nem numera: a paginação de verdade só existe no
 // `.docx` exportado (conferida no Word, não aqui). Ver o comentário em
 // `Editor.tsx` que reserva este lugar pra este componente.
 //

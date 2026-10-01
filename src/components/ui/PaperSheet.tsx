@@ -16,6 +16,13 @@ interface PaperSheetProps extends HTMLAttributes<HTMLDivElement> {
    * quando outra norma entrar. **Nunca** `--font-doc` (Newsreader) aqui.
    */
   font?: FonteDocumento | string;
+  /**
+   * Folha que cresce com o texto (o editor). Sem isto, a folha tem a altura
+   * de uma A4 e recorta o que passa dela — certo para amostra e mock, errado
+   * para o editor, que é rolagem contínua sem quebra de página (decisões,
+   * "Um único editor com rolagem contínua").
+   */
+  continua?: boolean;
 }
 
 const FONTES_NORMA: Record<FonteDocumento, string> = {
@@ -51,6 +58,24 @@ const AREA_ESCRITA: CSSProperties = {
   bottom: `${MARGEM_INFERIOR_PCT}%`,
 };
 
+// Folha contínua: a área escrita fica no fluxo, e as margens viram padding.
+// Padding em porcentagem resolve contra a largura do bloco CONTINENTE (não da
+// folha), então as quatro margens saem de `calc()` sobre a largura da própria
+// folha — a mesma proporção 30/30/20/20 sobre 210mm. A altura mínima é a de
+// uma A4, pela mesma conta.
+function areaContinua(width: string): CSSProperties {
+  const sobreLargura = (mm: number) => `calc(${width} * ${mm / 210})`;
+  return {
+    display: "flex",
+    flexDirection: "column",
+    flex: "1 1 auto",
+    paddingTop: sobreLargura(30),
+    paddingLeft: sobreLargura(30),
+    paddingBottom: sobreLargura(20),
+    paddingRight: sobreLargura(20),
+  };
+}
+
 // A folha A4: todo editor, prévia e mock de exportação vive dentro de uma.
 // Proporção 210×297 fixa via `aspect-ratio`, sombra de papel
 // (`--shadow-sheet`), **nunca** canto arredondado, **nunca** tingimento —
@@ -62,6 +87,7 @@ export function PaperSheet({
   showMargins = false,
   pageNumber,
   font = "times",
+  continua = false,
   className = "",
   style,
   children,
@@ -71,11 +97,21 @@ export function PaperSheet({
 
   return (
     <div
-      className={["relative shrink-0 bg-sheet shadow-sheet", className].join(" ")}
-      style={{ width, aspectRatio: "210 / 297", ...style }}
+      className={[
+        "relative shrink-0 bg-sheet shadow-sheet",
+        continua ? "flex flex-col" : "",
+        className,
+      ].join(" ")}
+      style={{
+        width,
+        ...(continua
+          ? { minHeight: `calc(${width} * ${297 / 210})` }
+          : { aspectRatio: "210 / 297" }),
+        ...style,
+      }}
       {...rest}
     >
-      {showMargins && (
+      {showMargins && !continua && (
         <div
           aria-hidden="true"
           className="pointer-events-none border border-dashed border-bordo-200"
@@ -85,13 +121,12 @@ export function PaperSheet({
 
       <div
         style={{
-          ...AREA_ESCRITA,
+          ...(continua ? areaContinua(width) : { ...AREA_ESCRITA, overflow: "hidden" }),
           fontFamily: familiaFonte,
           fontSize: "var(--doc-body)",
           lineHeight: "var(--leading-doc-abnt)",
           color: "var(--doc-ink)",
           textAlign: "justify",
-          overflow: "hidden",
         }}
       >
         {children}
