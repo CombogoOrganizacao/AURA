@@ -387,7 +387,7 @@ test.describe("importação de .bib com prévia (passo 4.7)", () => {
       bibComObras(
         2,
         [
-          "@techreport{relatorio, title = {Relatório}}",
+          "@patent{patente, title = {Invenção}}",
           "@inproceedings{evento, title = {Artigo}, booktitle = {Congresso X}, year = 2020}",
           "@book{quebrada, title = {Sem fechar,",
         ].join("\n\n"),
@@ -399,8 +399,8 @@ test.describe("importação de .bib com prévia (passo 4.7)", () => {
     await expect(dialogo.getByText(/nome do evento veio de booktitle/)).toBeVisible();
 
     const naoEntram = dialogo.getByRole("region", { name: "Entradas que não serão importadas" });
-    await expect(naoEntram.getByText(/relatorio/)).toBeVisible();
-    await expect(naoEntram.getByText(/@techreport/)).toBeVisible();
+    await expect(naoEntram.getByText(/patente/)).toBeVisible();
+    await expect(naoEntram.getByText(/@patent/)).toBeVisible();
 
     const comErro = dialogo.getByRole("region", { name: "Trechos com erro no arquivo" });
     // Diz QUAL entrada quebrou, pela chave — não só um número de linha.

@@ -40,9 +40,9 @@ describe("importarBibtex — um .bib real (fixtures/exemplo.bib)", () => {
       "silva2021",
       "costa2019",
       "abnt",
+      "relatorio2020",
     ]);
     expect(resultado.descartadas.map((item) => [item.chave, item.tipo])).toEqual([
-      ["relatorio2020", "techreport"],
       ["semendereco", "misc"],
     ]);
     // `quebrada` não fecha a chave do título: erro de sintaxe, apontando a
@@ -160,9 +160,7 @@ describe("importarBibtex — um .bib real (fixtures/exemplo.bib)", () => {
   // Achado no passo 6.2.3: o livro era separado depois de decodificado, e as
   // chaves que protegem o dois-pontos já tinham sumido.
   it("@incollection com o livro entre chaves não separa no dois-pontos", () => {
-    const item = unica(
-      "@incollection{a, title = {Parte}, booktitle = {{Livro: com dois-pontos}}}",
-    );
+    const item = unica("@incollection{a, title = {Parte}, booktitle = {{Livro: com dois-pontos}}}");
     expect(item.referencia).toMatchObject({ "container-title": "Livro: com dois-pontos" });
     expect(item.referencia).not.toHaveProperty("container-subtitle");
   });
@@ -229,9 +227,59 @@ describe("importarBibtex — o que não tem lugar é descartado com motivo", () 
     expect(descartadas.map((item) => item.chave)).toEqual(["a", "b", "c"]);
   });
 
-  it("@misc sem endereço", () => {
+  it("@misc sem endereço nem quem publicou (comunicação pessoal, por exemplo)", () => {
     const { descartadas } = importar(`@misc{a, title = {A}}`);
-    expect(descartadas[0].motivo).toContain("url");
+    expect(descartadas[0].motivo).toBe(
+      "@misc sem endereço (url) e sem editora ou instituição: não dá para saber que documento é.",
+    );
+  });
+});
+
+// NBR 6023 §7.1 (manual e folheto são monografia no todo) e §8.1.2 (pessoa
+// jurídica de autora: "ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. ABNT NBR
+// 14724 …", "BRASIL. Ministério da Justiça. Relatório de atividades …").
+describe("importarBibtex — relatório, manual e norma viram monografia (6.2.10)", () => {
+  it("@techreport com autor: a instituição é a editora", () => {
+    const { referencia, avisos } = unica(
+      `@techreport{r, author = {Pedro Lima}, title = {Relatório técnico}, institution = {Instituto X}, address = {Recife}, year = {2020}}`,
+    );
+    expect(referencia).toMatchObject({
+      type: "book",
+      author: [{ family: "Lima", given: "Pedro" }],
+      publisher: "Instituto X",
+      "publisher-place": "Recife",
+    });
+    expect(avisos).toContain(
+      "Veio de @techreport: entrou como monografia no todo (NBR 6023, 7.1). Confira a referência.",
+    );
+  });
+
+  it("@standard sem autor: a organização é a autora, e o número da norma vira aviso", () => {
+    const { referencia, avisos } = unica(
+      `@standard{ieee2019wave, title = {IEEE Guide for Wireless Access in Vehicular Environments (WAVE) Architecture}, organization = {Institute of Electrical and Electronics Engineers}, number = {1609.0-2019}, address = {New York}, year = {2019}}`,
+    );
+    expect(referencia).toMatchObject({
+      type: "book",
+      author: [{ literal: "Institute of Electrical and Electronics Engineers" }],
+      publisher: "Institute of Electrical and Electronics Engineers",
+    });
+    expect(referenciaEmTexto(referencia)).toMatch(
+      /^INSTITUTE OF ELECTRICAL AND ELECTRONICS ENGINEERS\. IEEE Guide/,
+    );
+    expect(avisos).toEqual(
+      expect.arrayContaining([expect.stringMatching(/^O número da norma \(1609\.0-2019\)/)]),
+    );
+  });
+
+  it("@manual e @report entram; @misc sem url mas com instituição também", () => {
+    const { importadas, descartadas } = importar(`
+      @manual{m, title = {Manual do usuário}, organization = {Empresa}, year = {2021}}
+      @report{r, title = {Global status report on road safety 2023}, institution = {World Health Organization}, address = {Geneva}, year = {2023}}
+      @misc{oms, author = {{World Health Organization}}, title = {Relatório}, publisher = {WHO}, year = {2023}}
+    `);
+    expect(descartadas).toEqual([]);
+    expect(importadas.map((item) => item.referencia.type)).toEqual(["book", "book", "book"]);
+    expect(importadas[1].referencia.author).toEqual([{ literal: "World Health Organization" }]);
   });
 });
 

@@ -227,16 +227,32 @@ export function converterEntrada(entrada: EntradaBibtex, gerarId: () => string):
       return { referencia: limpar(referencia), avisos };
     }
 
+    // Relatório, manual e norma técnica são monografia no todo para a NBR 6023
+    // (§7.1: "livro e/ou folheto (manual, guia, catálogo, … entre outros)"; os
+    // exemplos de §8.1.2 são "ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. ABNT
+    // NBR 14724 …" e "BRASIL. Ministério da Justiça. Relatório de atividades
+    // …"). Entram como livro, com a instituição de autora quando falta autor.
+    case "techreport":
+    case "report":
+    case "manual":
+    case "standard":
+      return monografia(entrada, base, campo, avisos);
+
     case "misc":
     case "online":
     case "electronic":
     case "www": {
-      // Dos seis tipos, o único que um `@misc` pode ser sem mentir é o site —
-      // e só quando tem endereço. Sem URL, forçá-lo em "livro" daria uma
-      // referência com cara de conformidade e dado errado.
+      // Com endereço, é site. Sem endereço, só é monografia quando o `.bib`
+      // diz quem publicou (editora ou instituição): sem isso, `@misc` cobre
+      // de comunicação pessoal — que a NBR 10520 manda para nota, não para
+      // as referências — a programa de computador, e forçá-lo em "livro"
+      // daria uma referência com cara de conformidade e dado errado.
       if (!base.URL) {
+        if (campo("publisher") ?? campo("institution") ?? campo("organization")) {
+          return monografia(entrada, base, campo, avisos);
+        }
         return {
-          motivo: `@${entrada.tipo} sem endereço (url) não corresponde a nenhum dos seis tipos do AURA.`,
+          motivo: `@${entrada.tipo} sem endereço (url) e sem editora ou instituição: não dá para saber que documento é.`,
         };
       }
       const referencia: ReferenciaSite = {
@@ -253,6 +269,35 @@ export function converterEntrada(entrada: EntradaBibtex, gerarId: () => string):
         motivo: `O tipo @${entrada.tipo} não tem correspondente entre os seis tipos do AURA.`,
       };
   }
+}
+
+// Relatório, manual, norma técnica e `@misc` publicado, como monografia no
+// todo (§7.1). Pessoa jurídica de autora (§8.1.2) quando falta `author`: a
+// instituição ou organização, por extenso, como o `.bib` a escreve.
+function monografia(
+  entrada: EntradaBibtex,
+  base: Omit<ReferenciaLivro, "type">,
+  campo: LeitorDeCampos,
+  avisos: string[],
+): Conversao {
+  const entidade = campo("institution") ?? campo("organization");
+  avisos.push(
+    `Veio de @${entrada.tipo}: entrou como monografia no todo (NBR 6023, 7.1). Confira a referência.`,
+  );
+  if (entrada.tipo === "standard" && campo("number")) {
+    avisos.push(
+      `O número da norma (${campo("number")}) não tem campo próprio: na NBR 6023 (8.1.2, exemplo 1) ele é o título, como em “ABNT NBR 14724”. Confira o título.`,
+    );
+  }
+  const referencia: ReferenciaLivro = {
+    ...base,
+    type: "book",
+    author: base.author ?? (entidade ? [{ literal: entidade }] : undefined),
+    edicao: edicao(campo, avisos),
+    publisher: campo("publisher") ?? entidade,
+    "publisher-place": campo("address") ?? campo("location"),
+  };
+  return { referencia: limpar(referencia), avisos };
 }
 
 // --- campos ------------------------------------------------------------------
