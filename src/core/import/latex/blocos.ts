@@ -662,17 +662,28 @@ const SO_FORMA = new Set([
 ]);
 
 // Percorre os comandos de dentro de um ambiente. `tratar` devolve onde o
-// comando terminou, ou `null` para o que não conhece; o que sobra (texto e
-// comandos desconhecidos) volta como parágrafo literal depois do bloco.
+// comando terminou, ou `null` para o que não conhece. O que sobra (texto,
+// grupos `{…}` e comandos desconhecidos) é juntado em trechos contíguos: um
+// trecho que começa por "Fonte:" é a fonte (`aoAcharFonte`), que muito TCC
+// escreve solta, sem `\legend` — `{\footnotesize Fonte: …}` ou
+// `{ \textbf{Fonte:} … }`. O resto volta como parágrafo depois do bloco, lido
+// pelo inline (negrito vira negrito, não `\textbf` cru).
 function comandosDoAmbiente(
   ctx: ContextoInline,
   pos: number,
   dentro: Faixa,
   onde: string,
   tratar: (nome: string, inicio: number, depois: number) => number | null,
+  aoAcharFonte: (fonte: string) => boolean,
 ): NoParagrafo[] {
   const t = ctx.fonte.texto;
-  const sobras: string[] = [];
+  const sobras: Faixa[] = [];
+  const sobrar = (inicio: number, fim: number) => {
+    const anterior = sobras.at(-1);
+    // Contíguo ao trecho anterior (só espaço entre eles): é o mesmo trecho.
+    if (anterior && t.slice(anterior.fim, inicio).trim() === "") anterior.fim = fim;
+    else sobras.push({ inicio, fim });
+  };
   let i = dentro.inicio;
   while ((i = pularEspacos(t, i, dentro.fim)) < dentro.fim) {
     if (t[i] === "\\") {
@@ -692,22 +703,55 @@ function comandosDoAmbiente(
         continue;
       }
       const fim = fimDosArgumentos(t, depois, dentro.fim);
-      sobras.push(t.slice(i, fim));
+      sobrar(i, fim);
+      i = fim;
+      continue;
+    }
+    if (t[i] === "{") {
+      const fim = lerGrupo(t, i, dentro.fim)?.depois ?? dentro.fim;
+      sobrar(i, fim);
       i = fim;
       continue;
     }
     let ate = i;
-    while (ate < dentro.fim && t[ate] !== "\\") ate++;
-    sobras.push(t.slice(i, ate));
+    while (ate < dentro.fim && t[ate] !== "\\" && t[ate] !== "{") ate++;
+    sobrar(i, ate);
     i = ate;
   }
-  const texto = sobras.join(" ").trim();
-  if (!texto) return [];
-  ctx.avisos.push({
-    ...ctx.fonte.posicao(pos),
-    mensagem: `Conteúdo não reconhecido dentro d${onde}: entrou como texto logo depois dela.`,
-  });
-  return [paragrafoLiteral(texto)];
+
+  const paragrafos: NoParagrafo[] = [];
+  for (const sobra of sobras) {
+    if (pareceFonte(t, sobra)) {
+      const fonte = fonteDoTexto(textoDosNos(lerInline(ctx, sobra.inicio, sobra.fim)));
+      if (aoAcharFonte(fonte)) continue;
+    }
+    const content = lerInline(ctx, sobra.inicio, sobra.fim);
+    if (content.length === 0) continue;
+    ctx.avisos.push({
+      ...ctx.fonte.posicao(sobra.inicio),
+      mensagem: `Conteúdo não reconhecido dentro d${onde}: entrou como parágrafo logo depois dela.`,
+    });
+    paragrafos.push({ type: "paragraph", content });
+  }
+  return paragrafos;
+}
+
+// "Fonte:" no começo do trecho, depois de tirar chaves e comandos — a
+// checagem barata, no texto cru, antes de ler o trecho de verdade.
+function pareceFonte(t: string, faixa: Faixa): boolean {
+  const cru = t
+    .slice(faixa.inicio, faixa.fim)
+    .replace(/\\[a-zA-Z]+\*?/g, " ")
+    .replace(/[{}]/g, " ");
+  return /^\s*Fonte\s*:/i.test(cru);
+}
+
+function textoDosNos(nos: readonly NoInline[]): string {
+  return nos
+    .map((no) => (no.type === "text" ? no.text : ""))
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // "Fonte: …" de `textoFonte()`. Sem o rótulo, o texto inteiro é a fonte.
@@ -746,36 +790,53 @@ function legendaOuFonte(
   return grupo.depois;
 }
 
+// A primeira fonte solta vira a fonte, se nenhum comando trouxe uma.
+function guardarFonte(lida: { fonte: string }) {
+  return (fonte: string) => {
+    if (lida.fonte || !fonte) return false;
+    lida.fonte = fonte;
+    return true;
+  };
+}
+
 function figura(ctx: ContextoInline, pos: number, dentro: Faixa): BlocoLido[] {
   const t = ctx.fonte.texto;
   const lida: FiguraLida = { type: "figura", legenda: "", fonte: "", imagem: null };
   dentro = semOpcionalNoComeco(t, dentro);
   let imagens = 0;
-  const sobras = comandosDoAmbiente(ctx, pos, dentro, "a figura", (nome, inicio, depois) => {
-    const legenda = legendaOuFonte(ctx, nome, depois, dentro.fim, lida);
-    if (legenda !== null) return legenda;
-    if (nome === "includegraphics") {
-      const estrela = t[depois] === "*" ? 1 : 0;
-      const opcional = lerOpcional(t, depois + estrela, dentro.fim);
-      const grupo = lerGrupo(t, opcional?.depois ?? depois + estrela, dentro.fim);
-      if (!grupo) return null;
-      if (++imagens > 1) {
-        ctx.avisos.push({
-          ...ctx.fonte.posicao(inicio),
-          mensagem: "Figura com mais de uma imagem: o AURA tem uma por figura, e ficou a primeira.",
-        });
+  const sobras = comandosDoAmbiente(
+    ctx,
+    pos,
+    dentro,
+    "a figura",
+    (nome, inicio, depois) => {
+      const legenda = legendaOuFonte(ctx, nome, depois, dentro.fim, lida);
+      if (legenda !== null) return legenda;
+      if (nome === "includegraphics") {
+        const estrela = t[depois] === "*" ? 1 : 0;
+        const opcional = lerOpcional(t, depois + estrela, dentro.fim);
+        const grupo = lerGrupo(t, opcional?.depois ?? depois + estrela, dentro.fim);
+        if (!grupo) return null;
+        if (++imagens > 1) {
+          ctx.avisos.push({
+            ...ctx.fonte.posicao(inicio),
+            mensagem:
+              "Figura com mais de uma imagem: o AURA tem uma por figura, e ficou a primeira.",
+          });
+          return grupo.depois;
+        }
+        const caminho = t.slice(grupo.inicio, grupo.fim).trim();
+        const doAura = IMAGEM_DO_AURA.exec(caminho);
+        if (doAura) lida.imagem = doAura[1];
+        else lida.caminho = caminho;
         return grupo.depois;
       }
-      const caminho = t.slice(grupo.inicio, grupo.fim).trim();
-      const doAura = IMAGEM_DO_AURA.exec(caminho);
-      if (doAura) lida.imagem = doAura[1];
-      else lida.caminho = caminho;
-      return grupo.depois;
-    }
-    // Espaço reservado da figura sem imagem, no `.tex` do AURA.
-    if (nome === "fbox") return fimDosArgumentos(t, depois, dentro.fim);
-    return null;
-  });
+      // Espaço reservado da figura sem imagem, no `.tex` do AURA.
+      if (nome === "fbox") return fimDosArgumentos(t, depois, dentro.fim);
+      return null;
+    },
+    guardarFonte(lida),
+  );
   return [lida, ...sobras];
 }
 
@@ -785,20 +846,27 @@ function tabelaFlutuante(ctx: ContextoInline, pos: number, dentro: Faixa): Bloco
   const t = ctx.fonte.texto;
   const lida: TabelaLida = { type: "tabela", legenda: "", fonte: "", linhas: [] };
   dentro = semOpcionalNoComeco(t, dentro);
-  const sobras = comandosDoAmbiente(ctx, pos, dentro, "a tabela", (nome, inicio, depois) => {
-    const legenda = legendaOuFonte(ctx, nome, depois, dentro.fim, lida);
-    if (legenda !== null) return legenda;
-    if (nome !== "begin") return null;
-    const grupo = lerGrupo(t, depois, dentro.fim);
-    const ambiente = grupo ? t.slice(grupo.inicio, grupo.fim) : "";
-    if (!grupo || !TABULARES.has(ambiente)) return null;
-    const fecha = fimDoAmbiente(t, inicio, dentro.fim);
-    if (fecha < 0) return null;
-    const lidaDaGrade = grade(ctx, ambiente, { inicio: grupo.depois, fim: fecha });
-    lida.linhas = lidaDaGrade.linhas;
-    if (lidaDaGrade.legenda && !lida.legenda) lida.legenda = lidaDaGrade.legenda;
-    return fecha + `\\end{${ambiente}}`.length;
-  });
+  const sobras = comandosDoAmbiente(
+    ctx,
+    pos,
+    dentro,
+    "a tabela",
+    (nome, inicio, depois) => {
+      const legenda = legendaOuFonte(ctx, nome, depois, dentro.fim, lida);
+      if (legenda !== null) return legenda;
+      if (nome !== "begin") return null;
+      const grupo = lerGrupo(t, depois, dentro.fim);
+      const ambiente = grupo ? t.slice(grupo.inicio, grupo.fim) : "";
+      if (!grupo || !TABULARES.has(ambiente)) return null;
+      const fecha = fimDoAmbiente(t, inicio, dentro.fim);
+      if (fecha < 0) return null;
+      const lidaDaGrade = grade(ctx, ambiente, { inicio: grupo.depois, fim: fecha });
+      lida.linhas = lidaDaGrade.linhas;
+      if (lidaDaGrade.legenda && !lida.legenda) lida.legenda = lidaDaGrade.legenda;
+      return fecha + `\\end{${ambiente}}`.length;
+    },
+    guardarFonte(lida),
+  );
   return [lida, ...sobras];
 }
 
@@ -942,6 +1010,14 @@ function tabelaLonga(
       depois = grupo.depois;
     }
     break;
+  }
+  // `{\footnotesize Fonte: …}` logo depois da tabela, sem comando de fonte.
+  if (!fonte && t[seguinte] === "{") {
+    const grupo = lerGrupo(t, seguinte);
+    if (grupo && pareceFonte(t, { inicio: seguinte, fim: grupo.depois })) {
+      fonte = fonteDoTexto(textoDosNos(lerInline(ctx, seguinte, grupo.depois)));
+      depois = grupo.depois;
+    }
   }
   return {
     itens: [{ tipo: "bloco", bloco: { type: "tabela", legenda, fonte, linhas }, pos }],

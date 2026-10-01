@@ -297,3 +297,122 @@ describe("outros formatos de fora", () => {
     ]);
   });
 });
+
+describe("fonte solta em figura e tabela (6.2.8)", () => {
+  // O TCC real que motivou isto escrevia a fonte num grupo, sem `\legend`:
+  // ela entrava como texto cru, `{ \textbf{Fonte:} Pessoa (2018).}`.
+  const corpo = (dentro: string) =>
+    [
+      "\\documentclass{article}",
+      "\\begin{document}",
+      "\\section{S}",
+      dentro,
+      "\\end{document}",
+    ].join("\n");
+
+  it("grupo com \\textbf{Fonte:} dentro da figura vira a fonte", () => {
+    const lido = ler(
+      corpo(
+        [
+          "\\begin{figure}[h]",
+          "\\centering",
+          "\\caption{Cenário}",
+          "\\includegraphics[width=\\textwidth]{img/vanet.png}",
+          "\\label{fig:vanet}",
+          "{ \\textbf{Fonte:} Pessoa (2018).}",
+          "\\end{figure}",
+        ].join("\n"),
+      ),
+    );
+    expect(lido.secoes[0].content).toEqual([
+      {
+        type: "figura",
+        legenda: "Cenário",
+        fonte: "Pessoa (2018).",
+        imagem: null,
+        caminho: "img/vanet.png",
+      },
+    ]);
+    expect(lido.avisos.map((aviso) => aviso.mensagem)).not.toEqual(
+      expect.arrayContaining([expect.stringMatching(/^Conteúdo não reconhecido/)]),
+    );
+  });
+
+  it("{\\footnotesize Fonte: …} dentro da tabela vira a fonte", () => {
+    const lido = ler(
+      corpo(
+        [
+          "\\begin{table}",
+          "\\caption{Canais}",
+          "\\begin{tabular}{ll}",
+          "Tipo & Propósito \\\\",
+          "A & B \\\\",
+          "\\end{tabular}",
+          "{\\footnotesize Fonte: Adaptado de Arena et al. (2020).}",
+          "\\end{table}",
+        ].join("\n"),
+      ),
+    );
+    expect(lido.secoes[0].content[0]).toMatchObject({
+      type: "tabela",
+      legenda: "Canais",
+      fonte: "Adaptado de Arena et al. (2020).",
+    });
+    expect(lido.secoes[0].content).toHaveLength(1);
+  });
+
+  it("fonte em grupo logo depois da longtable", () => {
+    const lido = ler(
+      corpo(
+        [
+          "\\begin{longtable}{ll}",
+          "\\caption{Cronograma} \\\\",
+          "Atividade & Mês \\\\",
+          "\\midrule",
+          "Revisão & 1 \\\\",
+          "\\end{longtable}",
+          "{\\small \\textbf{Fonte:} Elaborado pelo autor.}",
+          "",
+          "Texto seguinte.",
+        ].join("\n"),
+      ),
+    );
+    expect(lido.secoes[0].content[0]).toMatchObject({
+      type: "tabela",
+      legenda: "Cronograma",
+      fonte: "Elaborado pelo autor.",
+    });
+    expect(lido.secoes[0].content[1]).toEqual({
+      type: "paragraph",
+      content: [{ type: "text", text: "Texto seguinte." }],
+    });
+  });
+
+  it("o que sobra e não é fonte entra como parágrafo lido, não cru", () => {
+    const lido = ler(
+      corpo(
+        [
+          "\\begin{figure}",
+          "\\caption{X}",
+          "\\fonte{Autor.}",
+          "Nota \\textbf{importante} da figura.",
+          "\\end{figure}",
+        ].join("\n"),
+      ),
+    );
+    expect(lido.secoes[0].content).toEqual([
+      { type: "figura", legenda: "X", fonte: "Autor.", imagem: null },
+      {
+        type: "paragraph",
+        content: [
+          { type: "text", text: "Nota " },
+          { type: "text", text: "importante", marks: [{ type: "negrito" }] },
+          { type: "text", text: " da figura." },
+        ],
+      },
+    ]);
+    expect(lido.avisos.map((aviso) => aviso.mensagem)).toContain(
+      "Conteúdo não reconhecido dentro da figura: entrou como parágrafo logo depois dela.",
+    );
+  });
+});
