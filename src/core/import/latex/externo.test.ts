@@ -166,7 +166,6 @@ describe("TCC no modelo do abnTeX2", () => {
         "Coorientador(a) ainda não tem campo no AURA: não foi trazido.",
         expect.stringMatching(/não foram trazidos: siglas\. Cadastre as siglas/),
         "Lista (itemize) virou um parágrafo por item: o AURA ainda não tem lista.",
-        expect.stringMatching(/^Matemática no meio do texto/),
         expect.stringMatching(/^Uma referência cruzada \(\\ref\) virou o número fixo/),
         "\\textsc não tem equivalente no AURA: ficou o texto, sem essa formatação.",
         expect.stringMatching(/^\\cite\{freire\} virou citação direta, página 35/),
@@ -455,5 +454,37 @@ describe("referência cruzada vira o número (6.2.9)", () => {
     expect(
       mensagens.filter((mensagem) => mensagem.startsWith("Referência cruzada (\\ref) sem")),
     ).toHaveLength(2);
+  });
+});
+
+describe("fórmula no meio da frase (6.2.11)", () => {
+  it("$…$ e \\(…\\) viram fórmula inline; $ sem fechamento fica como texto", () => {
+    const lido = ler(
+      [
+        "\\documentclass{article}",
+        "\\begin{document}",
+        "\\section{S}",
+        "Por $PDR=\\left(\\sum P_{r}/\\sum P_{e}\\right)\\times100\\%$ e \\(a+b\\). Custa 5 $ só.",
+        "\\end{document}",
+      ].join("\n"),
+    );
+    expect(lido.secoes[0].content).toEqual([
+      {
+        type: "paragraph",
+        content: [
+          { type: "text", text: "Por " },
+          {
+            type: "formula_inline",
+            texto: "PDR=\\left(\\sum P_{r}/\\sum P_{e}\\right)\\times100\\%",
+          },
+          { type: "text", text: " e " },
+          { type: "formula_inline", texto: "a+b" },
+          { type: "text", text: ". Custa 5 $ só." },
+        ],
+      },
+    ]);
+    expect(lido.avisos.map((aviso) => aviso.mensagem)).toEqual([
+      "Fórmula ($…$) sem fechamento: entrou como texto.",
+    ]);
   });
 });

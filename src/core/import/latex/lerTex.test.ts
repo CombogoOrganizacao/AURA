@@ -457,7 +457,7 @@ describe("lerTex: edição feita fora do AURA (§1.5)", () => {
     expect(lido.avisos[0].mensagem).toMatch(/não está nas referências/);
   });
 
-  it("matemática inline, \\newcommand e \\input no corpo ficam como texto, com aviso", () => {
+  it("matemática inline vira fórmula; \\newcommand e \\input ficam como texto, com aviso", () => {
     const editado = tex.replace(
       "Perguntas aplicadas.",
       "Seja $x^2$ o valor. \\newcommand{\\foo}{bar} Veja.\n\n\\input{extra}",
@@ -466,12 +466,15 @@ describe("lerTex: edição feita fora do AURA (§1.5)", () => {
     expect(lido.apendices[0].content).toEqual([
       {
         type: "paragraph",
-        content: [{ type: "text", text: "Seja $x^2$ o valor. \\newcommand{\\foo}{bar} Veja." }],
+        content: [
+          { type: "text", text: "Seja " },
+          { type: "formula_inline", texto: "x^2" },
+          { type: "text", text: " o valor. \\newcommand{\\foo}{bar} Veja." },
+        ],
       },
       { type: "paragraph", content: [{ type: "text", text: "\\input{extra}" }] },
     ]);
     expect(lido.avisos.map((aviso) => aviso.mensagem)).toEqual([
-      "Matemática no meio do texto ($…$) não existe no AURA: entrou como texto. Use um bloco de fórmula.",
       "\\newcommand no texto não é expandido: entrou como texto.",
       "\\input no meio do texto não é seguido: entrou como texto.",
     ]);
@@ -557,5 +560,22 @@ describe("lerTex: edição feita fora do AURA (§1.5)", () => {
       imagem: null,
       caminho: "imagens/foto.png",
     });
+  });
+});
+
+describe("fórmula no meio da frase (6.2.11)", () => {
+  it("o .tex exportado volta com a fórmula inline no lugar", () => {
+    const documento = documentoCompleto();
+    const paragrafo: NoConteudo = {
+      type: "paragraph",
+      content: [
+        { type: "text", text: "Seja " },
+        { type: "formula_inline", texto: "x^2 + y_i" },
+        { type: "text", text: " o valor." },
+      ],
+    };
+    documento.sections[0].content = [paragrafo];
+    const lido = ler(gerarTex(documento));
+    expect(lido.secoes[0].content).toEqual([paragrafo]);
   });
 });

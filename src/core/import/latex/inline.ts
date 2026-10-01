@@ -70,6 +70,7 @@ type TokenTexto = { tipo: "texto"; texto: string; estado: Estado };
 type Token =
   | TokenTexto
   | { tipo: "nota"; texto: string }
+  | { tipo: "formula"; texto: string }
   | {
       tipo: "cite";
       comando: string;
@@ -406,7 +407,7 @@ class LeitorInline {
       if (c === "$") {
         const fecha = t.indexOf("$", i + 1);
         const ate = fecha >= 0 && fecha < fim ? fecha + 1 : i + 1;
-        i = this.matematica(i, ate, estado);
+        i = this.matematica(i, ate, 1);
         continue;
       }
       if (/\s/.test(c)) {
@@ -446,13 +447,17 @@ class LeitorInline {
     }
   }
 
-  // `$…$` e `\(…\)`: o AURA não tem fórmula no meio do texto.
-  private matematica(pos: number, ate: number, estado: Estado): number {
-    this.escrever(this.texto.slice(pos, ate), estado);
-    this.avisar(
-      pos,
-      "Matemática no meio do texto ($…$) não existe no AURA: entrou como texto. Use um bloco de fórmula.",
-    );
+  // `$…$` e `\(…\)`: fórmula no meio da frase (6.2.11). `delimitador` é o
+  // tamanho do que abre e do que fecha. Sem fechamento, o resto não é
+  // fórmula: o caractere fica como texto, com aviso.
+  private matematica(pos: number, ate: number, delimitador: number): number {
+    if (ate - pos <= delimitador) {
+      this.escrever(this.texto.slice(pos, ate), SEM_MARCA);
+      this.avisar(pos, "Fórmula ($…$) sem fechamento: entrou como texto.");
+      return ate;
+    }
+    const texto = this.texto.slice(pos + delimitador, ate - delimitador).trim();
+    if (texto) this.tokens.push({ tipo: "formula", texto });
     return ate;
   }
 
@@ -488,7 +493,7 @@ class LeitorInline {
     if (nome === "(") {
       const fecha = t.indexOf("\\)", depois);
       const ate = fecha >= 0 && fecha < fim ? fecha + 2 : depois;
-      return this.matematica(pos, ate, estado);
+      return this.matematica(pos, ate, 2);
     }
 
     if (FORMA_SEM_ARGUMENTO.has(nome)) {
@@ -966,6 +971,10 @@ function paraNos(tokens: readonly Token[]): NoInline[] {
       nos.push({ type: "nota_rodape", texto: token.texto });
       continue;
     }
+    if (token.tipo === "formula") {
+      nos.push({ type: "formula_inline", texto: token.texto });
+      continue;
+    }
     if (token.tipo !== "texto" || !token.texto) continue;
     const marcas = marcasDe(token.estado);
     const anterior = nos.at(-1);
@@ -1031,6 +1040,9 @@ export function textoPlano(
     } else if (token.tipo === "nota") {
       texto += ` (${token.texto})`;
       perdeu = true;
+    } else if (token.tipo === "formula") {
+      texto += `$${token.texto}$`;
+      perdeu = true;
     } else {
       texto += token.bruto;
       perdeu = true;
@@ -1050,6 +1062,14 @@ export function textoPlano(
 export function lerInlineDeCelula(ctx: ContextoInline, inicio: number, fim: number): NoTexto[] {
   return lerInline(ctx, inicio, fim).map((no) => {
     if (no.type === "text") return no;
+    if (no.type === "formula_inline") {
+      ctx.avisos.push({
+        ...ctx.fonte.posicao(inicio),
+        mensagem:
+          "Fórmula dentro de célula de tabela não existe no AURA: entrou como o LaTeX, em texto.",
+      });
+      return { type: "text", text: `$${no.texto}$` };
+    }
     ctx.avisos.push({
       ...ctx.fonte.posicao(inicio),
       mensagem:

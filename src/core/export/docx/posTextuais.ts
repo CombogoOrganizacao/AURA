@@ -1,4 +1,4 @@
-import { AlignmentType, Paragraph, TextRun, type FileChild } from "docx";
+import { AlignmentType, Paragraph, TextRun, type FileChild, type ParagraphChild } from "docx";
 
 import { gerarAnexos } from "../../document/elements/anexos";
 import { gerarApendices } from "../../document/elements/apendices";
@@ -38,7 +38,7 @@ import { runsDeTrechos } from "./trechos";
 // `comQuebrasEntreBlocos()`: qual bloco é o primeiro depende do que a pessoa
 // preencheu.
 
-function paragrafoDeTexto(children: TextRun[]): Paragraph {
+function paragrafoDeTexto(children: ParagraphChild[]): Paragraph {
   return new Paragraph({ children, style: "Corpo" });
 }
 

@@ -225,7 +225,7 @@ function trocarEmTrechos(
   let faixa = 0;
   let posicao = 0;
   for (const trecho of trechos) {
-    if (trecho.type === "nota_rodape") {
+    if (trecho.type !== "text") {
       saida.push(trecho);
       continue;
     }

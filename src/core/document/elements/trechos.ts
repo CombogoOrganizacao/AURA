@@ -31,7 +31,10 @@ export type PapelTrecho =
   // Nota de rodapé (passo 6.1.3c): `texto` é o conteúdo da nota, não algo que
   // saia no meio do parágrafo. Quem converte decide a forma: no `.docx`, a
   // referência de nota do Word, que desenha o expoente e numera sozinha.
-  | "nota";
+  | "nota"
+  // Fórmula no meio da frase (passo 6.2.11): `texto` é o LaTeX. No `.docx`,
+  // equação nativa do Word na linha; no `.tex`, entre `$`.
+  | "formula";
 
 export interface Trecho {
   papel: PapelTrecho;
@@ -129,13 +132,18 @@ export function partesDoInline(
 
   const nos = content ?? [];
   for (const [indice, no] of nos.entries()) {
-    if (no.type === "nota_rodape") {
+    if (no.type !== "text") {
       if (aberta) {
         const seguinte = nos.slice(indice + 1).find((item) => item.type === "text");
         const continua = seguinte?.type === "text" ? atributosDe(seguinte) : null;
         if (!(continua && mesmaCitacao(aberta.attrs, continua))) fechar();
       }
-      acrescentar({ papel: "nota", texto: no.texto, negrito: false, italico: false });
+      acrescentar({
+        papel: no.type === "nota_rodape" ? "nota" : "formula",
+        texto: no.texto,
+        negrito: false,
+        italico: false,
+      });
       continue;
     }
 

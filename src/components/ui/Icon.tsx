@@ -36,6 +36,7 @@ import {
   PanelRight,
   Plus,
   Quote,
+  Radical,
   Redo2,
   Ruler,
   Search,
@@ -132,6 +133,9 @@ const icones = {
   // Fórmula (passo 3.6.5) — o sigma é o glifo corrente para "equação" em
   // editor de texto, e não colide com nenhum conceito já mapeado aqui.
   sigma: Sigma,
+  // Fórmula no meio da frase (passo 6.2.11): a raiz, para não repetir o
+  // sigma da fórmula em bloco ao lado.
+  radical: Radical,
 } satisfies Record<string, LucideIcon>;
 
 export type NomeIcone = keyof typeof icones;

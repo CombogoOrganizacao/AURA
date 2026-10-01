@@ -51,7 +51,7 @@ function textoDoNo(no: NoConteudo): string[] {
   // A nota de rodapé entra: é texto do trabalho, e uma sigla usada só numa
   // nota foi "utilizada no texto" tanto quanto no parágrafo (passo 6.1.3c).
   return (no.content ?? []).map((inline) =>
-    inline.type === "nota_rodape" ? inline.texto : inline.text,
+    inline.type === "nota_rodape" ? inline.texto : inline.type === "text" ? inline.text : "",
   );
 }
 

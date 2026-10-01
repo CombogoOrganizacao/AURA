@@ -85,6 +85,7 @@ export function caminhoDaImagem(id: string, formato: FormatoImagem): string {
 
 function trechoLatex(trecho: Trecho): string {
   if (trecho.papel === "nota") return `\\footnote{${escaparLatex(trecho.texto)}}`;
+  if (trecho.papel === "formula") return formulaInline(trecho.texto);
   let texto = escaparLatex(trecho.texto);
   if (trecho.italico) texto = `\\textit{${texto}}`;
   if (trecho.negrito) texto = `\\textbf{${texto}}`;
@@ -149,6 +150,16 @@ function formula(no: NoFormula): string {
     return `\\begin{center}\n\\texttt{${escaparLatex(no.texto)}}\n\\end{center}`;
   }
   return `\\[\n${no.texto}\n\\]`;
+}
+
+// Fórmula no meio da frase (6.2.11): mesma regra da de bloco, entre `$`.
+function formulaInline(texto: string): string {
+  try {
+    katex.renderToString(texto, { throwOnError: true, strict: false, trust: false });
+  } catch {
+    return `\\texttt{${escaparLatex(texto)}}`;
+  }
+  return `$${texto}$`;
 }
 
 function fonteDe(no: NoFigura | NoTabela): string {

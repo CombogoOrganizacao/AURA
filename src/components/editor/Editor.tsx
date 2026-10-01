@@ -23,6 +23,7 @@ import { Italico } from "@/core/editor/marks/italico";
 import { Negrito } from "@/core/editor/marks/negrito";
 import { Documento as DocumentoNode } from "@/core/editor/nodes/documento";
 import { NotaRodape as NotaRodapeNode } from "@/core/editor/nodes/footnote";
+import { FormulaInline as FormulaInlineNode } from "@/core/editor/nodes/formulaInline";
 import { Figura as FiguraNode } from "@/core/editor/nodes/figure";
 import { Formula as FormulaNode } from "@/core/editor/nodes/formula";
 import { CitacaoLonga } from "@/core/editor/nodes/longQuote";
@@ -37,6 +38,7 @@ import { BarraEstatisticas } from "./BarraEstatisticas";
 import { BuscaSubstituicao, type CampoDaBusca } from "./BuscaSubstituicao";
 import { atualizarReferenciasDasChamadas, ChamadasDeCitacao } from "./chamadas";
 import { FiguraView } from "./nodes/FiguraView";
+import { FormulaInlineView } from "./nodes/FormulaInlineView";
 import { FormulaView } from "./nodes/FormulaView";
 import { NotaRodapeView } from "./nodes/NotaRodapeView";
 import { SectionView } from "./nodes/SectionView";
@@ -83,6 +85,13 @@ const FormulaComVisualizacao = FormulaNode.extend({
 const NotaRodapeComVisualizacao = NotaRodapeNode.extend({
   addNodeView() {
     return ReactNodeViewRenderer(NotaRodapeView, { as: "span" });
+  },
+});
+
+// E para a fórmula no meio da frase (passo 6.2.11).
+const FormulaInlineComVisualizacao = FormulaInlineNode.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(FormulaInlineView, { as: "span" });
   },
 });
 
@@ -204,6 +213,7 @@ export function Editor({
       // Nota de rodapé (passo 6.1.3c) — inline, dentro de parágrafo e de
       // citação longa; inserida pela toolbar.
       NotaRodapeComVisualizacao,
+      FormulaInlineComVisualizacao,
       Negrito,
       Italico,
       // Citação ligada a uma referência (passo 4.8). Registrada antes de ter

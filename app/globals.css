@@ -672,6 +672,41 @@ h5 {
   color: var(--doc-ink);
 }
 
+/* Fórmula no meio da frase (passo 6.2.11). Na linha, no corpo do texto; o
+   campo do LaTeX abre embaixo, com a mesma caixa da nota de rodapé
+   (`.doc-nota-campo`). Vazia ou com erro, aparece o LaTeX cru em vermelho,
+   como na fórmula em bloco. */
+.ProseMirror .doc-formula-inline {
+  position: relative;
+}
+
+.ProseMirror .doc-formula-inline-render {
+  padding-inline: 0.1em;
+  cursor: pointer;
+}
+
+.ProseMirror .doc-formula-inline-render[data-erro],
+.ProseMirror .doc-formula-inline-render[data-vazia] {
+  font-family: var(--font-mono);
+  font-size: var(--doc-caption);
+  color: var(--color-danger);
+}
+
+.ProseMirror .doc-formula-inline.ProseMirror-selectednode .doc-formula-inline-render {
+  outline: 2px solid var(--color-bordo-700);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.ProseMirror .doc-formula-inline-campo {
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.375rem;
+  color: var(--color-body);
+  font-family: var(--font-mono);
+}
+
 /* Cursor de intervalo (`prosemirror-gapcursor`, ligado por
    `src/core/editor/gapcursor.ts`): o traço piscando que aparece ENTRE dois
    blocos, onde não há texto para o cursor normal ocupar — depois de uma

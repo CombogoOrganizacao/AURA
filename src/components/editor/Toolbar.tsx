@@ -11,6 +11,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { novaFigura, novaFormula, novaTabela } from "@/core/document/factory";
 import { cursorDepoisDoBloco, fimDoBlocoAtual } from "@/core/editor/caret";
 import { inserirNotaRodape, podeInserirNota } from "@/core/editor/nodes/footnote";
+import { inserirFormulaInline, podeInserirFormulaInline } from "@/core/editor/nodes/formulaInline";
 import { deNoConteudo } from "@/core/document/serialize";
 import type { NivelSecao, NoConteudo } from "@/core/document/types";
 import type { Referencia } from "@/core/references/types";
@@ -308,6 +309,19 @@ export function Toolbar({ editor, references, onBuscar }: ToolbarProps) {
         onClick={() => inserirBloco(novaFormula())}
       >
         <Icon name="sigma" size={16} />
+      </BotaoToolbar>
+      {/*
+        Fórmula no meio da frase (passo 6.2.11) — só no computador, pelo
+        mesmo motivo da de bloco. Sem `.focus()`, como a nota: o foco vai
+        para o campo do LaTeX que o node view abre.
+      */}
+      <BotaoToolbar
+        label="Fórmula no texto (só no computador) — escrita em LaTeX, no meio da frase"
+        className="hidden md:flex"
+        disabled={!podeInserirFormulaInline(editor.state)}
+        onClick={() => editor.commands.command(({ tr }) => inserirFormulaInline(tr))}
+      >
+        <Icon name="radical" size={16} />
       </BotaoToolbar>
       {/*
         Nota de rodapé (passo 6.1.3c). Desligada onde a nota não cabe, como

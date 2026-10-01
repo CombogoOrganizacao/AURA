@@ -92,7 +92,18 @@ export interface NoNotaRodape {
 // tabela fica só com `NoTexto`: a tabela tem rodapé próprio (fonte, nota
 // geral e nota específica, IBGE §3.2.3), e nota de rodapé da página dentro
 // da grade não é o que as normas de apresentação tabular preveem.
-export type NoInline = NoTexto | NoNotaRodape;
+export type NoInline = NoTexto | NoNotaRodape | NoFormulaInline;
+
+// Fórmula no meio da frase (passo 6.2.11), ao lado da fórmula em bloco
+// (`NoFormula`): o mesmo LaTeX em `texto`, desenhado na linha. Inline e
+// atômica, como a nota de rodapé, e pela mesma regra **conta zero caracteres
+// no texto do parágrafo** (`soTexto()`, ./inline.ts): a busca, a conferência
+// e as estatísticas leem a frase sem ela. No `.docx`, equação nativa do Word
+// dentro do parágrafo (OMML), como a de bloco.
+export interface NoFormulaInline {
+  type: "formula_inline";
+  texto: string;
+}
 
 // `paragraph` e não `parágrafo`: o nó ainda é o `Paragraph` de fábrica do
 // TipTap (src/components/editor/Editor.tsx), sem nó customizado próprio no

@@ -395,10 +395,14 @@ function marcas(lista: readonly Marca[] | undefined) {
 }
 
 function inline(content: readonly NoInline[] | undefined) {
-  const nos: ({ texto: string; marcas: string } | { nota: string })[] = [];
+  const nos: ({ texto: string; marcas: string } | { nota: string } | { formula: string })[] = [];
   for (const no of content ?? []) {
     if (no.type === "nota_rodape") {
       nos.push({ nota: no.texto.replace(/\s+/g, " ").trim() });
+      continue;
+    }
+    if (no.type === "formula_inline") {
+      nos.push({ formula: no.texto.trim() });
       continue;
     }
     const chave = JSON.stringify(marcas(no.marks));

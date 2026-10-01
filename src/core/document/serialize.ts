@@ -179,9 +179,9 @@ function paraCelulaTabela(no: JSONContent): CelulaTabela {
 // `paraNoTexto()` direto, que recusa a nota como recusa qualquer nó fora da
 // lista.
 function paraNoInline(no: JSONContent): NoInline {
-  if (no.type === "nota_rodape") {
+  if (no.type === "nota_rodape" || no.type === "formula_inline") {
     const { texto } = (no.attrs ?? {}) as { texto?: unknown };
-    return { type: "nota_rodape", texto: typeof texto === "string" ? texto : "" };
+    return { type: no.type, texto: typeof texto === "string" ? texto : "" };
   }
   return paraNoTexto(no);
 }
@@ -249,9 +249,7 @@ export function fromDocumento(sections: Secao[]): JSONContent {
 function deConteudoInline(content: NoInline[] | undefined): JSONContent[] | undefined {
   if (!content || content.length === 0) return undefined;
   return content.map((texto) =>
-    texto.type === "nota_rodape"
-      ? { type: "nota_rodape", attrs: { texto: texto.texto } }
-      : deNoTexto(texto),
+    texto.type === "text" ? deNoTexto(texto) : { type: texto.type, attrs: { texto: texto.texto } },
   );
 }
 
