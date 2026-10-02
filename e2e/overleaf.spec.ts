@@ -28,7 +28,7 @@ test("o aviso de mão única vem antes, e cancelar não envia nada", async ({ pa
   await page.getByRole("button", { name: "Abrir no Overleaf" }).click();
   const dialogo = page.getByRole("dialog", { name: "Abrir no Overleaf" });
   await expect(dialogo).toContainText("O caminho é de mão única");
-  await expect(dialogo).toContainText("Reimportar LaTeX");
+  await expect(dialogo).toContainText("Importar LaTeX");
   await expect(dialogo).toContainText("Tamanho do pacote");
 
   await dialogo.getByRole("button", { name: "Cancelar" }).click();

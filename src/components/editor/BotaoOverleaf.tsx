@@ -109,7 +109,7 @@ export function BotaoOverleaf({ documento, salvarAgora }: BotaoOverleafProps) {
           <div className="flex flex-col gap-3 text-sm text-body">
             <Alert tone="warning" title="O caminho é de mão única">
               O que você editar no Overleaf não volta sozinho para o AURA. Para trazer as mudanças,
-              baixe o projeto no Overleaf (Menu → Download → Source) e use “Reimportar LaTeX”.
+              baixe o projeto no Overleaf (Menu → Download → Source) e use “Importar LaTeX”.
             </Alert>
             <p>
               Voltam o texto das seções, dos apêndices e dos anexos, os dados do bloco de metadados,
