@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/Select";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { novaFigura, novaFormula, novaTabela } from "@/core/document/factory";
 import { podeApagarSecao } from "@/core/editor/apagarSecao";
+import { estiloDaSelecao, type EstiloBloco } from "@/core/editor/estiloDoBloco";
 import { cursorDepoisDoBloco, fimDoBlocoAtual } from "@/core/editor/caret";
 import { inserirNotaRodape, podeInserirNota } from "@/core/editor/nodes/footnote";
 import { inserirFormulaInline, podeInserirFormulaInline } from "@/core/editor/nodes/formulaInline";
@@ -102,6 +103,72 @@ const CONTROLES_FUTUROS: ReadonlyArray<{ nome: NomeIcone; label: string }> = [
   { nome: "list-ordered", label: "Lista numerada — chega na Fase 3" },
 ];
 
+const ROTULO_ESTILO: Record<"corpo" | "citacao_longa", string> = {
+  corpo: "Corpo do texto",
+  citacao_longa: "Citação longa (recuo 4 cm)",
+};
+
+// Estilo do bloco do cursor. Só corpo e citação longa se trocam por aqui: o
+// título da seção não é um parágrafo neste schema (é atributo da seção, e o
+// nível muda pelos botões H1–H3), e legenda, célula e nota têm lugar próprio.
+function CaixaEstilo({ editor, estilo }: { editor: Editor; estilo: EstiloBloco }) {
+  if (estilo === "celula" || estilo === "outro") {
+    return (
+      <Tooltip content="Este elemento tem estilo próprio, definido pela norma">
+        <Select
+          aria-label="Estilo do parágrafo"
+          disabled
+          size="sm"
+          className="w-[184px]"
+          value={estilo}
+          options={[
+            { value: estilo, label: estilo === "celula" ? "Célula de tabela" : "—" },
+          ]}
+        />
+      </Tooltip>
+    );
+  }
+
+  const opcoes = [
+    ...(estilo === "misto" ? [{ value: "misto", label: "Estilos variados" }] : []),
+    { value: "corpo", label: ROTULO_ESTILO.corpo },
+    { value: "citacao_longa", label: ROTULO_ESTILO.citacao_longa },
+  ];
+  return (
+    <Select
+      aria-label="Estilo do parágrafo"
+      size="sm"
+      className="w-[184px]"
+      value={estilo}
+      options={opcoes}
+      onChange={(evento) => {
+        const novo = evento.target.value;
+        if (novo !== "corpo" && novo !== "citacao_longa") return;
+        editor
+          .chain()
+          .focus()
+          .setNode(novo === "corpo" ? "paragraph" : "citacao_longa")
+          .run();
+      }}
+    />
+  );
+}
+
+// Tamanho da fonte do bloco do cursor — só leitura. Quem define é a norma,
+// conforme o elemento (`estiloDaSelecao`, src/core/editor/estiloDoBloco.ts).
+function IndicadorTamanho({ tamanhoPt }: { tamanhoPt: number | null }) {
+  return (
+    <Tooltip content="Tamanho definido pela ABNT para este elemento: 12 no texto, 10 na citação longa, nas notas e nas legendas. Para mudar, mude o estilo.">
+      <output
+        aria-label="Tamanho da fonte"
+        className="flex h-[var(--control-h-sm)] w-14 shrink-0 items-center justify-center rounded-sm border border-[var(--border-subtle)] bg-sunken font-sans text-sm text-muted tabular-nums"
+      >
+        {tamanhoPt ?? "—"}
+      </output>
+    </Tooltip>
+  );
+}
+
 interface ToolbarProps {
   editor: Editor | null;
   // Para o menu de citação (4.10) listar o que pode ser citado.
@@ -135,12 +202,11 @@ interface ToolbarProps {
 // listada). Tabela e fórmula são **só desktop**; ver o comentário em cada
 // botão.
 //
-// Todo o resto — estilo de parágrafo, fonte do documento, corpo, sublinhado,
-// justificar, lista, nota de rodapé, "Aplicar formatação ABNT" — é
-// visual e desabilitado: prévia do que a Fase 3+ liga, não um controle que
-// finge funcionar. `CONTROLES_FUTUROS` cobre os botões de ícone; os três
-// seletores (`Select`, também desabilitados) ficam escritos por extenso
-// abaixo porque cada um tem opções próprias.
+// A caixa de estilo troca o bloco entre corpo e citação longa, e o
+// indicador de tamanho só mostra o que a norma fixa para o bloco
+// (`CaixaEstilo` e `IndicadorTamanho`, abaixo). Sublinhado, justificar,
+// lista e "Aplicar formatação ABNT" continuam visuais e desabilitados:
+// prévia, não um controle que finge funcionar (`CONTROLES_FUTUROS`).
 //
 // Nível de título muda a seção mais próxima da seleção
 // (`editor.chain().updateAttributes("secao", { nivel })`), não um parágrafo
@@ -152,6 +218,7 @@ export function Toolbar({ editor, references, onBuscar, onApagarSecao }: Toolbar
   if (!editor) return null;
 
   const nivelAtual = editor.getAttributes("secao").nivel as NivelSecao | undefined;
+  const estilo = estiloDaSelecao(editor.state);
 
   // `insertContentAt(selection.to)`, não `insertContent()`: quando a seleção
   // é o nó inteiro — e é o que acontece logo depois de inserir uma figura,
@@ -200,21 +267,7 @@ export function Toolbar({ editor, references, onBuscar, onApagarSecao }: Toolbar
 
       <Divisor />
 
-      <Tooltip content="Estilo de parágrafo — a Fase 3 unifica isso com o nível de seção">
-        <Select
-          aria-label="Estilo de parágrafo"
-          disabled
-          size="sm"
-          className="w-[168px]"
-          options={[
-            "Corpo do texto",
-            "Título 1 (seção primária)",
-            "Título 2 (seção secundária)",
-            "Citação longa (recuo 4 cm)",
-            "Legenda",
-          ]}
-        />
-      </Tooltip>
+      <CaixaEstilo editor={editor} estilo={estilo.estilo} />
       <Tooltip content="Fonte do documento — escolha do usuário, chega na Fase 3.3">
         <Select
           aria-label="Fonte do documento"
@@ -224,15 +277,7 @@ export function Toolbar({ editor, references, onBuscar, onApagarSecao }: Toolbar
           options={["Times New Roman", "Arial"]}
         />
       </Tooltip>
-      <Tooltip content="Tamanho por elemento — chega na Fase 3.3">
-        <Select
-          aria-label="Corpo"
-          disabled
-          size="sm"
-          className="w-14"
-          options={["10", "11", "12"]}
-        />
-      </Tooltip>
+      <IndicadorTamanho tamanhoPt={estilo.tamanhoPt} />
 
       <Divisor />
 
