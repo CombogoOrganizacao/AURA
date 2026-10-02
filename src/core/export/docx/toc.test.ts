@@ -50,20 +50,28 @@ describe("sumário no .docx como campo TOC (passo 3.6.2)", () => {
   });
 
   // NBR 6027 §5.2 contra §6.3: pós-textual entra no sumário, pré-textual não.
-  // O campo distingue os dois por nome de estilo — `\t "Titulo Pos-Textual,1"`
-  // recolhe REFERÊNCIAS, APÊNDICE e ANEXO; `TituloPreTextual` fica fora do
-  // mapa e por isso RESUMO, ABSTRACT e SUMÁRIO continuam ausentes.
-  it('recolhe também os pós-textuais, pelo estilo nomeado (\\t), sem arrastar os pré-textuais', async () => {
+  // Quem separa os dois é o nível de estrutura do estilo, que o `\o` recolhe:
+  // `TituloPosTextual` tem nível 1, `TituloPreTextual` não tem nenhum.
+  it("recolhe os pós-textuais pelo nível de estrutura do estilo, sem arrastar os pré-textuais", async () => {
+    const estilos = await xmlDe(documentoComTresNiveis(), "word/styles.xml");
+    const estilo = (id: string) =>
+      estilos.match(new RegExp(`<w:style [^>]*w:styleId="${id}"[^>]*>.*?</w:style>`, "s"))![0];
+
+    expect(estilo("TituloPosTextual")).toContain('<w:outlineLvl w:val="0"/>');
+    expect(estilo("TituloPreTextual")).not.toContain("<w:outlineLvl");
+  });
+
+  // `\t "Estilo,1"` depende do separador de lista do Windows (`;` em pt-BR):
+  // no Word em português o sumário saía sem REFERÊNCIAS. Ver `toc.ts`.
+  it("o campo não usa \\t, que quebra conforme o idioma do Windows", async () => {
     const instrucao = (await xmlDe(documentoComTresNiveis())).match(
       /<w:instrText[^>]*>(TOC [^<]*)<\/w:instrText>/,
     )![1];
 
-    expect(instrucao).toContain('\\t &quot;Titulo Pos-Textual,1&quot;');
-    expect(instrucao).not.toContain("TituloPreTextual");
-    expect(instrucao).not.toContain("Titulo Pre-Textual");
+    expect(instrucao).not.toContain("\\t");
   });
 
-  it("os títulos pós-textuais usam TituloPosTextual, que é o estilo do mapa \\t", async () => {
+  it("os títulos pós-textuais usam TituloPosTextual, o estilo com nível de estrutura", async () => {
     const documento = documentoComTresNiveis();
     documento.apendices = [{ id: "ap1", titulo: "Questionário aplicado", content: [] }];
     documento.anexos = [{ id: "an1", titulo: "Parecer do comitê", content: [] }];

@@ -217,19 +217,23 @@ export const ESTILOS_DOCUMENTO: IStylesOptions = {
     // 14724:2024 §5.2.3 põe os treze títulos sem indicativo numérico numa lista
     // só, e eles saem idênticos no papel — o que separa os dois estilos não é
     // aparência, é a NBR 6027: o §6.3 proíbe pré-textual no sumário e o §5.2
-    // manda pós-textual entrar nele. Um campo `TOC` só sabe distinguir os dois
-    // grupos se eles tiverem nomes de estilo diferentes (`toc.ts` mapeia este
-    // por `\t`, ver lá).
+    // manda pós-textual entrar nele. Só este tem nível de estrutura, e é por
+    // ele que o campo `TOC` o recolhe (ver `toc.ts`).
+    //
+    // `outlineLevel: 0` é o nível 1 do Word (`<w:outlineLvl w:val="0"/>`): título
+    // sem indicativo numérico fica ao lado das seções primárias (6027 §5.2).
     //
     // `basedOn: "TituloPreTextual"` em vez de repetir as propriedades: mudar o
     // título centralizado da norma num lugar muda nos dois, que é o que o
-    // §5.2.3 quer dizer ao tratá-los num grupo só.
+    // §5.2.3 quer dizer ao tratá-los num grupo só. O nível de estrutura não
+    // sobe para o pai — o pré-textual continua fora do sumário.
     {
       id: "TituloPosTextual",
       name: "Titulo Pos-Textual",
       basedOn: "TituloPreTextual",
       next: "Normal",
       quickFormat: true,
+      paragraph: { outlineLevel: 0 },
     },
     // NBR 10520 — citação direta com mais de três linhas (passo 3.4.2, nó
     // `citacao_longa` desde 3.4.1). Nomeado, ao contrário do que

@@ -1,4 +1,4 @@
-import { StyleLevel, TableOfContents, type FileChild } from "docx";
+import { TableOfContents, type FileChild } from "docx";
 
 import { TITULO_SUMARIO } from "../../document/elements/sumario";
 import { paragrafoTituloPreTextual } from "./preTextuais";
@@ -32,31 +32,28 @@ import { paragrafoTituloPreTextual } from "./preTextuais";
 // `<w:style>` com a PoC. Pedir "1-5" recolheria níveis que não existem.
 const NIVEIS_DE_TITULO = "1-3";
 
-// `\t "Titulo Pos-Textual,1"` no campo: o Word recolhe também os parágrafos
-// com esse estilo nomeado, no primeiro nível do sumário. É a NBR 6027 §5.2,
-// que manda alinhar os títulos "inclusive os elementos pós-textuais" e cujo
-// EXEMPLO lista `REFERÊNCIAS`, `APÊNDICE A` e `ANEXO A` dentro do sumário.
+// Pós-textuais (REFERÊNCIAS, APÊNDICE, ANEXO) entram pelo mesmo `\o`: o estilo
+// `TituloPosTextual` tem nível de estrutura 1 (`styles.ts`), e o `\o` recolhe
+// também parágrafos com nível de estrutura no intervalo. É a NBR 6027 §5.2, que
+// manda alinhar os títulos "inclusive os elementos pós-textuais" e cujo EXEMPLO
+// lista `REFERÊNCIAS`, `APÊNDICE A` e `ANEXO A` dentro do sumário.
 //
-// **Um switch separado, e não um nível de estrutura no estilo.** Dar
-// `outlineLevel` ao estilo o faria entrar pelo `\o`, que é o mesmo caminho dos
-// Heading — e aí qualquer mudança no `\o` arrastaria os pós-textuais junto. Com
-// `\t`, o que entra por estilo nomeado está escrito aqui, numa linha só.
+// **Não use `\t "Estilo,1"`.** Foi a primeira forma, e falhou no Word em
+// pt-BR: o Word separa nome e nível com o separador de lista do Windows, que
+// é `;` em pt-BR e `,` em inglês. Nenhuma grafia funciona nos dois, e o
+// sumário saía sem REFERÊNCIAS, sem erro nenhum. Conferido no Word em
+// 02/10/2026: `,` falha, `;` funciona, e o nível de estrutura funciona sem
+// switch nenhum.
 //
-// O `TituloPreTextual` fica de fora deste mapa de propósito: §6.3, "os
+// O `TituloPreTextual` não tem nível de estrutura, de propósito: §6.3, "os
 // elementos pré-textuais não podem constar no sumário". Os dois estilos são
-// visualmente idênticos (§5.2.3 da 14724) e existem separados só por causa
-// desta linha — ver `styles.ts`.
-//
-// Nível 1 porque são títulos **sem indicativo numérico**: a 6027 §5.2 os
-// alinha "pela margem do título do indicativo mais extenso", ao lado das
-// seções primárias, não recuados sob elas.
-const ESTILO_POSTEXTUAL_NO_SUMARIO = new StyleLevel("Titulo Pos-Textual", 1);
+// visualmente idênticos (§5.2.3 da 14724) e existem separados só por isso.
 
 // Título + campo, juntos: o par é o elemento pré-textual "sumário" inteiro, e
 // separá-los só daria a `sections.ts` a chance de montar um sem o outro.
 //
-// O título usa `TituloPreTextual`, que **não** é estilo de título nem está no
-// mapa de `\t` — é o que o mantém fora do próprio sumário, sem regra especial
+// O título usa `TituloPreTextual`, que **não** é estilo de título nem tem
+// nível de estrutura — é o que o mantém fora do próprio sumário, sem regra especial
 // (NBR 6027 §6.3, "os elementos pré-textuais não podem constar no sumário", e
 // o sumário é o último deles). Mesma razão pela qual resumo, abstract e as
 // listas também não aparecem lá.
@@ -71,7 +68,6 @@ export function blocoSumario(): FileChild[] {
     new TableOfContents(TITULO_SUMARIO, {
       hyperlink: true,
       headingStyleRange: NIVEIS_DE_TITULO,
-      stylesWithLevels: [ESTILO_POSTEXTUAL_NO_SUMARIO],
     }),
   ];
 }
