@@ -7,13 +7,23 @@ import TiptapParagraph from "@tiptap/extension-paragraph";
 import TiptapText from "@tiptap/extension-text";
 import { Fragment, Slice } from "@tiptap/pm/model";
 import { EditorContent, ReactNodeViewRenderer, useEditor } from "@tiptap/react";
+import type { Editor as TiptapEditor } from "@tiptap/core";
 
+import { Button } from "@/components/ui/Button";
+import { Dialog } from "@/components/ui/Dialog";
 import { EstadoCarregando } from "@/components/ui/Estados";
 import { PaperSheet } from "@/components/ui/PaperSheet";
 import { novaSecao } from "@/core/document/factory";
 import { fromDocumento, toDocumento } from "@/core/document/serialize";
 import type { Secao } from "@/core/document/types";
 import type { Referencia } from "@/core/references/types";
+import {
+  apagarSecao,
+  podeApagarSecao,
+  secaoDoCursor,
+  secaoPorId,
+  type SecaoNoDocumento,
+} from "@/core/editor/apagarSecao";
 import { cursorNaUltimaLinha } from "@/core/editor/caret";
 import { CursorDeIntervalo } from "@/core/editor/gapcursor";
 import { alvoNoEditor, selecaoDoAlvo } from "@/core/editor/localizar";
@@ -134,6 +144,30 @@ export type IrParaLocal = (local: LocalAchado) => boolean;
 // `MoverSecao`: o painel recebe só esta capacidade.
 export type CriarSecao = (subsecao: boolean) => void;
 
+// Apagar seção pelo menu de botão direito do painel — mesmo padrão. A barra
+// apaga a seção do cursor e não precisa disto: ela já vive dentro do editor.
+export type ApagarSecao = (id: string) => void;
+
+// Seção vazia (recém-criada, sem título nem texto) sai direto; a que tem algo
+// escrito pede confirmação antes. Nos dois casos, Ctrl+Z traz de volta.
+function pedirParaApagar(
+  editor: TiptapEditor,
+  id: string,
+  confirmar: (secao: SecaoNoDocumento) => void,
+) {
+  const secao = secaoPorId(editor.state.doc, id);
+  if (!secao || !podeApagarSecao(editor.state.doc)) return;
+  if (secao.temConteudo) confirmar(secao);
+  else executarApagar(editor, id);
+}
+
+function executarApagar(editor: TiptapEditor, id: string) {
+  const tr = editor.state.tr;
+  if (!apagarSecao(tr, id)) return;
+  editor.view.dispatch(tr.scrollIntoView());
+  editor.view.focus();
+}
+
 interface EditorProps {
   sections: Secao[];
   /**
@@ -154,6 +188,8 @@ interface EditorProps {
   onIrParaReady?: (irPara: IrParaLocal) => void;
   /** Mesmo padrão de `onReorderReady`, para "Nova seção" no painel (6.2.7). */
   onCriarSecaoReady?: (criar: CriarSecao) => void;
+  /** Mesmo padrão, para "Apagar seção" no menu do painel. */
+  onApagarSecaoReady?: (apagar: ApagarSecao) => void;
 }
 
 // Editor com seções (passo 1.3.7), formatação (passo 2.5: negrito, itálico,
@@ -180,6 +216,7 @@ export function Editor({
   onReorderReady,
   onIrParaReady,
   onCriarSecaoReady,
+  onApagarSecaoReady,
 }: EditorProps) {
   // `useState` com inicializador preguiçoso — roda uma vez só, no mount, e
   // ler o valor durante o render é normal (diferente de `ref.current`, que
@@ -303,6 +340,17 @@ export function Editor({
     };
   }, [editor, onCriarSecaoReady]);
 
+  // Seção com algo escrito, à espera da confirmação para ser apagada.
+  const [secaoAApagar, setSecaoAApagar] = useState<SecaoNoDocumento | null>(null);
+
+  useEffect(() => {
+    if (!editor || !onApagarSecaoReady) return;
+    onApagarSecaoReady((id) => pedirParaApagar(editor, id, setSecaoAApagar));
+    return () => {
+      onApagarSecaoReady(() => {});
+    };
+  }, [editor, onApagarSecaoReady]);
+
   // Clicar num achado da conferência (5.2.3). `alvoNoEditor()` traduz o
   // local para uma posição, e `selecaoDoAlvo()` escolhe a seleção
   // (src/core/editor/localizar.ts). `scrollIntoView` rola o contêiner da
@@ -379,7 +427,56 @@ export function Editor({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <Toolbar editor={editor} references={references} onBuscar={() => abrirBusca("localizar")} />
+      <Toolbar
+        editor={editor}
+        references={references}
+        onBuscar={() => abrirBusca("localizar")}
+        onApagarSecao={() => {
+          const secao = secaoDoCursor(editor.state);
+          if (secao) pedirParaApagar(editor, secao.id, setSecaoAApagar);
+        }}
+      />
+      <Dialog
+        open={secaoAApagar !== null}
+        width={420}
+        title="Apagar seção?"
+        // O foco volta ao texto, não ao botão que abriu: depois de apagar, o
+        // botão pode nem existir mais (a linha do painel some junto).
+        restaurarFoco={false}
+        onClose={() => {
+          setSecaoAApagar(null);
+          editor.view.focus();
+        }}
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setSecaoAApagar(null);
+                editor.view.focus();
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                if (secaoAApagar) executarApagar(editor, secaoAApagar.id);
+                setSecaoAApagar(null);
+              }}
+            >
+              Apagar seção
+            </Button>
+          </>
+        }
+      >
+        <p>
+          O título e o texto de{" "}
+          <strong>{secaoAApagar?.titulo.trim() ? `“${secaoAApagar.titulo}”` : "esta seção"}</strong>{" "}
+          saem do documento. As subseções dela continuam e passam para a seção anterior.
+        </p>
+        <p className="mt-2 text-muted">Para desfazer, use Ctrl+Z logo depois.</p>
+      </Dialog>
       {busca && (
         <BuscaSubstituicao
           editor={editor}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 
 import { PanelHeading } from "@/components/app/PanelHeading";
@@ -55,14 +55,86 @@ interface PainelSecoesProps {
   onReorder: (idOrigem: string, idDestino: string, inserirDepois: boolean) => void;
   /** Cria uma seção depois da seção do cursor, no mesmo nível — passo 6.2.7. */
   onNovaSecao: () => void;
+  /** Apaga a seção — quem confirma, se ela tiver texto, é o `Editor.tsx`. */
+  onApagarSecao: (id: string) => void;
+}
+
+interface MenuAberto {
+  id: string;
+  x: number;
+  y: number;
+}
+
+// Menu de botão direito de uma linha do painel. Fecha com Esc, com clique fora
+// e ao rolar; abre também pela tecla de menu do teclado (Shift+F10), que o
+// navegador entrega como o mesmo evento `contextmenu`.
+function MenuDaSecao({
+  menu,
+  podeApagar,
+  onApagar,
+  onFechar,
+}: {
+  menu: MenuAberto;
+  podeApagar: boolean;
+  onApagar: () => void;
+  onFechar: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    ref.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
+    function aoApertarFora(evento: PointerEvent) {
+      if (!ref.current?.contains(evento.target as Node)) onFechar();
+    }
+    function aoTeclar(evento: KeyboardEvent) {
+      if (evento.key === "Escape") onFechar();
+    }
+    document.addEventListener("pointerdown", aoApertarFora);
+    document.addEventListener("keydown", aoTeclar);
+    window.addEventListener("scroll", onFechar, true);
+    return () => {
+      document.removeEventListener("pointerdown", aoApertarFora);
+      document.removeEventListener("keydown", aoTeclar);
+      window.removeEventListener("scroll", onFechar, true);
+    };
+  }, [onFechar]);
+
+  return (
+    <div
+      ref={ref}
+      role="menu"
+      aria-label="Ações da seção"
+      style={{ position: "fixed", left: menu.x, top: menu.y }}
+      className="z-50 min-w-44 rounded-md border border-[var(--border-subtle)] bg-card py-1 shadow-lg"
+    >
+      <button
+        type="button"
+        role="menuitem"
+        disabled={!podeApagar}
+        title={podeApagar ? undefined : "O trabalho precisa de pelo menos uma seção"}
+        onClick={onApagar}
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-sans text-sm text-danger hover:bg-sunken focus-visible:bg-sunken focus-visible:outline-none disabled:cursor-not-allowed disabled:text-disabled disabled:hover:bg-transparent"
+      >
+        <Icon name="trash-2" size={14} />
+        Apagar seção
+      </button>
+    </div>
+  );
 }
 
 // Coluna esquerda do editor (passo 2B.10) — lista as seções que existem de
 // verdade. Numeração progressiva (3.2.1/3.2.2), navegação por âncora (3.2.3),
 // reordenar arrastando (3.2.4, só desktop) e "Nova seção" no cabeçalho
 // (6.2.7; a subseção fica na barra do editor, junto do cursor).
-export function PainelSecoes({ sections, onReorder, onNovaSecao }: PainelSecoesProps) {
+export function PainelSecoes({
+  sections,
+  onReorder,
+  onNovaSecao,
+  onApagarSecao,
+}: PainelSecoesProps) {
   const numeracao = useMemo(() => numerarSecoes(sections), [sections]);
+  const [menu, setMenu] = useState<MenuAberto | null>(null);
+  const fecharMenu = useCallback(() => setMenu(null), []);
 
   // "Latest ref" — mesmo padrão de `LayoutEdicao.tsx`/`AlcaRedimensionar`:
   // o gesto de arrasto dura vários renders (cada `pointermove` chama
@@ -153,6 +225,15 @@ export function PainelSecoes({ sections, onReorder, onNovaSecao }: PainelSecoesP
               <div
                 key={secao.id}
                 data-secao-id={secao.id}
+                onContextMenu={(evento) => {
+                  evento.preventDefault();
+                  // Pela tecla de menu, o evento vem sem coordenada: abre
+                  // junto da própria linha.
+                  const linha = evento.currentTarget.getBoundingClientRect();
+                  const x = evento.clientX || linha.left + 24;
+                  const y = evento.clientY || linha.bottom;
+                  setMenu({ id: secao.id, x, y });
+                }}
                 style={{ paddingLeft: 8 + (secao.nivel - 1) * 14 }}
                 className={[
                   "flex items-center gap-1 rounded-sm",
@@ -191,6 +272,17 @@ export function PainelSecoes({ sections, onReorder, onNovaSecao }: PainelSecoesP
           })
         )}
       </nav>
+      {menu && (
+        <MenuDaSecao
+          menu={menu}
+          podeApagar={sections.length > 1}
+          onFechar={fecharMenu}
+          onApagar={() => {
+            setMenu(null);
+            onApagarSecao(menu.id);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { BotaoReimportar } from "@/components/editor/BotaoReimportar";
 import { ProvedorImagens } from "@/components/editor/ImagensDoDocumento";
 import {
   Editor,
+  type ApagarSecao,
   type CriarSecao,
   type IrParaLocal,
   type MoverSecao,
@@ -240,6 +241,15 @@ function Carregado({
     criarSecaoRef.current?.(subsecao);
   }, []);
 
+  // "Apagar seção" no menu do painel — mesmo padrão.
+  const apagarSecaoRef = useRef<ApagarSecao | null>(null);
+  const registrarApagarSecao = useCallback((apagar: ApagarSecao) => {
+    apagarSecaoRef.current = apagar;
+  }, []);
+  const apagarSecao: ApagarSecao = useCallback((id) => {
+    apagarSecaoRef.current?.(id);
+  }, []);
+
   // Conferência (passo 5.2.3), recalculada na pausa da digitação (5.2.4).
   // A chave "Verificar enquanto escrevo" vale só nesta sessão do editor.
   const [verificarEnquantoEscrevo, setVerificarEnquantoEscrevo] = useState(true);
@@ -419,6 +429,7 @@ function Carregado({
                 sections={documento.sections}
                 onReorder={reordenarSecoes}
                 onNovaSecao={() => criarSecao(false)}
+                onApagarSecao={apagarSecao}
               />
             </div>
           }
@@ -445,6 +456,7 @@ function Carregado({
             onReorderReady={registrarComandoDeReordenar}
             onIrParaReady={registrarIrPara}
             onCriarSecaoReady={registrarCriarSecao}
+            onApagarSecaoReady={registrarApagarSecao}
           />
         </LayoutEdicao>
       </ProvedorImagens>

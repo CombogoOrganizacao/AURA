@@ -9,6 +9,7 @@ import type { NomeIcone } from "@/components/ui/Icon";
 import { Select } from "@/components/ui/Select";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { novaFigura, novaFormula, novaTabela } from "@/core/document/factory";
+import { podeApagarSecao } from "@/core/editor/apagarSecao";
 import { cursorDepoisDoBloco, fimDoBlocoAtual } from "@/core/editor/caret";
 import { inserirNotaRodape, podeInserirNota } from "@/core/editor/nodes/footnote";
 import { inserirFormulaInline, podeInserirFormulaInline } from "@/core/editor/nodes/formulaInline";
@@ -107,6 +108,8 @@ interface ToolbarProps {
   references: readonly Referencia[];
   // Abre a barra de localizar e substituir (5.4.3).
   onBuscar?: () => void;
+  // Apaga a seção do cursor — quem confirma é o `Editor.tsx`.
+  onApagarSecao?: () => void;
 }
 
 // Ações de formatação da v1 (passo 2.5, estendida no 2B.12): negrito,
@@ -143,7 +146,7 @@ interface ToolbarProps {
 // (`editor.chain().updateAttributes("secao", { nivel })`), não um parágrafo
 // — não existe "Título 1" como estilo de parágrafo neste schema: o título é
 // atributo da própria seção (docs/schema-tiptap.md §4.1).
-export function Toolbar({ editor, references, onBuscar }: ToolbarProps) {
+export function Toolbar({ editor, references, onBuscar, onApagarSecao }: ToolbarProps) {
   useEstadoEditor(editor);
 
   if (!editor) return null;
@@ -364,6 +367,19 @@ export function Toolbar({ editor, references, onBuscar }: ToolbarProps) {
       >
         <Icon name="list-indent-increase" size={16} />
       </BotaoToolbar>
+      {onApagarSecao && (
+        <BotaoToolbar
+          label={
+            podeApagarSecao(editor.state.doc)
+              ? "Apagar a seção atual — as subseções dela continuam"
+              : "Apagar a seção atual — o trabalho precisa de pelo menos uma seção"
+          }
+          disabled={!podeApagarSecao(editor.state.doc)}
+          onClick={onApagarSecao}
+        >
+          <Icon name="trash-2" size={16} />
+        </BotaoToolbar>
+      )}
 
       {NIVEIS.map((item) => (
         <BotaoToolbar
