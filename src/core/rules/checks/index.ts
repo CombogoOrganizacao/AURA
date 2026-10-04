@@ -8,6 +8,7 @@ import {
 import { corpoPresente, referenciasPresentes } from "./corpoEReferencias";
 import { dadosDeIdentificacao } from "./dadosDeIdentificacao";
 import { folhaDeAprovacao } from "./folhaDeAprovacao";
+import { naturezaCompleta } from "./naturezaCompleta";
 import { ilustracaoCitada, ilustracaoComFonte, ilustracaoComTitulo } from "./ilustracoes";
 import { posTextualComTitulo } from "./posTextualComTitulo";
 import { palavrasChaveMinusculas, resumoExtensao, resumoParagrafoUnico } from "./resumoForma";
@@ -24,6 +25,7 @@ import { siglaPrimeiraMencao } from "./siglaPrimeiraMencao";
 // (citações, ilustrações); cada regra tem id próprio.
 export const VERIFICACOES: readonly Verificacao[] = [
   dadosDeIdentificacao,
+  naturezaCompleta,
   folhaDeAprovacao,
   resumoVernaculo,
   resumoEstrangeiro,
