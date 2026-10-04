@@ -13,6 +13,7 @@ import { gerarListaDeFiguras, gerarListaDeTabelas } from "../../document/element
 import { textoItemSumario } from "../../document/elements/sumario";
 import { trechosDaCitacaoLonga, trechosDoInline } from "../../document/elements/trechos";
 import { numerarFiguras, numerarSecoes, numerarTabelas } from "../../document/numbering";
+import { semVaziosNasPontas } from "../../document/vaziosNasPontas";
 import {
   elementosDaParte,
   type ElementoDocumento,
@@ -253,7 +254,9 @@ function paragrafosDoCorpo(
         documento.metadados.fonte,
       ),
     );
-    for (const no of secao.content) {
+    // Sem o parágrafo vazio que o editor deixa em toda seção: exportado, ele
+    // dobrava o espaço entre um título e o subtítulo logo abaixo.
+    for (const no of semVaziosNasPontas(secao.content)) {
       if (no.type === "figura" || no.type === "tabela") {
         // `?? 0` nunca acontece com um documento consistente: os dois `Map`
         // são construídos percorrendo estas mesmas seções. Um nó ausente

@@ -9,6 +9,7 @@ import {
 import { textoTituloPosTextual, type ItemPosTextual } from "../../document/elements/posTextual";
 import { trechosDaCitacaoLonga, trechosDoInline } from "../../document/elements/trechos";
 import type { Documento, ElementoPosTextual, NoConteudo } from "../../document/types";
+import { semVaziosNasPontas } from "../../document/vaziosNasPontas";
 import type { Referencia } from "../../references/types";
 import { ABNT } from "./constants";
 import { paragrafoTituloPosTextual } from "./preTextuais";
@@ -97,7 +98,7 @@ function blocoDeElemento(
 ): FileChild[] {
   return [
     paragrafoTituloPosTextual(textoTituloPosTextual(item).toLocaleUpperCase("pt-BR")),
-    ...elemento.content.map((no) => paragrafoDeConteudo(no, references, notas)),
+    ...semVaziosNasPontas(elemento.content).map((no) => paragrafoDeConteudo(no, references, notas)),
   ];
 }
 
