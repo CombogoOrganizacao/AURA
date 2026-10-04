@@ -15,7 +15,7 @@ import { EstadoCarregando } from "@/components/ui/Estados";
 import { PaperSheet } from "@/components/ui/PaperSheet";
 import { novaSecao } from "@/core/document/factory";
 import { fromDocumento, toDocumento } from "@/core/document/serialize";
-import type { Secao } from "@/core/document/types";
+import type { FonteTrabalho, Secao } from "@/core/document/types";
 import type { Referencia } from "@/core/references/types";
 import {
   apagarSecao,
@@ -190,6 +190,9 @@ interface EditorProps {
   onCriarSecaoReady?: (criar: CriarSecao) => void;
   /** Mesmo padrão, para "Apagar seção" no menu do painel. */
   onApagarSecaoReady?: (apagar: ApagarSecao) => void;
+  /** Fonte do trabalho (`Metadados.fonte`): a folha e a caixa da barra seguem ela. */
+  fonte?: FonteTrabalho;
+  onFonteChange?: (fonte: FonteTrabalho) => void;
 }
 
 // Editor com seções (passo 1.3.7), formatação (passo 2.5: negrito, itálico,
@@ -217,6 +220,8 @@ export function Editor({
   onIrParaReady,
   onCriarSecaoReady,
   onApagarSecaoReady,
+  fonte,
+  onFonteChange,
 }: EditorProps) {
   // `useState` com inicializador preguiçoso — roda uma vez só, no mount, e
   // ler o valor durante o render é normal (diferente de `ref.current`, que
@@ -431,6 +436,8 @@ export function Editor({
         editor={editor}
         references={references}
         onBuscar={() => abrirBusca("localizar")}
+        fonte={fonte}
+        onFonteChange={onFonteChange}
         onApagarSecao={() => {
           const secao = secaoDoCursor(editor.state);
           if (secao) pedirParaApagar(editor, secao.id, setSecaoAApagar);
@@ -493,7 +500,7 @@ export function Editor({
         `AvisoPaginacao`, acima, fica fora da rolagem para não sumir.
       */}
       <div className="flex min-h-0 flex-1 flex-col items-center gap-6 overflow-auto bg-ink-100 p-8">
-        <PaperSheet continua>
+        <PaperSheet continua font={fonte ?? "times"}>
           {/*
             Clicar no vazio da folha, abaixo do texto, põe o cursor na última
             linha — criando-a se o documento terminar em tabela, figura ou

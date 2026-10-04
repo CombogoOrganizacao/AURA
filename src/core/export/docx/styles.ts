@@ -36,9 +36,9 @@ import { ABNT } from "./constants";
 // Espaço antes e depois do título de subseção: `ABNT.espacoTitulo`, pela NBR
 // 14724:2024 §5.2.2 (passo 6.1.5; ver constants.ts). Até ali eram 18 pt antes
 // e 12 pt depois, herdados da PoC sem base na norma.
-function estiloTitulo(extra: Record<string, boolean>) {
+function estiloTitulo(fonte: string, extra: Record<string, boolean>) {
   return {
-    run: { font: ABNT.fonte, size: ABNT.tamanhoCorpo, color: "000000", ...extra },
+    run: { font: fonte, size: ABNT.tamanhoCorpo, color: "000000", ...extra },
     paragraph: {
       keepNext: true,
       spacing: { before: ABNT.espacoTitulo, after: ABNT.espacoTitulo, line: ABNT.espacamento15 },
@@ -69,13 +69,13 @@ function estiloTitulo(extra: Record<string, boolean>) {
 //
 // `name: "toc N"` é o nome interno que o Word usa para reconhecer o estilo
 // como o de sumário dele (no Word em português aparece como "Sumário N").
-function estiloSumario(nivel: 1 | 2 | 3, extra: Record<string, boolean>) {
+function estiloSumario(fonte: string, nivel: 1 | 2 | 3, extra: Record<string, boolean>) {
   return {
     id: `TOC${nivel}`,
     name: `toc ${nivel}`,
     basedOn: "Normal",
     next: "Normal",
-    run: { font: ABNT.fonte, size: ABNT.tamanhoCorpo, color: "000000", ...extra },
+    run: { font: fonte, size: ABNT.tamanhoCorpo, color: "000000", ...extra },
     paragraph: {
       spacing: { before: 0, after: 0, line: ABNT.espacamento15 },
       indent: { left: 0, firstLine: 0 },
@@ -84,197 +84,205 @@ function estiloSumario(nivel: 1 | 2 | 3, extra: Record<string, boolean>) {
   };
 }
 
-export const ESTILOS_DOCUMENTO: IStylesOptions = {
-  default: {
-    document: {
-      run: { font: ABNT.fonte, size: ABNT.tamanhoCorpo },
-      paragraph: { spacing: { line: ABNT.espacamento15 } },
-    },
-    // heading4/heading5 não são produzidos por `fromDocumento()` — `NivelSecao`
-    // (src/core/document/types.ts) para em 3. Ficam declarados só pra manter
-    // paridade de `<w:style>` com `poc/docx/gerar.js` (conferido em
-    // `index.test.ts`), que monta até cinco níveis de subseção.
-    heading1: {
-      run: {
-        font: ABNT.fonte,
-        size: ABNT.tamanhoCorpo,
-        bold: true,
-        allCaps: true,
-        color: "000000",
+// `fonte`: o nome da família no Word — Times New Roman ou Arial, conforme a
+// escolha do aluno (`Metadados.fonte`, `FONTES_DOCX` em constants.ts). O
+// tamanho não muda com ela: é a norma que o fixa.
+export function estilosDocumento(fonte: string = ABNT.fonte): IStylesOptions {
+  return {
+    default: {
+      document: {
+        run: { font: fonte, size: ABNT.tamanhoCorpo },
+        paragraph: { spacing: { line: ABNT.espacamento15 } },
       },
-      // NBR 14724:2024 §5.2.2 (passo 6.1.5): a seção primária abre página nova
-      // e figura "na parte superior da mancha gráfica", por isso nada antes;
-      // depois, o mesmo `espacoTitulo` da subseção. A quebra de página não
-      // está aqui: fica no parágrafo (`fromDocumento.ts`), porque a primeira
-      // seção já abre a seção OOXML numa página nova.
-      paragraph: {
-        keepNext: true,
-        spacing: { before: 0, after: ABNT.espacoTitulo, line: ABNT.espacamento15 },
+      // heading4/heading5 não são produzidos por `fromDocumento()` — `NivelSecao`
+      // (src/core/document/types.ts) para em 3. Ficam declarados só pra manter
+      // paridade de `<w:style>` com `poc/docx/gerar.js` (conferido em
+      // `index.test.ts`), que monta até cinco níveis de subseção.
+      heading1: {
+        run: {
+          font: fonte,
+          size: ABNT.tamanhoCorpo,
+          bold: true,
+          allCaps: true,
+          color: "000000",
+        },
+        // NBR 14724:2024 §5.2.2 (passo 6.1.5): a seção primária abre página nova
+        // e figura "na parte superior da mancha gráfica", por isso nada antes;
+        // depois, o mesmo `espacoTitulo` da subseção. A quebra de página não
+        // está aqui: fica no parágrafo (`fromDocumento.ts`), porque a primeira
+        // seção já abre a seção OOXML numa página nova.
+        paragraph: {
+          keepNext: true,
+          spacing: { before: 0, after: ABNT.espacoTitulo, line: ABNT.espacamento15 },
+        },
       },
-    },
-    heading2: estiloTitulo({ bold: true }),
-    heading3: estiloTitulo({ italics: true }),
-    heading4: estiloTitulo({}),
-    heading5: estiloTitulo({ italics: true, smallCaps: true }),
-    // Nota de rodapé — NBR 14724:2024 §5.2.1 (lida no PDF no passo 6.1.3c) e
-    // NBR 10520:2023 §8: espaço simples (também §5.2), fonte menor e uniforme
-    // (§5.1: 10 pt, a mesma da citação longa), "sem espaço entre elas" e a
-    // segunda linha "abaixo da primeira letra da primeira palavra". O recuo
-    // deslocado faz a última parte: o expoente fica na margem, e a tabulação
-    // que `notas.ts` põe depois dele leva o texto até `recuoNota`, onde as
-    // linhas seguintes também começam.
-    //
-    // O `docx` substitui o `paragraph` de fábrica inteiro por este, e o de
-    // fábrica é que zerava o `after`: por isso `before`/`after` explícitos.
-    //
-    // O filete de 5 cm da §5.2.1 é o separador de notas do próprio Word, que
-    // o `docx` grava e não deixa medir. Fica para a conferência no Word.
-    footnoteText: {
-      run: { font: ABNT.fonte, size: ABNT.tamanhoMenor },
-      paragraph: {
-        spacing: { before: 0, after: 0, line: ABNT.espacamento1 },
-        indent: { left: ABNT.recuoNota, hanging: ABNT.recuoNota },
-      },
-    },
-  },
-  paragraphStyles: [
-    // Texto corrido — passo 6.1.1. NBR 14724:2024 §5.2: entrelinha 1,5; §5.1:
-    // fonte 12; recuo de primeira linha e justificado, os mesmos valores que
-    // o parágrafo já recebia solto antes deste estilo existir
-    // (`ABNT.recuoParagrafo`, ver constants.ts para a origem de cada um).
-    {
-      id: "Corpo",
-      name: "Corpo",
-      basedOn: "Normal",
-      next: "Corpo",
-      quickFormat: true,
-      run: { font: ABNT.fonte, size: ABNT.tamanhoCorpo },
-      paragraph: {
-        alignment: AlignmentType.JUSTIFIED,
-        spacing: { line: ABNT.espacamento15 },
-        indent: { firstLine: ABNT.recuoParagrafo },
+      heading2: estiloTitulo(fonte, { bold: true }),
+      heading3: estiloTitulo(fonte, { italics: true }),
+      heading4: estiloTitulo(fonte, {}),
+      heading5: estiloTitulo(fonte, { italics: true, smallCaps: true }),
+      // Nota de rodapé — NBR 14724:2024 §5.2.1 (lida no PDF no passo 6.1.3c) e
+      // NBR 10520:2023 §8: espaço simples (também §5.2), fonte menor e uniforme
+      // (§5.1: 10 pt, a mesma da citação longa), "sem espaço entre elas" e a
+      // segunda linha "abaixo da primeira letra da primeira palavra". O recuo
+      // deslocado faz a última parte: o expoente fica na margem, e a tabulação
+      // que `notas.ts` põe depois dele leva o texto até `recuoNota`, onde as
+      // linhas seguintes também começam.
+      //
+      // O `docx` substitui o `paragraph` de fábrica inteiro por este, e o de
+      // fábrica é que zerava o `after`: por isso `before`/`after` explícitos.
+      //
+      // O filete de 5 cm da §5.2.1 é o separador de notas do próprio Word, que
+      // o `docx` grava e não deixa medir. Fica para a conferência no Word.
+      footnoteText: {
+        run: { font: fonte, size: ABNT.tamanhoMenor },
+        paragraph: {
+          spacing: { before: 0, after: 0, line: ABNT.espacamento1 },
+          indent: { left: ABNT.recuoNota, hanging: ABNT.recuoNota },
+        },
       },
     },
-    // Referência da lista — passo 6.1.1. NBR 6023:2025 §6.3: "elaboradas em
-    // espaço simples, alinhadas à margem esquerda do texto"; a linha em branco
-    // entre uma e outra é um parágrafo vazio no mesmo estilo (ver
-    // `posTextuais.ts`, que explica por quê). Fonte 12: as referências não
-    // estão entre os elementos de tamanho menor (NBR 14724:2024 §5.1).
-    {
-      id: "Referencia",
-      name: "Referencia",
-      basedOn: "Normal",
-      next: "Referencia",
-      quickFormat: true,
-      run: { font: ABNT.fonte, size: ABNT.tamanhoCorpo },
-      paragraph: {
-        alignment: AlignmentType.LEFT,
-        spacing: { before: 0, after: 0, line: ABNT.espacamento1 },
-        indent: { left: 0, firstLine: 0 },
+    paragraphStyles: [
+      // Texto corrido — passo 6.1.1. NBR 14724:2024 §5.2: entrelinha 1,5; §5.1:
+      // fonte 12; recuo de primeira linha e justificado, os mesmos valores que
+      // o parágrafo já recebia solto antes deste estilo existir
+      // (`ABNT.recuoParagrafo`, ver constants.ts para a origem de cada um).
+      {
+        id: "Corpo",
+        name: "Corpo",
+        basedOn: "Normal",
+        next: "Corpo",
+        quickFormat: true,
+        run: { font: fonte, size: ABNT.tamanhoCorpo },
+        paragraph: {
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { line: ABNT.espacamento15 },
+          indent: { firstLine: ABNT.recuoParagrafo },
+        },
       },
-    },
-    // Conteúdo de célula de tabela — passo 6.1.3. Fonte 12 e entrelinha 1,5
-    // porque a tabela não está entre as exceções da NBR 14724:2024 §5.1 e
-    // §5.2 (que alcançam só título, legenda e fonte da tabela — ver
-    // `table.ts`). À esquerda e sem recuo: o recuo de primeira linha e o
-    // justificado do `Corpo` são de parágrafo corrido, e numa coluna estreita
-    // o justificado abre buracos entre as palavras.
-    {
-      id: "CelulaTabela",
-      name: "Celula de Tabela",
-      basedOn: "Normal",
-      next: "CelulaTabela",
-      quickFormat: true,
-      run: { font: ABNT.fonte, size: ABNT.tamanhoCorpo },
-      paragraph: {
-        alignment: AlignmentType.LEFT,
-        spacing: { before: 0, after: 0, line: ABNT.espacamento15 },
-        indent: { left: 0, firstLine: 0 },
+      // Referência da lista — passo 6.1.1. NBR 6023:2025 §6.3: "elaboradas em
+      // espaço simples, alinhadas à margem esquerda do texto"; a linha em branco
+      // entre uma e outra é um parágrafo vazio no mesmo estilo (ver
+      // `posTextuais.ts`, que explica por quê). Fonte 12: as referências não
+      // estão entre os elementos de tamanho menor (NBR 14724:2024 §5.1).
+      {
+        id: "Referencia",
+        name: "Referencia",
+        basedOn: "Normal",
+        next: "Referencia",
+        quickFormat: true,
+        run: { font: fonte, size: ABNT.tamanhoCorpo },
+        paragraph: {
+          alignment: AlignmentType.LEFT,
+          spacing: { before: 0, after: 0, line: ABNT.espacamento1 },
+          indent: { left: 0, firstLine: 0 },
+        },
       },
-    },
-    estiloSumario(1, { bold: true, allCaps: true }),
-    estiloSumario(2, { bold: true }),
-    estiloSumario(3, { italics: true }),
-    // Título de elemento sem indicativo numérico — NBR 14724:2024 §5.2.3,
-    // que trata NUMA LISTA SÓ os treze: errata, agradecimentos, as quatro
-    // listas, os dois resumos, sumário, referências, glossário, apêndice(s),
-    // anexo(s) e índice(s). "Devem ser centralizados", e nada mais. O
-    // `TituloPosTextual`, logo abaixo, tem a mesma aparência: o que separa os
-    // dois é só o sumário (ver lá).
-    {
-      id: "TituloPreTextual",
-      name: "Titulo Pre-Textual",
-      basedOn: "Normal",
-      next: "Normal",
-      quickFormat: true,
-      run: { font: ABNT.fonte, size: ABNT.tamanhoCorpo, bold: true, color: "000000" },
-      paragraph: {
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 360, line: ABNT.espacamento15 },
+      // Conteúdo de célula de tabela — passo 6.1.3. Fonte 12 e entrelinha 1,5
+      // porque a tabela não está entre as exceções da NBR 14724:2024 §5.1 e
+      // §5.2 (que alcançam só título, legenda e fonte da tabela — ver
+      // `table.ts`). À esquerda e sem recuo: o recuo de primeira linha e o
+      // justificado do `Corpo` são de parágrafo corrido, e numa coluna estreita
+      // o justificado abre buracos entre as palavras.
+      {
+        id: "CelulaTabela",
+        name: "Celula de Tabela",
+        basedOn: "Normal",
+        next: "CelulaTabela",
+        quickFormat: true,
+        run: { font: fonte, size: ABNT.tamanhoCorpo },
+        paragraph: {
+          alignment: AlignmentType.LEFT,
+          spacing: { before: 0, after: 0, line: ABNT.espacamento15 },
+          indent: { left: 0, firstLine: 0 },
+        },
       },
-    },
-    // **Mesma formatação do `TituloPreTextual`, estilo separado.** A NBR
-    // 14724:2024 §5.2.3 põe os treze títulos sem indicativo numérico numa lista
-    // só, e eles saem idênticos no papel — o que separa os dois estilos não é
-    // aparência, é a NBR 6027: o §6.3 proíbe pré-textual no sumário e o §5.2
-    // manda pós-textual entrar nele. Só este tem nível de estrutura, e é por
-    // ele que o campo `TOC` o recolhe (ver `toc.ts`).
-    //
-    // `outlineLevel: 0` é o nível 1 do Word (`<w:outlineLvl w:val="0"/>`): título
-    // sem indicativo numérico fica ao lado das seções primárias (6027 §5.2).
-    //
-    // `basedOn: "TituloPreTextual"` em vez de repetir as propriedades: mudar o
-    // título centralizado da norma num lugar muda nos dois, que é o que o
-    // §5.2.3 quer dizer ao tratá-los num grupo só. O nível de estrutura não
-    // sobe para o pai — o pré-textual continua fora do sumário.
-    {
-      id: "TituloPosTextual",
-      name: "Titulo Pos-Textual",
-      basedOn: "TituloPreTextual",
-      next: "Normal",
-      quickFormat: true,
-      paragraph: { outlineLevel: 0 },
-    },
-    // NBR 10520 — citação direta com mais de três linhas (passo 3.4.2, nó
-    // `citacao_longa` desde 3.4.1). Nomeado, ao contrário do que
-    // `poc/docx/gerar.js` fazia (formatação solta no `Paragraph`, sem
-    // `paragraphStyles` próprio) — é o que faz o Word listar "Citacao Longa"
-    // no painel de Estilos (critério do 6.1.1, que estende esta lista com
-    // Corpo/Referencia/Legenda mais adiante). `recuoCitacao` (4 cm) só à
-    // esquerda, mesma decisão da PoC e do CSS do editor (globals.css,
-    // `--doc-indent-citacao`, passo 3.4.1) — nunca as duas margens.
-    // NBR 14724 — legenda e fonte de ilustração/tabela (passo 3.6.3, estilo
-    // nomeado ao corrigir a lista de tabelas). **O estilo existe para que o
-    // tamanho menor venha do PARÁGRAFO, não de cada run.** O número da
-    // legenda é um campo (`SEQ`) com resultado em cache, e o run desse cache
-    // é montado pela biblioteca `docx`, sem como receber `size` — com o
-    // tamanho preso em cada run, o número sairia em 12 pt no meio de uma
-    // legenda de 10 pt. É também como o Word trata legenda desde sempre
-    // (estilo "Legenda"/"Caption"), e adianta uma linha do 6.1.1.
-    {
-      id: "Legenda",
-      name: "Legenda",
-      basedOn: "Normal",
-      next: "Normal",
-      quickFormat: true,
-      run: { font: ABNT.fonte, size: ABNT.tamanhoMenor, color: "000000" },
-      paragraph: {
-        alignment: AlignmentType.CENTER,
-        spacing: { line: ABNT.espacamento1 },
+      estiloSumario(fonte, 1, { bold: true, allCaps: true }),
+      estiloSumario(fonte, 2, { bold: true }),
+      estiloSumario(fonte, 3, { italics: true }),
+      // Título de elemento sem indicativo numérico — NBR 14724:2024 §5.2.3,
+      // que trata NUMA LISTA SÓ os treze: errata, agradecimentos, as quatro
+      // listas, os dois resumos, sumário, referências, glossário, apêndice(s),
+      // anexo(s) e índice(s). "Devem ser centralizados", e nada mais. O
+      // `TituloPosTextual`, logo abaixo, tem a mesma aparência: o que separa os
+      // dois é só o sumário (ver lá).
+      {
+        id: "TituloPreTextual",
+        name: "Titulo Pre-Textual",
+        basedOn: "Normal",
+        next: "Normal",
+        quickFormat: true,
+        run: { font: fonte, size: ABNT.tamanhoCorpo, bold: true, color: "000000" },
+        paragraph: {
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 360, line: ABNT.espacamento15 },
+        },
       },
-    },
-    {
-      id: "CitacaoLonga",
-      name: "Citacao Longa",
-      basedOn: "Normal",
-      next: "Normal",
-      quickFormat: true,
-      run: { font: ABNT.fonte, size: ABNT.tamanhoMenor, color: "000000" },
-      paragraph: {
-        alignment: AlignmentType.JUSTIFIED,
-        spacing: { before: 240, after: 240, line: ABNT.espacamento1 },
-        indent: { left: ABNT.recuoCitacao },
+      // **Mesma formatação do `TituloPreTextual`, estilo separado.** A NBR
+      // 14724:2024 §5.2.3 põe os treze títulos sem indicativo numérico numa lista
+      // só, e eles saem idênticos no papel — o que separa os dois estilos não é
+      // aparência, é a NBR 6027: o §6.3 proíbe pré-textual no sumário e o §5.2
+      // manda pós-textual entrar nele. Só este tem nível de estrutura, e é por
+      // ele que o campo `TOC` o recolhe (ver `toc.ts`).
+      //
+      // `outlineLevel: 0` é o nível 1 do Word (`<w:outlineLvl w:val="0"/>`): título
+      // sem indicativo numérico fica ao lado das seções primárias (6027 §5.2).
+      //
+      // `basedOn: "TituloPreTextual"` em vez de repetir as propriedades: mudar o
+      // título centralizado da norma num lugar muda nos dois, que é o que o
+      // §5.2.3 quer dizer ao tratá-los num grupo só. O nível de estrutura não
+      // sobe para o pai — o pré-textual continua fora do sumário.
+      {
+        id: "TituloPosTextual",
+        name: "Titulo Pos-Textual",
+        basedOn: "TituloPreTextual",
+        next: "Normal",
+        quickFormat: true,
+        paragraph: { outlineLevel: 0 },
       },
-    },
-  ],
-};
+      // NBR 10520 — citação direta com mais de três linhas (passo 3.4.2, nó
+      // `citacao_longa` desde 3.4.1). Nomeado, ao contrário do que
+      // `poc/docx/gerar.js` fazia (formatação solta no `Paragraph`, sem
+      // `paragraphStyles` próprio) — é o que faz o Word listar "Citacao Longa"
+      // no painel de Estilos (critério do 6.1.1, que estende esta lista com
+      // Corpo/Referencia/Legenda mais adiante). `recuoCitacao` (4 cm) só à
+      // esquerda, mesma decisão da PoC e do CSS do editor (globals.css,
+      // `--doc-indent-citacao`, passo 3.4.1) — nunca as duas margens.
+      // NBR 14724 — legenda e fonte de ilustração/tabela (passo 3.6.3, estilo
+      // nomeado ao corrigir a lista de tabelas). **O estilo existe para que o
+      // tamanho menor venha do PARÁGRAFO, não de cada run.** O número da
+      // legenda é um campo (`SEQ`) com resultado em cache, e o run desse cache
+      // é montado pela biblioteca `docx`, sem como receber `size` — com o
+      // tamanho preso em cada run, o número sairia em 12 pt no meio de uma
+      // legenda de 10 pt. É também como o Word trata legenda desde sempre
+      // (estilo "Legenda"/"Caption"), e adianta uma linha do 6.1.1.
+      {
+        id: "Legenda",
+        name: "Legenda",
+        basedOn: "Normal",
+        next: "Normal",
+        quickFormat: true,
+        run: { font: fonte, size: ABNT.tamanhoMenor, color: "000000" },
+        paragraph: {
+          alignment: AlignmentType.CENTER,
+          spacing: { line: ABNT.espacamento1 },
+        },
+      },
+      {
+        id: "CitacaoLonga",
+        name: "Citacao Longa",
+        basedOn: "Normal",
+        next: "Normal",
+        quickFormat: true,
+        run: { font: fonte, size: ABNT.tamanhoMenor, color: "000000" },
+        paragraph: {
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { before: 240, after: 240, line: ABNT.espacamento1 },
+          indent: { left: ABNT.recuoCitacao },
+        },
+      },
+    ],
+  };
+}
+
+// Times New Roman: o que o exportador gravava antes da escolha de fonte.
+export const ESTILOS_DOCUMENTO: IStylesOptions = estilosDocumento();

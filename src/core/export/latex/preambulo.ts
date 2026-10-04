@@ -2,7 +2,7 @@ import { TITULO_LISTA_ABREVIATURAS } from "../../document/elements/abreviaturas"
 import { tituloComSubtitulo } from "../../document/elements/capa";
 import { TITULO_LISTA_FIGURAS, TITULO_LISTA_TABELAS } from "../../document/elements/listas";
 import { TITULO_SUMARIO } from "../../document/elements/sumario";
-import type { Metadados } from "../../document/types";
+import type { FonteTrabalho, Metadados } from "../../document/types";
 import { escaparLatex } from "./escape";
 import { blocoDeMetadados } from "./markers";
 
@@ -32,13 +32,28 @@ const OPCOES_DA_CLASSE = [
   "brazil",
 ];
 
-const PACOTES = String.raw`\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-% Fonte tipo Times, como a Times New Roman do .docx. A norma não fixa família
-% (14724 §5.1): é convenção, não conformidade. newtxmath traz os símbolos da
-% AMS; por isso amssymb não entra (os dois definem os mesmos comandos).
-\usepackage{amsmath}
+// Fonte do texto, conforme `Metadados.fonte`. A norma não fixa família
+// (14724 §5.1): é convenção, não conformidade. Arial vira Helvetica sem
+// escala: a Arial tem a métrica da Helvetica, então 12 pt é 12 pt nas duas.
+// A matemática fica com a newtxmath nos dois casos.
+const FONTE_DO_TEXTO: Record<FonteTrabalho, string> = {
+  times: String.raw`% Fonte tipo Times, como a Times New Roman do .docx. newtxmath traz os
+% símbolos da AMS; por isso amssymb não entra (os dois definem os mesmos
+% comandos).
+\usepackage{newtxtext,newtxmath}`,
+  arial: String.raw`% Fonte tipo Arial (Helvetica, mesma métrica), como a Arial do .docx.
+% newtxtext fica carregada só para a matemática: sem ela, os algarismos das
+% fórmulas saíam em Computer Modern (visto no PDF compilado em 04/10/2026).
+% newtxmath traz os símbolos da AMS; por isso amssymb não entra.
 \usepackage{newtxtext,newtxmath}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}`,
+};
+
+const pacotes = (fonte: FonteTrabalho) => String.raw`\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+${FONTE_DO_TEXTO[fonte]}
 % Recuo também no primeiro parágrafo de cada seção, como o .docx.
 \usepackage{indentfirst}
 \usepackage{graphicx}
@@ -54,23 +69,24 @@ const SOBRESCRITAS = String.raw`% A classe já carrega o hyperref; carregar de n
 \hypersetup{hidelinks}
 
 % Títulos em 12 pt, com a gradação do .docx: nível 1 caixa alta e negrito,
-% nível 2 negrito, nível 3 itálico (14724 §5.1 e §5.4).
-\renewcommand{\ABNTEXchapterfont}{\rmfamily\bfseries}
+% nível 2 negrito, nível 3 itálico (14724 §5.1 e §5.4). \normalfont, e não
+% \rmfamily: segue a fonte escolhida (com Arial, \rmfamily voltaria à Times).
+\renewcommand{\ABNTEXchapterfont}{\normalfont\bfseries}
 \renewcommand{\ABNTEXchapterfontsize}{\normalsize}
-\renewcommand{\ABNTEXsectionfont}{\rmfamily\bfseries}
+\renewcommand{\ABNTEXsectionfont}{\normalfont\bfseries}
 \renewcommand{\ABNTEXsectionfontsize}{\normalsize}
-\renewcommand{\ABNTEXsubsectionfont}{\rmfamily\mdseries\itshape}
+\renewcommand{\ABNTEXsubsectionfont}{\normalfont\mdseries\itshape}
 \renewcommand{\ABNTEXsubsectionfontsize}{\normalsize}
-\renewcommand{\ABNTEXsubsubsectionfont}{\rmfamily\mdseries}
+\renewcommand{\ABNTEXsubsubsectionfont}{\normalfont\mdseries}
 \renewcommand{\ABNTEXsubsubsectionfontsize}{\normalsize}
 
 % Sumário com o mesmo destaque do texto (14724 §5.4; 6027 §6.2).
-\renewcommand{\cftchapterfont}{\rmfamily\bfseries}
-\renewcommand{\cftchapterpagefont}{\rmfamily\bfseries}
-\renewcommand{\cftsectionfont}{\rmfamily\bfseries}
-\renewcommand{\cftsectionpagefont}{\rmfamily\bfseries}
-\renewcommand{\cftsubsectionfont}{\rmfamily\itshape}
-\renewcommand{\cftsubsectionpagefont}{\rmfamily\itshape}
+\renewcommand{\cftchapterfont}{\normalfont\bfseries}
+\renewcommand{\cftchapterpagefont}{\normalfont\bfseries}
+\renewcommand{\cftsectionfont}{\normalfont\bfseries}
+\renewcommand{\cftsectionpagefont}{\normalfont\bfseries}
+\renewcommand{\cftsubsectionfont}{\normalfont\itshape}
+\renewcommand{\cftsubsectionpagefont}{\normalfont\itshape}
 
 % Espaço entre título e texto: 18 pt, a mesma medida do .docx
 % (ABNT.espacoTitulo, 14724 §5.2.2). A classe descumpre de propósito
@@ -185,7 +201,7 @@ function dados(metadados: Metadados): string {
 export function preambulo(metadados: Metadados): string {
   return [
     `\\documentclass[${OPCOES_DA_CLASSE.join(",")}]{abntex2}`,
-    PACOTES,
+    pacotes(metadados.fonte ?? "times"),
     SOBRESCRITAS,
     nomes(),
     COMANDOS_AURA,

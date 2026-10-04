@@ -20,13 +20,14 @@ import {
 } from "../../document/order";
 import type {
   Documento,
+  FonteTrabalho,
   NoCitacaoLonga,
   NoNumeravel,
   NoParagrafo,
   Secao,
 } from "../../document/types";
 import type { Referencia } from "../../references/types";
-import { ABNT } from "./constants";
+import { ABNT, fonteDocx } from "./constants";
 import { paragrafoImagem, type ImagensDoDocumento } from "./media";
 import { paragrafoFonte, paragrafoLegenda } from "./legenda";
 import { criarNotasDeRodape, type NotasDeRodape } from "./notas";
@@ -107,8 +108,13 @@ const NIVEL_PARA_HEADING = [
 //   da primeira letra da primeira palavra do título". Recuo deslocado com a
 //   largura do indicativo e do espaço que o separa, que muda de título para
 //   título ("1 " ou "2.3.1 ").
-function paragrafoTitulo(secao: Secao, numero: string | null, abrePagina: boolean): Paragraph {
-  const recuo = numero === null ? 0 : larguraIndicativo(numero);
+function paragrafoTitulo(
+  secao: Secao,
+  numero: string | null,
+  abrePagina: boolean,
+  fonte: FonteTrabalho | undefined,
+): Paragraph {
+  const recuo = numero === null ? 0 : larguraIndicativo(numero, fonte);
   return new Paragraph({
     text: textoItemSumario({ numero, titulo: secao.titulo }),
     heading: NIVEL_PARA_HEADING[secao.nivel - 1],
@@ -118,16 +124,24 @@ function paragrafoTitulo(secao: Secao, numero: string | null, abrePagina: boolea
 }
 
 // Largura, em twips, do indicativo mais o espaço que o separa do título
-// ("2.3.1 "). O indicativo só tem algarismos e pontos (`numerarSecoes()`). Na
-// Times New Roman (`ABNT.fonte`), normal, negrito e itálico, o algarismo tem
-// meio eme e o ponto e o espaço, um quarto: com 12 pt, 120 e 60 twips. A caixa
-// alta do nível 1 não muda algarismo nem ponto. Trocar a fonte exige refazer
-// esta conta.
-export function larguraIndicativo(numero: string): number {
+// ("2.3.1 "). O indicativo só tem algarismos e pontos (`numerarSecoes()`). A
+// caixa alta do nível 1 não muda algarismo nem ponto, e nas duas fontes as
+// larguras são as mesmas em normal, negrito e itálico. Em milésimos de eme,
+// das tabelas de métrica das fontes:
+// - Times New Roman: algarismo 500, ponto e espaço 250 (120 e 60 twips em 12 pt);
+// - Arial: algarismo 556, ponto e espaço 278.
+const METRICA_INDICATIVO: Record<FonteTrabalho, { algarismo: number; ponto: number }> = {
+  times: { algarismo: 500, ponto: 250 },
+  arial: { algarismo: 556, ponto: 278 },
+};
+
+export function larguraIndicativo(numero: string, fonte: FonteTrabalho = "times"): number {
   const eme = ABNT.tamanhoCorpo * 10; // meio-pontos -> twips
-  let largura = eme / 4; // o espaço separador
-  for (const caractere of numero) largura += caractere === "." ? eme / 4 : eme / 2;
-  return largura;
+  const { algarismo, ponto } = METRICA_INDICATIVO[fonte];
+  const larguraDe = (milesimos: number) => (eme * milesimos) / 1000;
+  let largura = larguraDe(ponto); // o espaço separador, da largura do ponto
+  for (const caractere of numero) largura += larguraDe(caractere === "." ? ponto : algarismo);
+  return Math.round(largura);
 }
 
 // Placeholder honesto da figura sem imagem, igual ao de `poc/docx/gerar.js`.
@@ -231,7 +245,14 @@ function paragrafosDoCorpo(
     // por `id`, e uma seção ausente dele sai sem indicativo em vez de com
     // `undefined` no meio do título.
     const abrePagina = secao.nivel === 1 && secao !== secoesEmOrdem[0];
-    corpo.push(paragrafoTitulo(secao, numeracao.get(secao.id) ?? null, abrePagina));
+    corpo.push(
+      paragrafoTitulo(
+        secao,
+        numeracao.get(secao.id) ?? null,
+        abrePagina,
+        documento.metadados.fonte,
+      ),
+    );
     for (const no of secao.content) {
       if (no.type === "figura" || no.type === "tabela") {
         // `?? 0` nunca acontece com um documento consistente: os dois `Map`
@@ -327,5 +348,11 @@ export function fromDocumento(
 
   const corpo = [...blocosDaParte(documento, "textual", imagens, notas).flat(), ...posTextuais];
 
-  return montarDocumento({ capa, corpo, preTextuais, notas: notas.conteudo });
+  return montarDocumento({
+    capa,
+    corpo,
+    preTextuais,
+    notas: notas.conteudo,
+    fonte: fonteDocx(documento.metadados.fonte),
+  });
 }

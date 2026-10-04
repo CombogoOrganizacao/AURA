@@ -457,6 +457,8 @@ function Carregado({
             onIrParaReady={registrarIrPara}
             onCriarSecaoReady={registrarCriarSecao}
             onApagarSecaoReady={registrarApagarSecao}
+            fonte={documento.metadados.fonte}
+            onFonteChange={(fonte) => atualizarMetadados((atual) => ({ ...atual, fonte }))}
           />
         </LayoutEdicao>
       </ProvedorImagens>

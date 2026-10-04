@@ -326,7 +326,15 @@ export interface Metadados {
   // "sejam colocadas após a aprovação do trabalho", então a folha sai com as
   // duas em branco, e o AURA não guarda nenhuma delas.
   bancaExaminadora?: MembroBanca[];
+
+  // Fonte do trabalho inteiro — Times New Roman ou Arial. A NBR 14724 fixa o
+  // tamanho, não a família: as duas são convenção aceita, e a escolha é do
+  // aluno (caixa na barra do editor). Opcional pelo mesmo motivo dos campos
+  // acima: ausente é Times, a fonte que o AURA usava antes da caixa existir.
+  fonte?: FonteTrabalho;
 }
+
+export type FonteTrabalho = "times" | "arial";
 
 // Um membro da banca: "nome, titulação e assinatura dos componentes da banca
 // examinadora e instituições a que pertencem" (§4.2.1.3). A assinatura é à

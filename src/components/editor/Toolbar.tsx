@@ -15,7 +15,7 @@ import { cursorDepoisDoBloco, fimDoBlocoAtual } from "@/core/editor/caret";
 import { inserirNotaRodape, podeInserirNota } from "@/core/editor/nodes/footnote";
 import { inserirFormulaInline, podeInserirFormulaInline } from "@/core/editor/nodes/formulaInline";
 import { deNoConteudo } from "@/core/document/serialize";
-import type { NivelSecao, NoConteudo } from "@/core/document/types";
+import type { FonteTrabalho, NivelSecao, NoConteudo } from "@/core/document/types";
 import type { Referencia } from "@/core/references/types";
 
 import { MenuCitacao } from "./MenuCitacao";
@@ -177,6 +177,9 @@ interface ToolbarProps {
   onBuscar?: () => void;
   // Apaga a seção do cursor — quem confirma é o `Editor.tsx`.
   onApagarSecao?: () => void;
+  // Fonte do trabalho (`Metadados.fonte`); ausente é Times.
+  fonte?: FonteTrabalho;
+  onFonteChange?: (fonte: FonteTrabalho) => void;
 }
 
 // Ações de formatação da v1 (passo 2.5, estendida no 2B.12): negrito,
@@ -212,7 +215,14 @@ interface ToolbarProps {
 // (`editor.chain().updateAttributes("secao", { nivel })`), não um parágrafo
 // — não existe "Título 1" como estilo de parágrafo neste schema: o título é
 // atributo da própria seção (docs/schema-tiptap.md §4.1).
-export function Toolbar({ editor, references, onBuscar, onApagarSecao }: ToolbarProps) {
+export function Toolbar({
+  editor,
+  references,
+  onBuscar,
+  onApagarSecao,
+  fonte,
+  onFonteChange,
+}: ToolbarProps) {
   useEstadoEditor(editor);
 
   if (!editor) return null;
@@ -268,15 +278,21 @@ export function Toolbar({ editor, references, onBuscar, onApagarSecao }: Toolbar
       <Divisor />
 
       <CaixaEstilo editor={editor} estilo={estilo.estilo} />
-      <Tooltip content="Fonte do documento — escolha do usuário, chega na Fase 3.3">
-        <Select
-          aria-label="Fonte do documento"
-          disabled
-          size="sm"
-          className="w-[132px]"
-          options={["Times New Roman", "Arial"]}
-        />
-      </Tooltip>
+      {onFonteChange && (
+        <Tooltip content="Fonte do trabalho inteiro — a ABNT aceita Times New Roman ou Arial; o tamanho não muda">
+          <Select
+            aria-label="Fonte do trabalho"
+            size="sm"
+            className="w-[150px]"
+            value={fonte ?? "times"}
+            options={[
+              { value: "times", label: "Times New Roman" },
+              { value: "arial", label: "Arial" },
+            ]}
+            onChange={(evento) => onFonteChange(evento.target.value as FonteTrabalho)}
+          />
+        </Tooltip>
+      )}
       <IndicadorTamanho tamanhoPt={estilo.tamanhoPt} />
 
       <Divisor />

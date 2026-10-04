@@ -1,5 +1,7 @@
 import { convertMillimetersToTwip } from "docx";
 
+import type { FonteTrabalho } from "../../document/types";
+
 // Constantes ABNT (NBR 14724, seção 5) — porte 1:1 de `poc/docx/gerar.js`
 // (ver docs/aura-poc-exportador-docx.md e docs/porte-poc.md para o que ficou
 // de fora deste porte). Valores conferidos na PoC; não reajustar um número
@@ -51,3 +53,14 @@ export const ABNT = {
   // constante fica porque virá preset de instituição que peça o contrário.
   resumoEspacoSimples: false,
 } as const;
+
+// Nome da família no Word para cada escolha de `Metadados.fonte`. Ausente é
+// Times, o `ABNT.fonte` de sempre.
+export const FONTES_DOCX: Record<FonteTrabalho, string> = {
+  times: "Times New Roman",
+  arial: "Arial",
+};
+
+export function fonteDocx(fonte: FonteTrabalho | undefined): string {
+  return FONTES_DOCX[fonte ?? "times"];
+}

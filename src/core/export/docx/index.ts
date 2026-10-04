@@ -1,7 +1,7 @@
 import { Document, type FileChild, type Paragraph } from "docx";
 
 import { montarSecoes } from "./sections";
-import { ESTILOS_DOCUMENTO } from "./styles";
+import { estilosDocumento } from "./styles";
 
 // Porte de poc/docx/gerar.js (passo 1.4.1) — o que ficou de fora deste porte
 // está registrado em docs/porte-poc.md, pra ninguém supor que ele cobre mais
@@ -46,6 +46,8 @@ export interface ConteudoExportacao {
   // referências já estão no corpo; aqui fica o que o Word põe no pé da
   // página. Opcional pelo mesmo motivo da capa.
   notas?: Record<number, { children: Paragraph[] }>;
+  // Família da fonte no Word (`fonteDocx()`, constants.ts). Ausente é Times.
+  fonte?: string;
 }
 
 // Só monta o `Document` (docx) — não empacota. Quem chama escolhe o
@@ -59,6 +61,7 @@ export function montarDocumento({
   capa = [],
   preTextuais = [],
   notas = {},
+  fonte,
 }: ConteudoExportacao): Document {
   return new Document({
     // `<w:updateFields/>` em `word/settings.xml` — porte do mesmo `features`
@@ -69,7 +72,7 @@ export function montarDocumento({
     // marcado `w:dirty="true"`; isto é o outro lado do mesmo par.
     features: { updateFields: true },
     footnotes: notas,
-    styles: ESTILOS_DOCUMENTO,
+    styles: estilosDocumento(fonte),
     sections: montarSecoes(corpo, preTextuais, capa),
   });
 }
