@@ -14,12 +14,16 @@ import { type LinhaPreTextual, linhaCentro } from "./linhaPreTextual";
 //    `metadados.naturezaTrabalho`
 //    (formulário 1.3.4 pede a frase inteira, ex.: "Trabalho de Conclusão de
 //    Curso apresentado ao curso de X da Universidade Y como requisito
-//    parcial para obtenção do título de Z"). É o único elemento recuado, e o
-//    recuo é literal no §5.2: "na folha de rosto e na folha de aprovação, a
+//    parcial para obtenção do título de Z"). O recuo é literal no §5.2: "na folha de rosto e na folha de aprovação, a
 //    natureza do trabalho deve ser alinhada do meio da mancha gráfica até a
 //    margem direita" — o critério de aceite deste passo;
 // f) nome do orientador (e coorientador, se houver — `Metadados` não tem
-//    campo de coorientador na v1);
+//    campo de coorientador na v1). **No mesmo bloco recuado da natureza**, logo
+//    abaixo dela: a norma não fixa onde o orientador fica (o §5.2 só alinha a
+//    natureza), e este é o arranjo da maior parte dos modelos de instituição
+//    (decisão da usuária em 04/10/2026; a UNICAP não tem modelo próprio). Até
+//    ali saía centralizado, decisão do passo 3.5.1. Em entrelinha 1,5, como o
+//    texto: a exceção de espaço simples do §5.2 é só da natureza;
 // g) local;
 // h) ano de depósito.
 //
@@ -45,7 +49,11 @@ export function gerarFolhaDeRosto(metadados: Metadados): LinhaPreTextual[] {
       papel: "natureza",
     });
   }
-  linhas.push(linhaCentro(`Orientador: ${metadados.orientador}`, "orientador"));
+  linhas.push({
+    texto: `Orientador: ${metadados.orientador}`,
+    alinhamento: "recuada-a-direita",
+    papel: "orientador",
+  });
   linhas.push(linhaCentro(metadados.local, "local"));
   linhas.push(linhaCentro(String(metadados.ano), "ano"));
 

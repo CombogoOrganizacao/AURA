@@ -48,21 +48,23 @@ describe("gerarFolhaDeRosto", () => {
     );
   });
 
-  it("recua só a nota de natureza do trabalho para a direita, o resto fica centralizado", () => {
-    const metadados = criarMetadados();
-    const linhas = gerarFolhaDeRosto(metadados);
+  it("recua a natureza e o orientador para a direita, num bloco só; o resto fica centralizado", () => {
+    const linhas = gerarFolhaDeRosto(criarMetadados());
 
-    const notaDeNatureza = linhas.find((linha) => linha.texto === metadados.naturezaTrabalho);
-    expect(notaDeNatureza?.alinhamento).toBe("recuada-a-direita");
+    const recuadas = linhas.filter((linha) => linha.alinhamento === "recuada-a-direita");
+    expect(recuadas.map((linha) => linha.papel)).toEqual(["natureza", "orientador"]);
 
-    const demais = linhas.filter((linha) => linha.texto !== metadados.naturezaTrabalho);
+    const demais = linhas.filter((linha) => linha.alinhamento !== "recuada-a-direita");
     expect(demais.every((linha) => linha.alinhamento === "centro")).toBe(true);
   });
 
-  it("omite a nota de natureza quando o campo está vazio", () => {
+  it("sem natureza, o orientador continua recuado", () => {
     const linhas = gerarFolhaDeRosto(criarMetadados({ naturezaTrabalho: "" }));
 
-    expect(linhas.some((linha) => linha.alinhamento === "recuada-a-direita")).toBe(false);
+    expect(linhas.some((linha) => linha.papel === "natureza")).toBe(false);
+    expect(linhas.find((linha) => linha.papel === "orientador")?.alinhamento).toBe(
+      "recuada-a-direita",
+    );
   });
 
   it("põe um autor por linha, na ordem em que aparecem nos metadados", () => {

@@ -137,8 +137,10 @@ const RECUO_METADE = Math.round(ABNT.larguraUtil / 2);
 // de rosto), congelada e conferida no Word.
 //
 // **Nada disso é norma.** A NBR 14724 enumera os elementos da capa e da folha
-// de rosto e diz que são centralizados; não manda caixa alta nem negrito em
-// lugar nenhum. É a convenção que toda banca espera, e está aqui como
+// de rosto, na ordem (§4.1.1 e §4.2.1.1.1), e só fixa o alinhamento da
+// natureza (§5.2); não manda centralizar o resto, nem caixa alta, nem negrito
+// (relido no PDF em 04/10/2026 — o comentário anterior dizia que a norma
+// centralizava). É a convenção que toda banca espera, e está aqui como
 // convenção — mesma disciplina de `docs/auditoria-abnt.md`, que separa
 // "conforme" de "convenção sem base normativa literal".
 const ENFASE: Partial<Record<PapelLinhaPreTextual, { bold?: boolean; caixaAlta?: boolean }>> = {
@@ -158,8 +160,8 @@ function paragrafoDeLinha(linha: LinhaPreTextual): Paragraph {
         // texto" e lista quem vai em tamanho menor (citação longa, notas,
         // paginação, ficha catalográfica, fontes e legendas): a natureza não
         // está na lista. O que o §5.2 dá a ela é só o espaço simples, logo
-        // abaixo. O nome do orientador segue centralizado, que é o que o
-        // passo 3.5.1 decidiu (a PoC o recuava junto com a natureza).
+        // abaixo. O orientador entra neste mesmo bloco, em 1,5
+        // (`gerarFolhaDeRosto()`).
         new TextRun({ text: linha.texto }),
       ],
       alignment: AlignmentType.JUSTIFIED,
@@ -230,7 +232,7 @@ function paragrafoNoPeDaPagina(linha: LinhaPreTextual): Paragraph {
 // conferido no Word.
 //
 // Distribuição vertical de capa e folha de rosto é convenção; a norma só
-// enumera e centraliza.
+// enumera.
 function comEspacosPorPapel(
   linhas: readonly LinhaPreTextual[],
   espacos: Partial<Record<PapelLinhaPreTextual, number>>,

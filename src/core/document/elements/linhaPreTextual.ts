@@ -9,11 +9,12 @@
 // registrou pra isso acontecer: um terceiro consumidor do mesmo tipo. Antes
 // disso seriam duas linhas de tipo num arquivo só pra si.
 
-// A norma centraliza a capa e a folha de rosto inteiras, com uma exceção: a
-// nota de natureza do trabalho, "recuada a partir do meio da mancha gráfica
-// para a margem direita" (NBR 14724 §5.2). Dedicatória e epígrafe usam o
-// mesmo recuo por CONVENÇÃO, não por texto normativo — ver
-// `opcionaisPreTextuais.ts`.
+// A capa e a folha de rosto saem centralizadas por CONVENÇÃO: a NBR 14724 só
+// fixa o alinhamento da natureza do trabalho, "alinhada do meio da mancha
+// gráfica até a margem direita" (§5.2; relido no PDF em 04/10/2026). O
+// orientador entra no mesmo bloco recuado, também por convenção
+// (`folhaDeRosto.ts`). Dedicatória e epígrafe usam o mesmo recuo pela
+// recomendação do §5.2.4 — ver `opcionaisPreTextuais.ts`.
 export type AlinhamentoLinhaPreTextual = "centro" | "recuada-a-direita" | "justificado";
 
 // O que a linha É, segundo a enumeração da norma (§5.1 e §5.2 listam os
