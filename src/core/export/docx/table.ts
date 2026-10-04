@@ -8,7 +8,11 @@ import {
   WidthType,
 } from "docx";
 
-import { linhasDeCabecalho } from "../../document/elements/tabela";
+import {
+  linhasDeCabecalho,
+  proporcoesDasColunas,
+  textosDasCelulas,
+} from "../../document/elements/tabela";
 import { trechosDoInline } from "../../document/elements/trechos";
 import type { CelulaTabela, NoTabela } from "../../document/types";
 import type { Referencia } from "../../references/types";
@@ -61,8 +65,9 @@ import { runsDeTrechos } from "./trechos";
 // `CelulaTabela` (styles.ts).
 //
 // Cabeçalho em negrito é **convenção**, a mesma da tela: o IBGE não fala de
-// destaque tipográfico no cabeçalho. Colunas de largura igual na largura útil
-// da folha, como a PoC e o CSS do editor.
+// destaque tipográfico no cabeçalho. Largura das colunas pelo texto das
+// células (`proporcoesDasColunas`, document/elements/tabela.ts), a mesma do
+// `.tex` e da tela; até 04/10/2026 eram iguais, como na PoC.
 
 const TRACO: IBorderOptions = { style: BorderStyle.SINGLE, size: 4, color: "000000" };
 const SEM_TRACO: IBorderOptions = { style: BorderStyle.NONE, size: 0, color: "auto" };
@@ -103,18 +108,19 @@ function celulaDocx(
 export function tabelaDocx(no: NoTabela, references: readonly Referencia[]): Table | null {
   if (no.linhas.length === 0) return null;
 
-  const colunas = Math.max(1, ...no.linhas.map((linha) => linha.celulas.length));
-  const largura = Math.floor(ABNT.larguraUtil / colunas);
+  const larguras = proporcoesDasColunas(textosDasCelulas(no.linhas)).map((proporcao) =>
+    Math.floor(ABNT.larguraUtil * proporcao),
+  );
   const cabecalho = linhasDeCabecalho(no.linhas);
 
   const rows = no.linhas.map(
     (linha, indice) =>
       new TableRow({
         tableHeader: indice < cabecalho,
-        children: linha.celulas.map((celula) =>
+        children: linha.celulas.map((celula, coluna) =>
           celulaDocx(
             celula,
-            largura,
+            larguras[coluna],
             { top: indice === 0, bottom: indice === cabecalho - 1 },
             references,
           ),
@@ -123,8 +129,8 @@ export function tabelaDocx(no: NoTabela, references: readonly Referencia[]): Tab
   );
 
   return new Table({
-    width: { size: largura * colunas, type: WidthType.DXA },
-    columnWidths: Array<number>(colunas).fill(largura),
+    width: { size: larguras.reduce((total, largura) => total + largura, 0), type: WidthType.DXA },
+    columnWidths: larguras,
     borders: {
       top: TRACO,
       bottom: TRACO,

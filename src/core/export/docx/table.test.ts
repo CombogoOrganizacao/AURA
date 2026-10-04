@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { novoDocumento } from "../../document/factory";
 import type { CelulaTabela, Documento, LinhaTabela, NoTabela } from "../../document/types";
+import { ABNT } from "./constants";
 import { fromDocumento } from "./fromDocumento";
 import { linhasDeCabecalho } from "./table";
 
@@ -235,12 +236,26 @@ describe("grade da tabela no .docx (passo 6.1.3)", () => {
     expect(documento).toContain("Fonte: IBGE (2024)");
   });
 
-  it("colunas de largura igual, somando a largura útil da folha", async () => {
+  it("colunas somando a largura útil da folha", async () => {
     const tbl = tabelas((await pacote(TRES_POR_TRES)).documento)[0];
 
     const larguras = [...tbl.matchAll(/<w:gridCol w:w="(\d+)"\/>/g)].map((m) => Number(m[1]));
     expect(larguras).toHaveLength(3);
-    expect(new Set(larguras).size).toBe(1);
+    const soma = larguras.reduce((total, largura) => total + largura, 0);
+    // `Math.floor` por coluna: até um twip a menos em cada uma.
+    expect(soma).toBeLessThanOrEqual(ABNT.larguraUtil);
+    expect(soma).toBeGreaterThanOrEqual(ABNT.larguraUtil - 3);
+  });
+
+  it("a coluna de texto longo fica mais larga que a de texto curto", async () => {
+    const cronograma = tabela([
+      linha(["Atividades", "Mês 1"], true),
+      linha(["Análise estatística dos dados e redação final da monografia, com revisão", "X"]),
+    ]);
+    const tbl = tabelas((await pacote(cronograma)).documento)[0];
+
+    const [atividades, mes] = [...tbl.matchAll(/<w:gridCol w:w="(\d+)"\/>/g)].map((m) => Number(m[1]));
+    expect(atividades).toBeGreaterThan(mes * 3);
   });
 });
 

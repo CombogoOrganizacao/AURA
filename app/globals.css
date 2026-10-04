@@ -467,10 +467,10 @@ h5 {
    junção das células. */
 .ProseMirror .doc-tabela table {
   width: 100%;
-  /* Colunas de largura igual, como o exportador faz (`largCol =
-     larguraUtil / nCols` em `poc/docx/gerar.js`). Com `auto`, uma coluna
-     ainda vazia encolhe a quase nada e o fio do cabeçalho aparece como um
-     risco curto, sem relação com o que vai sair no `.docx`. */
+  /* `fixed`, com a largura de cada coluna no `<colgroup>` de `TabelaView.tsx`
+     (`proporcoesDasColunas`, a mesma conta do `.docx` e do `.tex`). Com `auto`,
+     uma coluna ainda vazia encolhe a quase nada e o fio do cabeçalho aparece
+     como um risco curto, sem relação com o que vai sair no `.docx`. */
   table-layout: fixed;
   border-collapse: collapse;
   border-block: 1px solid var(--doc-ink);

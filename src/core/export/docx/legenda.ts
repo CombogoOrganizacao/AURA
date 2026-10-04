@@ -66,6 +66,11 @@ export function paragrafoLegenda(no: NoNumeravel, numero: number): Paragraph {
     ],
     style: "Legenda",
     keepNext: true,
+    // 6 pt entre o título e o traço de cima da tabela. Sem eles, o traço
+    // encostava nas letras do título (achado no TCC exportado, 02/10/2026).
+    // É o espaço que a figura já tem entre legenda e imagem (a moldura e a
+    // imagem trazem 6 pt antes) e o `\belowcaptionskip` do `.tex`.
+    ...(no.type === "tabela" ? { spacing: { after: 120 } } : {}),
   });
 }
 

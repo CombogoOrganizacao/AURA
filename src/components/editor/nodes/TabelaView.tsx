@@ -8,6 +8,7 @@ import { useCallback, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { ROTULO_TABELA } from "@/core/document/elements/legenda";
+import { proporcoesDasColunas } from "@/core/document/elements/tabela";
 import {
   alternarCabecalho,
   celulaDaSelecao,
@@ -50,6 +51,16 @@ export function TabelaView({ node, editor, getPos, updateAttributes }: ReactNode
       />
       <table>
         {/*
+          Largura das colunas pelo texto das células, a mesma conta do `.docx`
+          e do `.tex` (`proporcoesDasColunas`). Recalculada a cada render, que
+          o node view já recebe a cada mudança na tabela.
+        */}
+        <colgroup>
+          {proporcoesDasColunas(textosDoNo(node)).map((proporcao, coluna) => (
+            <col key={coluna} style={{ width: `${proporcao * 100}%` }} />
+          ))}
+        </colgroup>
+        {/*
           Argumento de tipo explícito: `as` é `NoInfer<T>` na assinatura do
           `NodeViewContent`, então TS não deduz "tbody" do próprio valor.
         */}
@@ -64,6 +75,18 @@ export function TabelaView({ node, editor, getPos, updateAttributes }: ReactNode
       {grade && <BarraGrade editor={editor} grade={grade} />}
     </NodeViewWrapper>
   );
+}
+
+// O texto de cada célula, linha a linha — o equivalente, no nó do
+// ProseMirror, de `textosDasCelulas()` sobre a tabela canônica.
+function textosDoNo(tabela: ReactNodeViewProps["node"]): string[][] {
+  const linhas: string[][] = [];
+  tabela.forEach((linha) => {
+    const celulas: string[] = [];
+    linha.forEach((celula) => celulas.push(celula.textContent));
+    linhas.push(celulas);
+  });
+  return linhas;
 }
 
 interface EstadoGrade {

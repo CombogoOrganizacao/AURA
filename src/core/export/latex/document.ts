@@ -19,7 +19,11 @@ import {
 } from "../../document/elements/opcionaisPreTextuais";
 import { textoTituloPosTextual, type ItemPosTextual } from "../../document/elements/posTextual";
 import { gerarListaReferencias } from "../../document/elements/referencias";
-import { linhasDeCabecalho } from "../../document/elements/tabela";
+import {
+  linhasDeCabecalho,
+  proporcoesDasColunas,
+  textosDasCelulas,
+} from "../../document/elements/tabela";
 import {
   partesDoInline,
   trechosDaCitacaoLonga,
@@ -206,7 +210,8 @@ function figura(no: NoFigura, imagens: ImagensParaTex): string {
 
 // Tabela no padrão do IBGE, como o `.docx` do passo 6.1.3: traço acima, traço
 // abaixo do cabeçalho e traço no fim, sem laterais. O cabeçalho se repete na
-// página seguinte (`\endhead`). Colunas de largura igual, como no `.docx`.
+// página seguinte (`\endhead`). Largura das colunas pelo texto das células,
+// a mesma conta do `.docx` (`proporcoesDasColunas`).
 function tabela(no: NoTabela, references: readonly Referencia[]): string {
   if (no.linhas.length === 0) {
     return [
@@ -219,8 +224,16 @@ function tabela(no: NoTabela, references: readonly Referencia[]): string {
       .join("\n");
   }
 
-  const colunas = Math.max(1, ...no.linhas.map((linha) => linha.celulas.length));
-  const largura = `\\dimexpr(\\linewidth-${2 * colunas}\\tabcolsep)/${colunas}\\relax`;
+  const proporcoes = proporcoesDasColunas(textosDasCelulas(no.linhas));
+  const colunas = proporcoes.length;
+  // Milésimos da largura útil sem o respiro das células: `\dimexpr` só
+  // multiplica e divide por inteiro.
+  const especificacao = proporcoes
+    .map(
+      (proporcao) =>
+        `p{\\dimexpr(\\linewidth-${2 * colunas}\\tabcolsep)*${Math.round(proporcao * 1000)}/1000\\relax}`,
+    )
+    .join("");
   const cabecalho = linhasDeCabecalho(no.linhas);
 
   const linhaLatex = (indice: number) => {
@@ -239,7 +252,7 @@ function tabela(no: NoTabela, references: readonly Referencia[]): string {
   const abaixoDoCabecalho = cabecalho > 0 ? ["\\midrule"] : [];
 
   return [
-    `\\begin{longtable}{*{${colunas}}{p{${largura}}}}`,
+    `\\begin{longtable}{${especificacao}}`,
     `\\caption{${escaparLatex(no.legenda)}} \\\\`,
     "\\toprule",
     ...linhasDoCabecalho,
