@@ -20,9 +20,9 @@ import { abrirDocumento, documentoSalvo, tresSecoes } from "./apoio";
 // sai do mesmo `gerarTex()` que o botão vai usar, a partir do documento
 // gravado no IndexedDB, como em `busca.spec.ts`.
 
-async function reimportar(page: Page, conteudo: string) {
+async function reimportar(page: Page, conteudo: string, nome = "trabalho.tex") {
   await page.getByLabel("Arquivo .tex ou .zip").setInputFiles({
-    name: "trabalho.tex",
+    name: nome,
     mimeType: "application/x-tex",
     buffer: Buffer.from(conteudo),
   });
@@ -87,6 +87,36 @@ test("arquivo igual ao trabalho: o relatório diz que nada mudou, e não há o q
   await expect(dialogo.getByRole("button", { name: "Reimportar" })).toHaveCount(0);
   await dialogo.getByText("Fechar", { exact: true }).click();
   await expect(dialogo).toBeHidden();
+});
+
+test("nome de arquivo comprido não alarga a janela: rola para o lado, a partir da esquerda", async ({
+  page,
+}) => {
+  const documento = tresSecoes();
+  await abrirDocumento(page, documento);
+  const nome =
+    "Construção_e_Avaliação_de_uma_Rede_Veicular_Definida_por_Software_com_Priorização_de_Pacotes_de_Segurança_em_Ambiente_Emulado.tex";
+
+  await reimportar(page, gerarTex(documento), nome);
+
+  const dialogo = page.getByRole("dialog", { name: "Reimportar do LaTeX" });
+  await expect(dialogo).toContainText("Nada mudou");
+  // Nada passa da largura da janela, e o título continua à vista.
+  expect(await dialogo.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  await expect(dialogo.getByRole("heading", { name: "Reimportar do LaTeX" })).toBeInViewport({
+    ratio: 1,
+  });
+  // O nome inteiro, numa linha que rola, começando do início.
+  const linha = dialogo.getByTitle(nome);
+  await expect(linha).toHaveText(nome);
+  const rolagem = await linha.evaluate((el) => ({
+    rola: el.scrollWidth > el.clientWidth,
+    inicio: el.scrollLeft,
+    cabe:
+      el.getBoundingClientRect().right <=
+      el.closest("[role=dialog]")!.getBoundingClientRect().right,
+  }));
+  expect(rolagem).toEqual({ rola: true, inicio: 0, cabe: true });
 });
 
 test("arquivo de um trabalho que não está no navegador cria um trabalho novo e o abre", async ({

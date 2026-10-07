@@ -109,7 +109,13 @@ export function ModalReimportacao({
       open
       width={720}
       title={externo ? "Importar do LaTeX" : "Reimportar do LaTeX"}
-      subtitle={arquivo}
+      // O nome do arquivo numa linha só, a partir da esquerda, rolando para
+      // o lado quando não cabe; o nome inteiro também aparece no hover.
+      subtitle={
+        <span title={arquivo} className="block overflow-x-auto whitespace-nowrap pb-1">
+          {arquivo}
+        </span>
+      }
       onClose={gravando ? undefined : onFechar}
       footer={
         nadaAGravar ? (
@@ -379,7 +385,7 @@ function DoProjeto({
           <h3 className="text-xs font-semibold text-title">
             Arquivos que o AURA não lê ({ignorados.length})
           </h3>
-          <ul className="flex flex-col gap-0.5 font-mono text-2xs text-muted">
+          <ul className="flex flex-col gap-0.5 overflow-x-auto whitespace-nowrap pb-1 font-mono text-2xs text-muted">
             {ignorados.map((caminho) => (
               <li key={caminho}>{caminho}</li>
             ))}

@@ -124,7 +124,9 @@ export function Dialog({
         className="overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-card shadow-lg outline-none"
       >
         <header className="flex items-start justify-between gap-4 px-5 pb-3 pt-5">
-          <div className="flex flex-col gap-0.5">
+          {/* `min-w-0`: sem ele, um subtítulo sem espaço (nome de arquivo)
+              alarga o cabeçalho além da janela e empurra o conteúdo. */}
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             {title && (
               <h2 id={tituloId} className="font-serif text-xl text-title">
                 {title}
