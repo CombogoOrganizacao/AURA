@@ -7,9 +7,8 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import type { Documento } from "@/core/document/types";
-import { carregarImagensDoDocumento } from "@/core/export/docx/media";
 import { cabeNoOverleaf, camposOverleaf, ENDERECO_OVERLEAF } from "@/core/export/latex/overleaf";
-import { gerarZipTex } from "@/core/export/latex/zip";
+import { blobDoZip, zipLatexDoDocumento } from "@/lib/exportar";
 import { usePersistencia } from "@/lib/persistence-provider";
 
 interface BotaoExportarLatexProps {
@@ -53,8 +52,7 @@ export function BotaoExportarLatex({ documento, salvarAgora }: BotaoExportarLate
       await salvarAgora().catch((erro: unknown) => {
         console.error("Falha ao salvar antes de exportar o LaTeX:", erro);
       });
-      const imagens = await carregarImagensDoDocumento(persistencia, documento);
-      const zip = await gerarZipTex(documento, imagens);
+      const zip = await zipLatexDoDocumento(persistencia, documento);
       const campos = camposOverleaf(zip);
       setPreparo((atual) =>
         atual ? { status: "pronto", campos, zip, cabe: cabeNoOverleaf(campos) } : atual,
@@ -89,10 +87,7 @@ export function BotaoExportarLatex({ documento, salvarAgora }: BotaoExportarLate
   }
 
   function baixarProjeto(zip: Uint8Array) {
-    baixar(
-      new Blob([zip as BlobPart], { type: "application/zip" }),
-      `${nomeArquivo(documento)}.zip`,
-    );
+    baixar(blobDoZip(zip), `${nomeArquivo(documento)}.zip`);
     setPreparo(null);
   }
 

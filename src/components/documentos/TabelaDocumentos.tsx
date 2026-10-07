@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 
+import { AcoesDocumento } from "@/components/documentos/AcoesDocumento";
 import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { Tabs } from "@/components/ui/Tabs";
@@ -12,6 +14,7 @@ type Ordenacao = "recentes" | "nome";
 
 interface TabelaDocumentosProps {
   documentos: ResumoDocumento[];
+  onExcluido: (id: string) => void;
 }
 
 // Lista no estilo Overleaf — sem pastas (decisão de produto,
@@ -25,9 +28,14 @@ interface TabelaDocumentosProps {
 // docs/aura-decisoes-e-pendencias.md §1.15) e colunas "Conformidade" /
 // "Páginas" (não existe motor de conformidade nem paginação real —
 // `ResumoDocumento` só tem `id`/`titulo`/`atualizadoEm`; inventar um
-// número aqui é o erro que o CLAUDE.md proíbe). Renomear e excluir
-// continuam abertos no passo 6.4.1.
-export function TabelaDocumentos({ documentos }: TabelaDocumentosProps) {
+// número aqui é o erro que o CLAUDE.md proíbe). Renomear continua aberto no
+// passo 6.4.1.
+//
+// **Ações por linha** (`AcoesDocumento`: exportar `.docx`, baixar LaTeX,
+// excluir), à moda do Overleaf: aparecem ao passar o mouse na linha ou ao
+// chegar nelas pelo teclado (`group-focus-within`), e ficam sempre à vista
+// em tela estreita, onde não há hover.
+export function TabelaDocumentos({ documentos, onExcluido }: TabelaDocumentosProps) {
   const [busca, setBusca] = useState("");
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("recentes");
 
@@ -71,7 +79,10 @@ export function TabelaDocumentos({ documentos }: TabelaDocumentosProps) {
           <thead>
             <tr className="bg-sunken">
               <Cabecalho>Documento</Cabecalho>
-              <Cabecalho>Última edição</Cabecalho>
+              <Cabecalho className="w-px whitespace-nowrap">Última edição</Cabecalho>
+              <Cabecalho>
+                <span className="sr-only">Ações</span>
+              </Cabecalho>
             </tr>
           </thead>
           <tbody>
@@ -79,7 +90,7 @@ export function TabelaDocumentos({ documentos }: TabelaDocumentosProps) {
               <tr
                 key={documento.id}
                 className={[
-                  "hover:bg-bordo-50",
+                  "group hover:bg-bordo-50",
                   i === listaFiltrada.length - 1 ? "" : "border-b border-[var(--border-subtle)]",
                 ].join(" ")}
               >
@@ -94,8 +105,13 @@ export function TabelaDocumentos({ documentos }: TabelaDocumentosProps) {
                     {documento.titulo || "Documento sem título"}
                   </Link>
                 </td>
-                <td className="px-4 py-3 font-sans text-xs text-muted">
+                <td className="px-4 py-3 font-sans text-xs whitespace-nowrap text-muted">
                   {documento.atualizadoEm.toLocaleDateString("pt-BR")}
+                </td>
+                <td className="w-px px-3 py-3 whitespace-nowrap">
+                  <div className="transition-opacity duration-[var(--dur-fast)] md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100">
+                    <AcoesDocumento documento={documento} onExcluido={onExcluido} />
+                  </div>
                 </td>
               </tr>
             ))}
@@ -117,9 +133,14 @@ export function TabelaDocumentos({ documentos }: TabelaDocumentosProps) {
   );
 }
 
-function Cabecalho({ children }: { children: string }) {
+function Cabecalho({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <th className="border-b border-[var(--border-subtle)] px-4 py-2.5 text-left font-sans text-2xs font-medium tracking-caps text-subtle uppercase">
+    <th
+      className={[
+        "border-b border-[var(--border-subtle)] px-4 py-2.5 text-left font-sans text-2xs font-medium tracking-caps text-subtle uppercase",
+        className,
+      ].join(" ")}
+    >
       {children}
     </th>
   );

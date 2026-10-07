@@ -15,6 +15,7 @@ import {
   CircleQuestionMark,
   CloudCheck,
   Ellipsis,
+  FileArchive,
   FileDown,
   FileSearch,
   FileText,
@@ -102,6 +103,7 @@ const icones = {
   // Documento e normas
   "file-text": FileText,
   "file-down": FileDown,
+  "file-archive": FileArchive,
   "file-search": FileSearch,
   ruler: Ruler,
   quote: Quote,

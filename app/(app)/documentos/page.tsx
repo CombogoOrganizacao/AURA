@@ -15,8 +15,8 @@ import { usePersistencia } from "@/lib/persistence-provider";
 // landing (2B.6) tomar essa rota; a lógica de carregar/criar/repetir em
 // erro é a mesma de lá, só a casca mudou (agora dentro do grupo `(app)`,
 // com `AppTopBar` no modo `app`). A tabela com busca e ordenação é nova
-// (`TabelaDocumentos.tsx`) — cumpre o passo 6.4.1 exceto renomear/excluir,
-// que continuam abertos.
+// (`TabelaDocumentos.tsx`) — cumpre o passo 6.4.1 exceto renomear, que
+// continua aberto; excluir e exportar ficam nas ações de cada linha.
 export default function DocumentosPage() {
   const persistencia = usePersistencia();
   const router = useRouter();
@@ -93,7 +93,12 @@ export default function DocumentosPage() {
       ) : documentos.length === 0 ? (
         <EstadoVazio titulo="Nenhum documento ainda." />
       ) : (
-        <TabelaDocumentos documentos={documentos} />
+        <TabelaDocumentos
+          documentos={documentos}
+          onExcluido={(id) =>
+            setDocumentos((lista) => lista?.filter((doc) => doc.id !== id) ?? null)
+          }
+        />
       )}
     </div>
   );
