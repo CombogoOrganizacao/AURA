@@ -1,6 +1,6 @@
-// "Abrir no Overleaf" (passo 6.3.1): os campos do POST para
-// `overleaf.com/docs`, a API documentada em overleaf.com/devs (lida de novo
-// em 30/09/2026; docs/latex-abntex.md §3.3).
+// "Abrir no Overleaf", dentro de "Exportar LaTeX" (passo 6.3.1): os campos
+// do POST para `overleaf.com/docs`, a API documentada em overleaf.com/devs
+// (lida de novo em 30/09/2026; docs/latex-abntex.md §3.3).
 //
 // **O trabalho vai dentro do POST, como data URL, e não como link.** A API
 // aceita também um endereço de onde o Overleaf baixaria o arquivo, mas isso
@@ -8,7 +8,7 @@
 // trabalho nenhum. O `.zip` sai do navegador direto para o Overleaf.
 //
 // Lógica pura: montar o formulário e enviá-lo é da tela
-// (`components/editor/BotaoOverleaf.tsx`).
+// (`components/editor/BotaoExportarLatex.tsx`).
 
 export const ENDERECO_OVERLEAF = "https://www.overleaf.com/docs";
 
@@ -49,8 +49,8 @@ export function tamanhoDoEnvio(campos: Record<string, string>): number {
   return new URLSearchParams(campos).toString().length;
 }
 
-// Acima do limite, o Overleaf recusa o projeto inteiro: a tela oferece o
-// `.zip` para baixar e subir pelo "Upload Project" do próprio Overleaf, sem
+// Acima do limite, o Overleaf recusa o projeto inteiro: a tela tira o
+// "Abrir no Overleaf" e indica o "Upload Project" com o `.zip` baixado, sem
 // publicar o trabalho em URL nenhuma.
 export function cabeNoOverleaf(campos: Record<string, string>): boolean {
   return tamanhoDoEnvio(campos) <= LIMITE_ENVIO_OVERLEAF;

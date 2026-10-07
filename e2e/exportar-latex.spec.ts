@@ -2,17 +2,18 @@ import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import { expect, test } from "@playwright/test";
-import type { BrowserContext, Request } from "@playwright/test";
+import type { BrowserContext, Page, Request } from "@playwright/test";
 import JSZip from "jszip";
 
 import { ENDERECO_OVERLEAF } from "../src/core/export/latex/overleaf";
 
 import { abrirDocumento, tresSecoes } from "./apoio";
 
-// Passo 6.3.1 — "Abrir no Overleaf". O Overleaf de verdade não é chamado: o
-// POST é interceptado no navegador, e o teste confere o que iria nele. Se a
-// CSP barrasse o formulário (`form-action`), a interceptação nunca seria
-// acionada. A conferência no Overleaf de verdade é humana (🔍 do to-do).
+// Passo 6.3.1 — "Exportar LaTeX": baixar o projeto em `.zip` e, quando ele
+// cabe no limite do Overleaf, "Abrir no Overleaf". O Overleaf de verdade não
+// é chamado: o POST é interceptado no navegador, e o teste confere o que iria
+// nele. Se a CSP barrasse o formulário (`form-action`), a interceptação nunca
+// seria acionada. A conferência no Overleaf de verdade é humana (🔍 do to-do).
 
 // Toda requisição que sai da máquina, fora o servidor de teste.
 function requisicoesDeFora(contexto: BrowserContext): Request[] {
@@ -24,17 +25,40 @@ function requisicoesDeFora(contexto: BrowserContext): Request[] {
   return fora;
 }
 
+async function abrirJanela(page: Page) {
+  await page.getByRole("button", { name: "Exportar LaTeX" }).click();
+  return page.getByRole("dialog", { name: "Exportar LaTeX" });
+}
+
 test("o aviso de mão única vem antes, e cancelar não envia nada", async ({ page, context }) => {
   const fora = requisicoesDeFora(context);
   await abrirDocumento(page, tresSecoes());
 
-  await page.getByRole("button", { name: "Abrir no Overleaf" }).click();
-  const dialogo = page.getByRole("dialog", { name: "Abrir no Overleaf" });
+  const dialogo = await abrirJanela(page);
   await expect(dialogo).toContainText("O caminho é de mão única");
   await expect(dialogo).toContainText("Importar LaTeX");
-  await expect(dialogo).toContainText("Tamanho do pacote");
+  await expect(dialogo).toContainText("Tamanho do projeto");
 
   await dialogo.getByRole("button", { name: "Cancelar" }).click();
+  await expect(dialogo).toBeHidden();
+  expect(fora).toEqual([]);
+});
+
+test("baixar o projeto entrega o .zip, sem enviar nada para fora", async ({ page, context }) => {
+  const fora = requisicoesDeFora(context);
+  await abrirDocumento(page, tresSecoes());
+
+  const dialogo = await abrirJanela(page);
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    dialogo.getByRole("button", { name: "Baixar o projeto (.zip)" }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/\.zip$/);
+  const zip = await JSZip.loadAsync(readFileSync(await download.path()));
+  const nomes = Object.keys(zip.files);
+  expect(nomes).toContain("main.tex");
+  expect(nomes).toContain("referencias.bib");
+  expect(nomes.some((nome) => nome.startsWith("sections/"))).toBe(true);
   await expect(dialogo).toBeHidden();
   expect(fora).toEqual([]);
 });
@@ -52,8 +76,7 @@ test("confirmar abre o Overleaf numa aba nova com o projeto dentro do POST", asy
 
   const documento = tresSecoes();
   await abrirDocumento(page, documento);
-  await page.getByRole("button", { name: "Abrir no Overleaf" }).click();
-  const dialogo = page.getByRole("dialog", { name: "Abrir no Overleaf" });
+  const dialogo = await abrirJanela(page);
   const confirmar = dialogo.getByRole("button", { name: "Abrir no Overleaf" });
   await expect(confirmar).toBeEnabled();
 
@@ -86,7 +109,7 @@ test("confirmar abre o Overleaf numa aba nova com o projeto dentro do POST", asy
   expect(capitulos.join("\n")).toContain("Aplicamos o questionário em campo.");
 });
 
-test("projeto acima do limite do Overleaf: o aviso explica e oferece o .zip, sem enviar nada", async ({
+test("projeto acima do limite do Overleaf: sem o botão do Overleaf, com o motivo, e o .zip baixa", async ({
   page,
   context,
 }) => {
@@ -110,9 +133,8 @@ test("projeto acima do limite do Overleaf: o aviso explica e oferece o .zip, sem
   });
   await expect(figura.locator("img.doc-figura-imagem")).toBeVisible();
 
-  await page.getByRole("button", { name: "Abrir no Overleaf" }).click();
-  const dialogo = page.getByRole("dialog", { name: "Abrir no Overleaf" });
-  await expect(dialogo).toContainText("Grande demais para abrir direto");
+  const dialogo = await abrirJanela(page);
+  await expect(dialogo).toContainText("Grande demais para abrir direto no Overleaf");
   await expect(dialogo).toContainText("Upload Project");
   await expect(dialogo.getByRole("button", { name: "Abrir no Overleaf" })).toHaveCount(0);
 

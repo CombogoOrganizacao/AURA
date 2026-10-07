@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AppTopBar } from "@/components/app/AppTopBar";
 import { BotaoExportar } from "@/components/editor/BotaoExportar";
-import { BotaoOverleaf } from "@/components/editor/BotaoOverleaf";
+import { BotaoExportarLatex } from "@/components/editor/BotaoExportarLatex";
 import { BotaoReimportar } from "@/components/editor/BotaoReimportar";
 import { ProvedorImagens } from "@/components/editor/ImagensDoDocumento";
 import {
@@ -304,8 +304,8 @@ function Carregado({
               substituir={historico.substituir}
               salvarAgora={salvarAgora}
             />
-            {/* A ida para o Overleaf (6.3.1), com o aviso de mão única. */}
-            <BotaoOverleaf documento={documento} salvarAgora={salvarAgora} />
+            {/* A ida: o projeto LaTeX em .zip, ou direto no Overleaf (6.3.1). */}
+            <BotaoExportarLatex documento={documento} salvarAgora={salvarAgora} />
             {botaoExportar}
           </div>
         }

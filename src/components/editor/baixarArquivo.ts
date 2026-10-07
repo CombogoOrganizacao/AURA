@@ -1,8 +1,7 @@
 import type { Documento } from "@/core/document/types";
 
 // Baixar um arquivo gerado no navegador: o `.docx` (`BotaoExportar`) e o
-// `.zip` do projeto LaTeX (`BotaoOverleaf`, quando o projeto passa do que o
-// Overleaf recebe pelo POST).
+// `.zip` do projeto LaTeX (`BotaoExportarLatex`).
 
 // Nome de arquivo não aceita todo caractere em todo SO — troca qualquer
 // coisa fora de letra/número/espaço/hífen por espaço.

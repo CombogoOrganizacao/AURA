@@ -12,7 +12,7 @@ import { cabeNoOverleaf, camposOverleaf, ENDERECO_OVERLEAF } from "@/core/export
 import { gerarZipTex } from "@/core/export/latex/zip";
 import { usePersistencia } from "@/lib/persistence-provider";
 
-interface BotaoOverleafProps {
+interface BotaoExportarLatexProps {
   // O documento como está na tela, como no `BotaoExportar`.
   documento: Documento;
   // Grava já, sem esperar o autosave.
@@ -24,32 +24,34 @@ type Preparo =
   | { status: "pronto"; campos: Record<string, string>; zip: Uint8Array; cabe: boolean }
   | { status: "erro" };
 
-// "Abrir no Overleaf" (passo 6.3.1). O clique abre o aviso de mão única, e o
-// pacote é montado enquanto o aviso está aberto. O envio acontece no clique
-// de confirmar, sem espera: aberto depois de uma espera longa, o Overleaf
-// numa aba nova seria barrado como pop-up.
+// "Exportar LaTeX" (passo 6.3.1, decisão da usuária em 07/10/2026). O clique
+// abre a janela e monta o projeto (`gerarZipTex()`) enquanto ela está aberta.
+// A ação principal é baixar o `.zip`; "Abrir no Overleaf" aparece ao lado só
+// quando o projeto cabe no que o Overleaf recebe por POST.
 //
-// **Nenhuma URL do trabalho é gerada.** O `.zip` vai dentro do POST, como
-// data URL (`core/export/latex/overleaf.ts`), do navegador direto para o
-// Overleaf. A CSP libera o `form-action` só para `https://www.overleaf.com`
-// (next.config.ts).
+// **Overleaf: nenhuma URL do trabalho é gerada.** O `.zip` vai dentro do
+// POST, como data URL (`core/export/latex/overleaf.ts`), do navegador direto
+// para o Overleaf. A CSP libera o `form-action` só para
+// `https://www.overleaf.com` (next.config.ts). O envio acontece no clique de
+// confirmar, sem espera: aberto depois de uma espera longa, o Overleaf numa
+// aba nova seria barrado como pop-up.
 //
 // **Projeto grande não vai pelo POST.** O Overleaf recusa corpo acima de
 // 2 MiB (`LIMITE_ENVIO_OVERLEAF`, medido), e um TCC com algumas fotos passa
-// disso. Nesse caso o aviso diz o porquê e oferece o `.zip` para baixar e
-// subir pelo "Upload Project" do Overleaf. A alternativa da API, o Overleaf
-// buscar o `.zip` numa URL, publicaria o trabalho.
-export function BotaoOverleaf({ documento, salvarAgora }: BotaoOverleafProps) {
+// disso. Nesse caso a janela diz o porquê e indica o "Upload Project" do
+// Overleaf com o `.zip` baixado. A alternativa da API, o Overleaf buscar o
+// `.zip` numa URL, publicaria o trabalho.
+export function BotaoExportarLatex({ documento, salvarAgora }: BotaoExportarLatexProps) {
   const persistencia = usePersistencia();
   const [preparo, setPreparo] = useState<Preparo | null>(null);
 
-  async function abrirAviso() {
+  async function abrirJanela() {
     if (!persistencia) return;
     setPreparo({ status: "preparando" });
     try {
-      // O que vai para o Overleaf fica também salvo aqui.
+      // O que sai do AURA fica também salvo aqui.
       await salvarAgora().catch((erro: unknown) => {
-        console.error("Falha ao salvar antes de abrir no Overleaf:", erro);
+        console.error("Falha ao salvar antes de exportar o LaTeX:", erro);
       });
       const imagens = await carregarImagensDoDocumento(persistencia, documento);
       const zip = await gerarZipTex(documento, imagens);
@@ -58,12 +60,12 @@ export function BotaoOverleaf({ documento, salvarAgora }: BotaoOverleafProps) {
         atual ? { status: "pronto", campos, zip, cabe: cabeNoOverleaf(campos) } : atual,
       );
     } catch (erro) {
-      console.error("Falha ao montar o projeto para o Overleaf:", erro);
+      console.error("Falha ao montar o projeto LaTeX:", erro);
       setPreparo((atual) => (atual ? { status: "erro" } : atual));
     }
   }
 
-  function enviar(campos: Record<string, string>) {
+  function abrirNoOverleaf(campos: Record<string, string>) {
     // Formulário de verdade, e não `fetch`: o Overleaf abre o projeto na aba
     // nova, com a sessão da pessoa lá. `noopener noreferrer`: a aba do
     // Overleaf não recebe acesso a esta nem o endereço dela.
@@ -94,66 +96,67 @@ export function BotaoOverleaf({ documento, salvarAgora }: BotaoOverleafProps) {
     setPreparo(null);
   }
 
-  const grandeDemais = preparo?.status === "pronto" && !preparo.cabe;
+  const pronto = preparo?.status === "pronto" ? preparo : null;
 
   return (
     <>
-      <Button variant="outline" size="sm" disabled={!persistencia} onClick={abrirAviso}>
-        Abrir no Overleaf
+      <Button variant="outline" size="sm" disabled={!persistencia} onClick={abrirJanela}>
+        Exportar LaTeX
       </Button>
 
       {preparo && (
         <Dialog
           open
           width={520}
-          title="Abrir no Overleaf"
-          subtitle="Uma cópia do trabalho, num projeto novo"
+          title="Exportar LaTeX"
+          subtitle="Projeto completo, para o Overleaf ou outro editor LaTeX"
           onClose={() => setPreparo(null)}
           footer={
             <>
               <Button variant="ghost" onClick={() => setPreparo(null)}>
                 Cancelar
               </Button>
-              {grandeDemais ? (
-                <Button onClick={() => preparo.status === "pronto" && baixarProjeto(preparo.zip)}>
-                  Baixar o projeto (.zip)
-                </Button>
-              ) : (
-                <Button
-                  loading={preparo.status === "preparando"}
-                  disabled={preparo.status !== "pronto"}
-                  onClick={() => preparo.status === "pronto" && enviar(preparo.campos)}
-                >
+              {pronto?.cabe && (
+                <Button variant="outline" onClick={() => abrirNoOverleaf(pronto.campos)}>
                   Abrir no Overleaf
                 </Button>
               )}
+              <Button
+                loading={preparo.status === "preparando"}
+                disabled={!pronto}
+                onClick={() => pronto && baixarProjeto(pronto.zip)}
+              >
+                Baixar o projeto (.zip)
+              </Button>
             </>
           }
         >
           <div className="flex flex-col gap-3 text-sm text-body">
-            <Alert tone="warning" title="O caminho é de mão única">
-              O que você editar no Overleaf não volta sozinho para o AURA. Para trazer as mudanças,
-              baixe o projeto no Overleaf (Menu → Download → Source) e use “Importar LaTeX”.
-            </Alert>
             <p>
-              Voltam o texto das seções, dos apêndices e dos anexos, os dados do bloco de metadados,
-              as referências e as figuras. O resto do preâmbulo (pacotes, fontes, margens) fica só
-              no Overleaf.
+              O arquivo .zip traz o main.tex, um arquivo por capítulo, as referências em
+              referencias.bib e as figuras. No Overleaf, envie-o em New Project → Upload Project.
             </p>
-            <p className="text-xs text-muted">
-              O trabalho vai do seu navegador direto para o Overleaf, que cria o projeto na sua
-              conta. O AURA não guarda cópia nem gera link do trabalho.
-            </p>
-            {preparo.status === "pronto" && (
+            <Alert tone="warning" title="O caminho é de mão única">
+              O que você editar fora do AURA não volta sozinho. Para trazer as mudanças, use
+              “Importar LaTeX” com o projeto editado (no Overleaf, Menu → Download → Source). Voltam
+              o texto das seções, dos apêndices e dos anexos, os dados do bloco de metadados, as
+              referências e as figuras; o resto do preâmbulo (pacotes, fontes, margens) não.
+            </Alert>
+            {pronto && (
               <p className="text-xs text-muted">
-                Tamanho do pacote: {tamanho(preparo.zip.length)}.
+                Tamanho do projeto: {tamanho(pronto.zip.length)}.
               </p>
             )}
-            {grandeDemais && (
-              <Alert tone="warning" title="Grande demais para abrir direto">
-                O Overleaf só recebe por este botão projetos de até cerca de 1,4 MB, e as figuras
-                deixam este maior. Baixe o projeto e, no Overleaf, use New Project → Upload Project
-                para enviar o arquivo .zip.
+            {pronto?.cabe && (
+              <p className="text-xs text-muted">
+                “Abrir no Overleaf” envia o projeto do seu navegador direto para o Overleaf, que o
+                cria na sua conta. O AURA não guarda cópia nem gera link do trabalho.
+              </p>
+            )}
+            {pronto && !pronto.cabe && (
+              <Alert tone="info" title="Grande demais para abrir direto no Overleaf">
+                O Overleaf só recebe projetos de até cerca de 1,4 MB por envio direto, e as figuras
+                deixam este maior. Baixe o .zip e envie-o em New Project → Upload Project.
               </Alert>
             )}
             {preparo.status === "erro" && (
