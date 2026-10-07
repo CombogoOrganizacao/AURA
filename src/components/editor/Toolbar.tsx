@@ -92,15 +92,16 @@ const NIVEIS: ReadonlyArray<{ nivel: NivelSecao; nomeIcone: NomeIcone; label: st
   { nivel: 3, nomeIcone: "heading-3", label: "Mudar a seção para o nível 3" },
 ];
 
-// Botões desabilitados do passo 2B.12 — controle, ícone, e a fase que liga
-// cada um. Todo item aqui tem tooltip explicando o motivo (nunca só o nome
-// do controle): é o critério do passo, "nenhum controle desabilitado é
-// focável sem indicação do porquê". Cada fase citada é a que o
-// docs/to-do.md já registra para aquele recurso — não um "em breve" vago.
+// Botões desabilitados do passo 2B.12 — controle, ícone e o motivo. Todo
+// item aqui tem tooltip explicando o porquê (nunca só o nome do controle): é
+// o critério do passo, "nenhum controle desabilitado é focável sem indicação
+// do porquê". O motivo é o estado real do recurso, não uma fase do plano:
+// sublinhado e lista não têm nó no schema nem passo na v1, e o corpo já é
+// justificado pelo estilo (passo 3.3.2).
 const CONTROLES_FUTUROS: ReadonlyArray<{ nome: NomeIcone; label: string }> = [
-  { nome: "underline", label: "Sublinhado — sem nó no schema ainda" },
-  { nome: "align-justify", label: "Justificar — chega na Fase 3.3" },
-  { nome: "list-ordered", label: "Lista numerada — chega na Fase 3" },
+  { nome: "underline", label: "Sublinhado — ainda não disponível" },
+  { nome: "align-justify", label: "Justificar — o corpo do texto já é justificado" },
+  { nome: "list-ordered", label: "Lista numerada — ainda não disponível" },
 ];
 
 const ROTULO_ESTILO: Record<"corpo" | "citacao_longa", string> = {
@@ -121,9 +122,7 @@ function CaixaEstilo({ editor, estilo }: { editor: Editor; estilo: EstiloBloco }
           size="sm"
           className="w-[184px]"
           value={estilo}
-          options={[
-            { value: estilo, label: estilo === "celula" ? "Célula de tabela" : "—" },
-          ]}
+          options={[{ value: estilo, label: estilo === "celula" ? "Célula de tabela" : "—" }]}
         />
       </Tooltip>
     );
@@ -463,7 +462,10 @@ export function Toolbar({
         </BotaoToolbar>
       )}
 
-      <BotaoToolbar label="Aplicar formatação ABNT — chega na Fase 3" disabled>
+      <BotaoToolbar
+        label="Aplicar formatação ABNT — não é preciso: o trabalho já segue a norma na tela e na exportação"
+        disabled
+      >
         <Icon name="wand-sparkles" size={16} />
       </BotaoToolbar>
     </div>
