@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 
+import { baixar, nomeArquivo } from "@/components/editor/baixarArquivo";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import type { Documento } from "@/core/document/types";
 import { carregarImagensDoDocumento } from "@/core/export/docx/media";
-import { camposOverleaf, ENDERECO_OVERLEAF } from "@/core/export/latex/overleaf";
+import { cabeNoOverleaf, camposOverleaf, ENDERECO_OVERLEAF } from "@/core/export/latex/overleaf";
 import { gerarZipTex } from "@/core/export/latex/zip";
 import { usePersistencia } from "@/lib/persistence-provider";
 
@@ -20,7 +21,7 @@ interface BotaoOverleafProps {
 
 type Preparo =
   | { status: "preparando" }
-  | { status: "pronto"; campos: Record<string, string>; bytes: number }
+  | { status: "pronto"; campos: Record<string, string>; zip: Uint8Array; cabe: boolean }
   | { status: "erro" };
 
 // "Abrir no Overleaf" (passo 6.3.1). O clique abre o aviso de mão única, e o
@@ -32,6 +33,12 @@ type Preparo =
 // data URL (`core/export/latex/overleaf.ts`), do navegador direto para o
 // Overleaf. A CSP libera o `form-action` só para `https://www.overleaf.com`
 // (next.config.ts).
+//
+// **Projeto grande não vai pelo POST.** O Overleaf recusa corpo acima de
+// 2 MiB (`LIMITE_ENVIO_OVERLEAF`, medido), e um TCC com algumas fotos passa
+// disso. Nesse caso o aviso diz o porquê e oferece o `.zip` para baixar e
+// subir pelo "Upload Project" do Overleaf. A alternativa da API, o Overleaf
+// buscar o `.zip` numa URL, publicaria o trabalho.
 export function BotaoOverleaf({ documento, salvarAgora }: BotaoOverleafProps) {
   const persistencia = usePersistencia();
   const [preparo, setPreparo] = useState<Preparo | null>(null);
@@ -46,8 +53,9 @@ export function BotaoOverleaf({ documento, salvarAgora }: BotaoOverleafProps) {
       });
       const imagens = await carregarImagensDoDocumento(persistencia, documento);
       const zip = await gerarZipTex(documento, imagens);
+      const campos = camposOverleaf(zip);
       setPreparo((atual) =>
-        atual ? { status: "pronto", campos: camposOverleaf(zip), bytes: zip.length } : atual,
+        atual ? { status: "pronto", campos, zip, cabe: cabeNoOverleaf(campos) } : atual,
       );
     } catch (erro) {
       console.error("Falha ao montar o projeto para o Overleaf:", erro);
@@ -78,6 +86,16 @@ export function BotaoOverleaf({ documento, salvarAgora }: BotaoOverleafProps) {
     setPreparo(null);
   }
 
+  function baixarProjeto(zip: Uint8Array) {
+    baixar(
+      new Blob([zip as BlobPart], { type: "application/zip" }),
+      `${nomeArquivo(documento)}.zip`,
+    );
+    setPreparo(null);
+  }
+
+  const grandeDemais = preparo?.status === "pronto" && !preparo.cabe;
+
   return (
     <>
       <Button variant="outline" size="sm" disabled={!persistencia} onClick={abrirAviso}>
@@ -96,13 +114,19 @@ export function BotaoOverleaf({ documento, salvarAgora }: BotaoOverleafProps) {
               <Button variant="ghost" onClick={() => setPreparo(null)}>
                 Cancelar
               </Button>
-              <Button
-                loading={preparo.status === "preparando"}
-                disabled={preparo.status !== "pronto"}
-                onClick={() => preparo.status === "pronto" && enviar(preparo.campos)}
-              >
-                Abrir no Overleaf
-              </Button>
+              {grandeDemais ? (
+                <Button onClick={() => preparo.status === "pronto" && baixarProjeto(preparo.zip)}>
+                  Baixar o projeto (.zip)
+                </Button>
+              ) : (
+                <Button
+                  loading={preparo.status === "preparando"}
+                  disabled={preparo.status !== "pronto"}
+                  onClick={() => preparo.status === "pronto" && enviar(preparo.campos)}
+                >
+                  Abrir no Overleaf
+                </Button>
+              )}
             </>
           }
         >
@@ -121,7 +145,16 @@ export function BotaoOverleaf({ documento, salvarAgora }: BotaoOverleafProps) {
               conta. O AURA não guarda cópia nem gera link do trabalho.
             </p>
             {preparo.status === "pronto" && (
-              <p className="text-xs text-muted">Tamanho do pacote: {tamanho(preparo.bytes)}.</p>
+              <p className="text-xs text-muted">
+                Tamanho do pacote: {tamanho(preparo.zip.length)}.
+              </p>
+            )}
+            {grandeDemais && (
+              <Alert tone="warning" title="Grande demais para abrir direto">
+                O Overleaf só recebe por este botão projetos de até cerca de 1,4 MB, e as figuras
+                deixam este maior. Baixe o projeto e, no Overleaf, use New Project → Upload Project
+                para enviar o arquivo .zip.
+              </Alert>
             )}
             {preparo.status === "erro" && (
               <Alert tone="danger" title="Não foi possível montar o projeto">

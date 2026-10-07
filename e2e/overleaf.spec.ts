@@ -1,3 +1,6 @@
+import { randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
+
 import { expect, test } from "@playwright/test";
 import type { BrowserContext, Request } from "@playwright/test";
 import JSZip from "jszip";
@@ -81,4 +84,46 @@ test("confirmar abre o Overleaf numa aba nova com o projeto dentro do POST", asy
       .map((nome) => zip.file(nome)!.async("string")),
   );
   expect(capitulos.join("\n")).toContain("Aplicamos o questionário em campo.");
+});
+
+test("projeto acima do limite do Overleaf: o aviso explica e oferece o .zip, sem enviar nada", async ({
+  page,
+  context,
+}) => {
+  const fora = requisicoesDeFora(context);
+  await abrirDocumento(page, tresSecoes());
+
+  // PNG válido com 1,7 MB de bytes aleatórios depois do fim: o `.zip` não
+  // os comprime, e o projeto passa do limite medido (~1,4 MB).
+  const captura = await page.screenshot({
+    type: "png",
+    clip: { x: 0, y: 0, width: 64, height: 64 },
+  });
+  const png = Buffer.concat([captura, randomBytes(1_700_000)]);
+  await page.locator(".ProseMirror p").first().click();
+  await page.getByRole("button", { name: /^Figura/ }).click();
+  const figura = page.locator(".ProseMirror figure");
+  await figura.getByLabel(/Arquivo de imagem/).setInputFiles({
+    name: "foto.png",
+    mimeType: "image/png",
+    buffer: png,
+  });
+  await expect(figura.locator("img.doc-figura-imagem")).toBeVisible();
+
+  await page.getByRole("button", { name: "Abrir no Overleaf" }).click();
+  const dialogo = page.getByRole("dialog", { name: "Abrir no Overleaf" });
+  await expect(dialogo).toContainText("Grande demais para abrir direto");
+  await expect(dialogo).toContainText("Upload Project");
+  await expect(dialogo.getByRole("button", { name: "Abrir no Overleaf" })).toHaveCount(0);
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    dialogo.getByRole("button", { name: "Baixar o projeto (.zip)" }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/\.zip$/);
+  const zip = await JSZip.loadAsync(readFileSync(await download.path()));
+  expect(Object.keys(zip.files)).toContain("main.tex");
+  expect(Object.keys(zip.files).some((nome) => nome.startsWith("figuras/"))).toBe(true);
+  await expect(dialogo).toBeHidden();
+  expect(fora).toEqual([]);
 });

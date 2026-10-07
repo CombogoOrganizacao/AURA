@@ -2,7 +2,13 @@ import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 
 import { documentoCompleto, imagensDoZip } from "./__fixtures__/documento";
-import { camposOverleaf, paraBase64 } from "./overleaf";
+import {
+  cabeNoOverleaf,
+  camposOverleaf,
+  LIMITE_ENVIO_OVERLEAF,
+  paraBase64,
+  tamanhoDoEnvio,
+} from "./overleaf";
 import { gerarZipTex } from "./zip";
 
 // Passo 6.3.1: o POST do "Abrir no Overleaf" (docs/latex-abntex.md §3.3).
@@ -34,5 +40,43 @@ describe("camposOverleaf", () => {
     expect(await recebido.file("main.tex")!.async("string")).toMatch(
       new RegExp(`^% AURA-DOCUMENTO: ${documento.id} v`),
     );
+  });
+});
+
+// Bytes que o base64 escreve com `+` e `/`: 0xFB 0xFF → "+/8=".
+function zipDeBytes(tamanho: number): Uint8Array {
+  return Uint8Array.from({ length: tamanho }, (_, i) => (i % 2 === 0 ? 0xfb : 0xff));
+}
+
+describe("tamanhoDoEnvio", () => {
+  it("conta o corpo do formulário, com + e / do base64 codificados", () => {
+    const campos = camposOverleaf(zipDeBytes(3)); // base64 "+//7"
+    const esperado = new URLSearchParams(campos).toString();
+    expect(esperado).toContain("%2B%2F");
+    expect(tamanhoDoEnvio(campos)).toBe(esperado.length);
+    expect(tamanhoDoEnvio(campos)).toBeGreaterThan(campos.snip_uri.length);
+  });
+});
+
+describe("cabeNoOverleaf", () => {
+  it("aceita o projeto da fixture, com figura", async () => {
+    const documento = documentoCompleto();
+    const zip = await gerarZipTex(documento, imagensDoZip(documento.id));
+    expect(cabeNoOverleaf(camposOverleaf(zip))).toBe(true);
+  });
+
+  it("recusa a partir de um byte acima do limite medido", () => {
+    const base = tamanhoDoEnvio({ ...camposOverleaf(new Uint8Array()), x: "" });
+    const noLimite = {
+      ...camposOverleaf(new Uint8Array()),
+      x: "a".repeat(LIMITE_ENVIO_OVERLEAF - base),
+    };
+    expect(tamanhoDoEnvio(noLimite)).toBe(LIMITE_ENVIO_OVERLEAF);
+    expect(cabeNoOverleaf(noLimite)).toBe(true);
+    expect(cabeNoOverleaf({ ...noLimite, x: noLimite.x + "a" })).toBe(false);
+  });
+
+  it("um projeto de 1,6 MB já não cabe", () => {
+    expect(cabeNoOverleaf(camposOverleaf(zipDeBytes(1_600_000)))).toBe(false);
   });
 });

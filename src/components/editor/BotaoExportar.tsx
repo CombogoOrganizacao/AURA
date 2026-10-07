@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { baixar, nomeArquivo } from "@/components/editor/baixarArquivo";
 import { fromDocumento } from "@/core/export/docx/fromDocumento";
 import { carregarImagensDoDocumento } from "@/core/export/docx/media";
 import type { Documento } from "@/core/document/types";
@@ -135,25 +136,4 @@ export function BotaoExportar({ documento, salvarAgora, onPreencherDados }: Bota
       )}
     </>
   );
-}
-
-// Nome de arquivo não aceita todo caractere em todo SO — troca qualquer
-// coisa fora de letra/número/espaço/hífen por espaço.
-function nomeArquivo(documento: Documento): string {
-  const base = documento.metadados.titulo.trim() || "documento";
-  return (
-    base
-      .replace(/[^\p{L}\p{N} -]/gu, " ")
-      .replace(/\s+/g, " ")
-      .trim() || "documento"
-  );
-}
-
-function baixar(conteudo: Blob, nome: string): void {
-  const url = URL.createObjectURL(conteudo);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = nome;
-  link.click();
-  URL.revokeObjectURL(url);
 }
