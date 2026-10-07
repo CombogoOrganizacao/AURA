@@ -9,11 +9,12 @@ import { ENDERECO_OVERLEAF } from "../src/core/export/latex/overleaf";
 
 import { abrirDocumento, tresSecoes } from "./apoio";
 
-// Passo 6.3.1 — "Exportar LaTeX": baixar o projeto em `.zip` e, quando ele
-// cabe no limite do Overleaf, "Abrir no Overleaf". O Overleaf de verdade não
-// é chamado: o POST é interceptado no navegador, e o teste confere o que iria
-// nele. Se a CSP barrasse o formulário (`form-action`), a interceptação nunca
-// seria acionada. A conferência no Overleaf de verdade é humana (🔍 do to-do).
+// Passos 6.3.1 e 6.3.2 — a janela "Exportar": `.docx` como formato principal,
+// projeto LaTeX em `.zip` (com "Abrir no Overleaf" quando cabe no limite) e
+// só o `.tex`. Nenhum PDF. O Overleaf de verdade não é chamado: o POST é
+// interceptado no navegador, e o teste confere o que iria nele. Se a CSP
+// barrasse o formulário (`form-action`), a interceptação nunca seria
+// acionada.
 
 // Toda requisição que sai da máquina, fora o servidor de teste.
 function requisicoesDeFora(contexto: BrowserContext): Request[] {
@@ -26,20 +27,20 @@ function requisicoesDeFora(contexto: BrowserContext): Request[] {
 }
 
 async function abrirJanela(page: Page) {
-  await page.getByRole("button", { name: "Exportar LaTeX" }).click();
-  return page.getByRole("dialog", { name: "Exportar LaTeX" });
+  await page.getByRole("banner").getByRole("button", { name: "Exportar", exact: true }).click();
+  return page.getByRole("dialog", { name: "Exportar" });
 }
 
-test("o aviso de mão única vem antes, e cancelar não envia nada", async ({ page, context }) => {
+test("abrir a janela e fechar não envia nada", async ({ page, context }) => {
   const fora = requisicoesDeFora(context);
   await abrirDocumento(page, tresSecoes());
 
   const dialogo = await abrirJanela(page);
-  await expect(dialogo).toContainText("O caminho é de mão única");
+  await expect(dialogo).toContainText("não volta sozinho");
   await expect(dialogo).toContainText("Importar LaTeX");
   await expect(dialogo).toContainText("Tamanho do projeto");
 
-  await dialogo.getByRole("button", { name: "Cancelar" }).click();
+  await dialogo.getByRole("button", { name: "Fechar" }).click();
   await expect(dialogo).toBeHidden();
   expect(fora).toEqual([]);
 });
@@ -51,7 +52,7 @@ test("baixar o projeto entrega o .zip, sem enviar nada para fora", async ({ page
   const dialogo = await abrirJanela(page);
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    dialogo.getByRole("button", { name: "Baixar o projeto (.zip)" }).click(),
+    dialogo.getByRole("button", { name: "Baixar .zip" }).click(),
   ]);
   expect(download.suggestedFilename()).toMatch(/\.zip$/);
   const zip = await JSZip.loadAsync(readFileSync(await download.path()));
@@ -59,7 +60,8 @@ test("baixar o projeto entrega o .zip, sem enviar nada para fora", async ({ page
   expect(nomes).toContain("main.tex");
   expect(nomes).toContain("referencias.bib");
   expect(nomes.some((nome) => nome.startsWith("sections/"))).toBe(true);
-  await expect(dialogo).toBeHidden();
+  // A janela fica aberta, para baixar outro formato se quiser.
+  await expect(dialogo).toBeVisible();
   expect(fora).toEqual([]);
 });
 
@@ -134,18 +136,72 @@ test("projeto acima do limite do Overleaf: sem o botão do Overleaf, com o motiv
   await expect(figura.locator("img.doc-figura-imagem")).toBeVisible();
 
   const dialogo = await abrirJanela(page);
-  await expect(dialogo).toContainText("Grande demais para abrir direto no Overleaf");
+  await expect(dialogo).toContainText("Grande demais para abrir direto");
   await expect(dialogo).toContainText("Upload Project");
   await expect(dialogo.getByRole("button", { name: "Abrir no Overleaf" })).toHaveCount(0);
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    dialogo.getByRole("button", { name: "Baixar o projeto (.zip)" }).click(),
+    dialogo.getByRole("button", { name: "Baixar .zip" }).click(),
   ]);
   expect(download.suggestedFilename()).toMatch(/\.zip$/);
   const zip = await JSZip.loadAsync(readFileSync(await download.path()));
   expect(Object.keys(zip.files)).toContain("main.tex");
   expect(Object.keys(zip.files).some((nome) => nome.startsWith("figuras/"))).toBe(true);
-  await expect(dialogo).toBeHidden();
+  // A janela fica aberta, para baixar outro formato se quiser.
+  await expect(dialogo).toBeVisible();
   expect(fora).toEqual([]);
+});
+
+test("o .docx é o formato principal, com a nota do PDF, e não há PDF em lugar nenhum", async ({
+  page,
+}) => {
+  await abrirDocumento(page, tresSecoes());
+  const dialogo = await abrirJanela(page);
+
+  const word = dialogo.getByRole("region", { name: "Word (.docx)" });
+  await expect(word).toContainText("Formato principal");
+  await expect(word).toContainText("Salvar como → PDF");
+  // O .docx vem antes dos formatos LaTeX.
+  const formatos = await dialogo
+    .getByRole("region")
+    .evaluateAll((secoes) => secoes.map((secao) => secao.getAttribute("aria-label")));
+  expect(formatos).toEqual(["Word (.docx)", "Projeto LaTeX (.zip)", "Só o .tex"]);
+
+  // Nenhum botão ou link de PDF, nem na janela nem na página atrás dela.
+  await expect(page.getByRole("button", { name: /pdf/i })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /pdf/i })).toHaveCount(0);
+});
+
+test("só o .tex: baixa o main.tex e avisa que as figuras ficam de fora", async ({ page }) => {
+  const documento = tresSecoes();
+  await abrirDocumento(page, documento);
+
+  // Sem figura com imagem, não há aviso de figura.
+  let dialogo = await abrirJanela(page);
+  const soTex = dialogo.getByRole("region", { name: "Só o .tex" });
+  await expect(soTex).not.toContainText("figura");
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    soTex.getByRole("button", { name: "Baixar .tex" }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe("Trabalho de teste.tex");
+  const tex = readFileSync(await download.path(), "utf-8");
+  expect(tex).toMatch(new RegExp(`^% AURA-DOCUMENTO: ${documento.id} v`));
+  expect(tex).toContain("Aplicamos o questionário em campo.");
+  await dialogo.getByRole("button", { name: "Fechar" }).click();
+
+  // Com uma figura com imagem, o aviso aparece.
+  const png = await page.screenshot({ type: "png", clip: { x: 0, y: 0, width: 32, height: 32 } });
+  await page.locator(".ProseMirror p").first().click();
+  await page.getByRole("button", { name: /^Figura/ }).click();
+  await page
+    .locator(".ProseMirror figure")
+    .getByLabel(/Arquivo de imagem/)
+    .setInputFiles({ name: "foto.png", mimeType: "image/png", buffer: png });
+  await expect(page.locator(".ProseMirror img.doc-figura-imagem")).toBeVisible();
+  dialogo = await abrirJanela(page);
+  await expect(dialogo.getByRole("region", { name: "Só o .tex" })).toContainText(
+    "sem a imagem: elas vêm no .zip",
+  );
 });

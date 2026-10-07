@@ -17,9 +17,9 @@ import { clicarExportar } from "./apoio";
 // mudou: o parágrafo solto virou um `<span role="status">` dentro do
 // `AppTopBar` (2B.10) — `p[role="status"]` nunca mais bate; `span` é o que
 // distingue esse status do `<div role="status">` do banner de ambiente
-// interno, que continua na página. E "Exportar .docx" passou a ter duas
+// interno, que continua na página. E o botão de exportar passou a ter duas
 // instâncias (topbar + rodapé do inspetor, 2B.11) — escopado à barra
-// superior (`getByRole("banner")`) pra continuar único.
+// superior (`getByRole("banner")`) pra continuar único (`clicarExportar`).
 test("criar, digitar, recarregar, persistir e exportar", async ({ page }) => {
   const titulo = "Trabalho de teste da fatia vertical";
   const corpo = "Texto digitado no corpo do editor para o passo 1.4.5.";

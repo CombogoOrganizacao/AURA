@@ -68,7 +68,7 @@ test("duas figuras com imagem: aparecem na tela, voltam ao recarregar e saem no 
   await expect(imagens).toHaveCount(2);
 
   const download = page.waitForEvent("download");
-  await clicarExportar(page, page.getByRole("button", { name: "Exportar .docx" }).first());
+  await clicarExportar(page, page.getByRole("button", { name: "Exportar", exact: true }).first());
   const caminho = await (await download).path();
   const zip = await JSZip.loadAsync(readFileSync(caminho!));
 

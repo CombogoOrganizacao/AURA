@@ -1,7 +1,7 @@
 import type { Documento } from "@/core/document/types";
 
-// Baixar um arquivo gerado no navegador: o `.docx` (`BotaoExportar`) e o
-// `.zip` do projeto LaTeX (`BotaoExportarLatex`).
+// Baixar um arquivo gerado no navegador: o `.docx`, o `.tex` e o `.zip` do
+// projeto LaTeX (`ModalExportar` no editor, `AcoesDocumento` na lista).
 
 // Nome de arquivo não aceita todo caractere em todo SO — troca qualquer
 // coisa fora de letra/número/espaço/hífen por espaço.

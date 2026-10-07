@@ -121,9 +121,12 @@ export function Dialog({
         tabIndex={-1}
         onKeyDown={aoTeclar}
         style={{ width, maxWidth: "100%" }}
-        className="overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-card shadow-lg outline-none"
+        // Nunca mais alta que a tela: cabeçalho e rodapé ficam, o meio rola.
+        // Sem isso, uma janela longa (a de exportação, 6.3.2) punha o X fora
+        // da tela num notebook de tela baixa.
+        className="flex max-h-full flex-col overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-card shadow-lg outline-none"
       >
-        <header className="flex items-start justify-between gap-4 px-5 pb-3 pt-5">
+        <header className="flex shrink-0 items-start justify-between gap-4 px-5 pb-3 pt-5">
           {/* `min-w-0`: sem ele, um subtítulo sem espaço (nome de arquivo)
               alarga o cabeçalho além da janela e empurra o conteúdo. O
               subtítulo quebra em qualquer ponto quando não cabe (sem barra
@@ -149,9 +152,11 @@ export function Dialog({
             </button>
           )}
         </header>
-        <div className="px-5 pb-5 font-sans text-sm leading-normal text-body">{children}</div>
+        <div className="min-h-0 overflow-y-auto px-5 pb-5 font-sans text-sm leading-normal text-body">
+          {children}
+        </div>
         {footer && (
-          <footer className="flex justify-end gap-2 border-t border-[var(--border-subtle)] bg-sunken px-5 py-3">
+          <footer className="flex shrink-0 justify-end gap-2 border-t border-[var(--border-subtle)] bg-sunken px-5 py-3">
             {footer}
           </footer>
         )}

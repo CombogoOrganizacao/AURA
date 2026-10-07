@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AppTopBar } from "@/components/app/AppTopBar";
 import { BotaoExportar } from "@/components/editor/BotaoExportar";
-import { BotaoExportarLatex } from "@/components/editor/BotaoExportarLatex";
 import { BotaoReimportar } from "@/components/editor/BotaoReimportar";
 import { ProvedorImagens } from "@/components/editor/ImagensDoDocumento";
 import {
@@ -197,8 +196,9 @@ function Carregado({
   const { status, salvarAgora } = useAutosave(documento, (atual) =>
     persistencia.salvarDocumento(atual),
   );
-  // Os dois botões de exportar (barra superior e rodapé do inspetor) exportam
-  // o documento da tela e gravam na hora — ver `BotaoExportar.tsx`.
+  // Os dois botões de exportar (barra superior e rodapé do inspetor) abrem a
+  // janela dos três formatos (6.3.2), com o documento da tela, e gravam na
+  // hora — ver `BotaoExportar.tsx`.
   const botaoExportar = (
     <BotaoExportar
       documento={documento}
@@ -304,8 +304,6 @@ function Carregado({
               substituir={historico.substituir}
               salvarAgora={salvarAgora}
             />
-            {/* A ida: o projeto LaTeX em .zip, ou direto no Overleaf (6.3.1). */}
-            <BotaoExportarLatex documento={documento} salvarAgora={salvarAgora} />
             {botaoExportar}
           </div>
         }

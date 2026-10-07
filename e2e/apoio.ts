@@ -87,20 +87,19 @@ export async function documentoSalvo(page: Page, id: string): Promise<Documento>
   );
 }
 
-// Clica em "Exportar .docx" (6.2.12). Com dado da capa faltando, o botão
-// pergunta antes; aqui a resposta é "Exportar assim mesmo", porque o que estes
-// specs conferem é o arquivo, não a capa. Quem chama espera o download como
-// antes (`page.waitForEvent("download")` antes do clique).
+// Baixa o `.docx` pela janela de exportação (6.3.2): "Exportar" na barra
+// superior (ou o botão dado), "Baixar .docx", e fecha a janela depois do
+// download (ela fica aberta para outro formato, e cobriria a página). Dado da
+// capa faltando só avisa no topo da janela, sem pergunta no meio. Quem chama
+// espera o download (`page.waitForEvent("download")` antes do clique).
 export async function clicarExportar(page: Page, botao?: Locator) {
-  await (botao ?? page.getByRole("banner").getByRole("button", { name: "Exportar .docx" })).click();
-  const confirmar = page.getByRole("button", { name: "Exportar assim mesmo" });
-  const baixou = page
-    .waitForEvent("download", { timeout: 15_000 })
-    .then(() => false)
-    .catch(() => false);
-  const perguntou = confirmar
-    .waitFor({ timeout: 15_000 })
-    .then(() => true)
-    .catch(() => false);
-  if (await Promise.race([baixou, perguntou])) await confirmar.click();
+  await (
+    botao ?? page.getByRole("banner").getByRole("button", { name: "Exportar", exact: true })
+  ).click();
+  const dialogo = page.getByRole("dialog", { name: "Exportar" });
+  const baixou = page.waitForEvent("download");
+  await dialogo.getByRole("button", { name: "Baixar .docx" }).click();
+  await baixou;
+  await dialogo.getByRole("button", { name: "Fechar" }).click();
+  await expect(dialogo).toBeHidden();
 }

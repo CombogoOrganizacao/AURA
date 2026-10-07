@@ -1,6 +1,6 @@
-// "Abrir no Overleaf", dentro de "Exportar LaTeX" (passo 6.3.1): os campos
-// do POST para `overleaf.com/docs`, a API documentada em overleaf.com/devs
-// (lida de novo em 30/09/2026; docs/latex-abntex.md §3.3).
+// "Abrir no Overleaf", na janela de exportação (passos 6.3.1 e 6.3.2): os
+// campos do POST para `overleaf.com/docs`, a API documentada em
+// overleaf.com/devs (lida de novo em 30/09/2026; docs/latex-abntex.md §3.3).
 //
 // **O trabalho vai dentro do POST, como data URL, e não como link.** A API
 // aceita também um endereço de onde o Overleaf baixaria o arquivo, mas isso
@@ -8,7 +8,7 @@
 // trabalho nenhum. O `.zip` sai do navegador direto para o Overleaf.
 //
 // Lógica pura: montar o formulário e enviá-lo é da tela
-// (`components/editor/BotaoExportarLatex.tsx`).
+// (`components/editor/ModalExportar.tsx`).
 
 export const ENDERECO_OVERLEAF = "https://www.overleaf.com/docs";
 
