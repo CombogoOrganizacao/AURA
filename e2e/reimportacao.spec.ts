@@ -89,7 +89,7 @@ test("arquivo igual ao trabalho: o relatório diz que nada mudou, e não há o q
   await expect(dialogo).toBeHidden();
 });
 
-test("nome de arquivo comprido não alarga a janela: rola para o lado, a partir da esquerda", async ({
+test("nome de arquivo comprido não alarga a janela: quebra em linhas, inteiro e sem rolagem", async ({
   page,
 }) => {
   const documento = tresSecoes();
@@ -106,17 +106,19 @@ test("nome de arquivo comprido não alarga a janela: rola para o lado, a partir 
   await expect(dialogo.getByRole("heading", { name: "Reimportar do LaTeX" })).toBeInViewport({
     ratio: 1,
   });
-  // O nome inteiro, numa linha que rola, começando do início.
-  const linha = dialogo.getByTitle(nome);
-  await expect(linha).toHaveText(nome);
-  const rolagem = await linha.evaluate((el) => ({
-    rola: el.scrollWidth > el.clientWidth,
-    inicio: el.scrollLeft,
-    cabe:
-      el.getBoundingClientRect().right <=
-      el.closest("[role=dialog]")!.getBoundingClientRect().right,
-  }));
-  expect(rolagem).toEqual({ rola: true, inicio: 0, cabe: true });
+  // O nome inteiro, em mais de uma linha, sem barra de rolagem (no Windows
+  // ela cobria o texto) e dentro da janela.
+  const subtitulo = dialogo.getByText(nome, { exact: true });
+  const medidas = await subtitulo.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const linha = parseFloat(getComputedStyle(el).lineHeight);
+    return {
+      rola: el.scrollWidth > el.clientWidth,
+      linhas: Math.round(r.height / linha) > 1,
+      cabe: r.right <= el.closest("[role=dialog]")!.getBoundingClientRect().right,
+    };
+  });
+  expect(medidas).toEqual({ rola: false, linhas: true, cabe: true });
 });
 
 test("arquivo de um trabalho que não está no navegador cria um trabalho novo e o abre", async ({

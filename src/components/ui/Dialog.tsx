@@ -125,14 +125,18 @@ export function Dialog({
       >
         <header className="flex items-start justify-between gap-4 px-5 pb-3 pt-5">
           {/* `min-w-0`: sem ele, um subtítulo sem espaço (nome de arquivo)
-              alarga o cabeçalho além da janela e empurra o conteúdo. */}
+              alarga o cabeçalho além da janela e empurra o conteúdo. O
+              subtítulo quebra em qualquer ponto quando não cabe (sem barra
+              de rolagem: no Windows ela cobre o texto). */}
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             {title && (
               <h2 id={tituloId} className="font-serif text-xl text-title">
                 {title}
               </h2>
             )}
-            {subtitle && <p className="font-sans text-xs text-muted">{subtitle}</p>}
+            {subtitle && (
+              <p className="font-sans text-xs text-muted [overflow-wrap:anywhere]">{subtitle}</p>
+            )}
           </div>
           {onClose && (
             <button
