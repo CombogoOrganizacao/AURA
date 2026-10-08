@@ -27,7 +27,7 @@ test("percorre landing → documentos → editor → editais", async ({ page }) 
 
   // De volta a documentos, "Novo documento" leva ao editor de três
   // colunas — `AppTopBar` troca pro modo `editor`, com o botão de voltar.
-  await page.getByRole("link", { name: "Meus documentos" }).click();
+  await page.getByRole("link", { name: "Meus documentos", exact: true }).click();
   await page.waitForURL(/\/documentos$/);
   await page.getByRole("button", { name: "Novo documento" }).click();
   await page.waitForURL(/\/documento\//);
