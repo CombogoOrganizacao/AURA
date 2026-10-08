@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { ModalExportar } from "@/components/editor/ModalExportar";
+import { Button } from "@/components/ui/Button";
 import type { Documento } from "@/core/document/types";
 import type { CampoExigido } from "@/core/rules/checks/dadosDeIdentificacao";
 import { usePersistencia } from "@/lib/persistence-provider";
@@ -37,14 +38,11 @@ export function BotaoExportar({ documento, salvarAgora, onPreencherDados }: Bota
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setAberto(true)}
-        disabled={!persistencia}
-        className="rounded-sm bg-bordo-700 px-4 py-2 text-sm font-medium text-on-bordo hover:bg-bordo-800 disabled:opacity-50"
-      >
+      {/* `Button` do sistema, do mesmo tamanho do "Importar LaTeX" ao lado:
+          um `<button>` com padding próprio saía mais alto que ele. */}
+      <Button onClick={() => setAberto(true)} disabled={!persistencia}>
         Exportar
-      </button>
+      </Button>
 
       {aberto && (
         <ModalExportar

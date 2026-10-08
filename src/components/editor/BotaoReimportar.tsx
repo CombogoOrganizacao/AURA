@@ -281,7 +281,6 @@ export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoRei
     <>
       <Button
         variant="outline"
-        size="sm"
         disabled={!persistencia}
         onClick={() => entradaArquivo.current?.click()}
       >
