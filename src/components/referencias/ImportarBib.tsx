@@ -19,6 +19,8 @@ import { nomeDaReferencia, PreviaReferencia } from "./PreviaReferencia";
 
 interface ImportarBibProps {
   onImportar: (referencias: Referencia[]) => void;
+  /** No celular (6.4.5): à vista, desabilitado; o painel explica o motivo. */
+  disabled?: boolean;
 }
 
 // Teto do arquivo lido: `TAMANHO_MAXIMO_BIB`, que explica o valor.
@@ -46,7 +48,7 @@ interface Previa {
 //
 // O arquivo é lido no navegador e não vai a servidor nenhum — o `.bib` pode
 // ter anotações pessoais em `note` e `abstract`.
-export function ImportarBib({ onImportar }: ImportarBibProps) {
+export function ImportarBib({ onImportar, disabled = false }: ImportarBibProps) {
   const entradaArquivo = useRef<HTMLInputElement>(null);
   const [previa, setPrevia] = useState<Previa | null>(null);
   const [falha, setFalha] = useState<string | null>(null);
@@ -116,7 +118,12 @@ export function ImportarBib({ onImportar }: ImportarBibProps) {
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => entradaArquivo.current?.click()}>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={disabled}
+        onClick={() => entradaArquivo.current?.click()}
+      >
         Importar .bib
       </Button>
       <input

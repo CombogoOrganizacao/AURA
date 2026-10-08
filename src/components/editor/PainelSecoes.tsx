@@ -6,9 +6,11 @@ import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerE
 import { PanelHeading } from "@/components/app/PanelHeading";
 import { fecharGavetas } from "@/components/editor/LayoutEdicao";
 import { IconButton } from "@/components/ui/IconButton";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { Icon } from "@/components/ui/Icon";
 import { numerarSecoes } from "@/core/document/numbering";
 import type { Secao } from "@/core/document/types";
+import { useDesktop } from "@/lib/useDesktop";
 
 // Mesmo limiar que o resto do sistema ainda não tinha precisado nomear —
 // este é o primeiro comportamento responsivo do app (nenhum `md:`/`sm:`
@@ -31,6 +33,11 @@ function irParaSecao(id: string) {
   const elemento = document.querySelector<HTMLElement>(`section[data-id="${CSS.escape(id)}"]`);
   elemento?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
+// Reordenar é montar a estrutura do trabalho, e no celular a v1 cuida de
+// escrever e revisar (decisão §1.12, "Recorte mobile"; passo 6.4.5).
+const MOTIVO_REORDENAR =
+  "Reordenar seções é só no computador: no celular, esta versão cuida de escrever e revisar, não de montar a estrutura do trabalho";
 
 interface AlvoDeArrasto {
   id: string;
@@ -135,6 +142,7 @@ export function PainelSecoes({
   onNovaSecao,
   onApagarSecao,
 }: PainelSecoesProps) {
+  const desktop = useDesktop();
   const numeracao = useMemo(() => numerarSecoes(sections), [sections]);
   const [menu, setMenu] = useState<MenuAberto | null>(null);
   const fecharMenu = useCallback(() => setMenu(null), []);
@@ -177,9 +185,9 @@ export function PainelSecoes({
     document.addEventListener("pointerup", aoSoltar);
   }
 
-  // Alternativa por teclado à mesma reordenação — a alça só existe no DOM em
-  // viewport desktop (`hidden md:flex` abaixo), então isto herda o "só
-  // desktop" de graça, sem checagem própria. Seta pra cima troca de posição
+  // Alternativa por teclado à mesma reordenação — só a alça do desktop a
+  // chama (no celular a alça é outra, desabilitada, 6.4.5), então isto herda
+  // o "só desktop" de graça, sem checagem própria. Seta pra cima troca de posição
   // com a seção anterior; pra baixo, com a seguinte.
   function aoTeclarAlca(evento: ReactKeyboardEvent, indice: number) {
     if (evento.key === "ArrowUp" && indice > 0) {
@@ -244,16 +252,32 @@ export function PainelSecoes({
                   indicador,
                 ].join(" ")}
               >
-                <button
-                  type="button"
-                  aria-label={`Reordenar "${secao.titulo || "Seção sem título"}" — segure e arraste, ou use as setas`}
-                  onPointerDown={(evento) => aoPressionarAlca(evento, secao.id)}
-                  onKeyDown={(evento) => aoTeclarAlca(evento, indice)}
-                  className="hidden shrink-0 touch-none items-center rounded-sm p-1 text-subtle select-none hover:bg-sunken hover:text-muted focus-visible:outline-none focus-visible:shadow-focus-ring md:flex"
-                  style={{ cursor: "grab" }}
-                >
-                  <Icon name="grip-vertical" size={14} />
-                </button>
+                {desktop ? (
+                  <button
+                    type="button"
+                    aria-label={`Reordenar "${secao.titulo || "Seção sem título"}" — segure e arraste, ou use as setas`}
+                    onPointerDown={(evento) => aoPressionarAlca(evento, secao.id)}
+                    onKeyDown={(evento) => aoTeclarAlca(evento, indice)}
+                    className="flex shrink-0 touch-none items-center rounded-sm p-1 text-subtle select-none hover:bg-sunken hover:text-muted focus-visible:outline-none focus-visible:shadow-focus-ring"
+                    style={{ cursor: "grab" }}
+                  >
+                    <Icon name="grip-vertical" size={14} />
+                  </button>
+                ) : (
+                  // No celular (6.4.5): à vista e desabilitada, com o motivo
+                  // na dica, que abre no foco — tocar põe o foco nela.
+                  <Tooltip content={MOTIVO_REORDENAR}>
+                    <button
+                      type="button"
+                      aria-label={`Reordenar "${secao.titulo || "Seção sem título"}" (só no computador)`}
+                      aria-disabled="true"
+                      onClick={(evento) => evento.currentTarget.focus()}
+                      className="flex shrink-0 cursor-not-allowed items-center rounded-sm p-1 text-disabled focus-visible:outline-none focus-visible:shadow-focus-ring"
+                    >
+                      <Icon name="grip-vertical" size={14} />
+                    </button>
+                  </Tooltip>
+                )}
                 <button
                   type="button"
                   onClick={() => irParaSecao(secao.id)}

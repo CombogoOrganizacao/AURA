@@ -406,21 +406,17 @@ function Carregado({
                 </div>
               </details>
               {/*
-              Referências **só no desktop** (critério do passo 4.5), com o
-              mesmo `hidden md:block` da tabela e da fórmula na `Toolbar`
-              (3.6.3/3.6.5). Cadastrar uma referência é preencher de seis a
-              doze campos separados — autoria, título, imprenta, paginação —, e
-              num teclado virtual isso deixa de ser tarefa e vira provação. O
-              que o breakpoint tira é o CADASTRO: as referências já cadastradas
-              continuam saindo no `.docx` exportado de qualquer largura.
-
-              O 6.4.5 troca este `hidden` por "desabilitado com explicação",
-              junto com os outros três — sumir sem aviso é pior que impedir
-              com motivo, e a troca vale a pena fazer de uma vez só.
+              Cadastro de referências **só no desktop** (critério do passo
+              4.5). Cadastrar uma referência é preencher de seis a doze campos
+              separados — autoria, título, imprenta, paginação —, e num teclado
+              virtual isso deixa de ser tarefa e vira provação. No celular o
+              painel aparece só para leitura, com o motivo escrito no topo
+              (6.4.5; antes ele sumia sem aviso): as referências já cadastradas
+              continuam à vista e saindo no `.docx` exportado.
             */}
               <details
                 data-painel="referencias"
-                className="hidden shrink-0 border-b border-[var(--border-subtle)] md:block"
+                className="shrink-0 border-b border-[var(--border-subtle)]"
               >
                 <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
                   Referências

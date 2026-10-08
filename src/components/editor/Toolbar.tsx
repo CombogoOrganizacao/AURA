@@ -21,6 +21,7 @@ import type { Referencia } from "@/core/references/types";
 import { MenuCitacao } from "./MenuCitacao";
 import { criarSecaoNoEditor } from "./novaSecao";
 import { lerSelecaoDoNavegador } from "./selecaoDoNavegador";
+import { useDesktop } from "@/lib/useDesktop";
 
 // Re-renderiza a toolbar a cada transação do editor — é como o estado
 // "ativo" dos botões (negrito ligado, nível 2 selecionado...) acompanha a
@@ -50,8 +51,11 @@ interface BotaoToolbarProps {
   disabled?: boolean;
   onClick?: () => void;
   label: string;
-  /** Classes extras do botão — hoje só o `hidden md:flex` da tabela e da fórmula. */
-  className?: string;
+  /**
+   * Ação só do computador (passo 6.4.5, decisão §1.12): o motivo, mostrado
+   * na dica quando a tela é de celular. Lá o botão fica à vista, desabilitado.
+   */
+  soNoComputador?: string;
   children: ReactNode;
 }
 
@@ -64,17 +68,36 @@ const EditorDaBarra = createContext<Editor | null>(null);
 // selecionar pelo teclado chegava antes de o ProseMirror ler a seleção, e a
 // ação valia para a seleção antiga (ver `selecaoDoNavegador.ts`). Pelo
 // teclado nada muda: Tab e Enter não passam por `mousedown`.
-function BotaoToolbar({ ativo, disabled, onClick, label, className, children }: BotaoToolbarProps) {
+//
+// **Só no computador, no celular** (6.4.5): o botão continua à vista, com
+// `aria-disabled` e não `disabled` — um botão `disabled` não recebe foco nem
+// toque, e a explicação nunca apareceria. Tocar põe o foco nele, e a dica
+// (que abre no foco) diz o motivo; a ação não roda.
+function BotaoToolbar({
+  ativo,
+  disabled,
+  onClick,
+  label,
+  soNoComputador,
+  children,
+}: BotaoToolbarProps) {
   const editor = useContext(EditorDaBarra);
+  const desktop = useDesktop();
+  const restrito = Boolean(soNoComputador) && !desktop;
   return (
-    <Tooltip content={label}>
+    <Tooltip content={restrito ? soNoComputador : label}>
       <button
         type="button"
         aria-label={label}
         aria-pressed={ativo}
+        aria-disabled={restrito || undefined}
         disabled={disabled}
         onMouseDown={(evento) => evento.preventDefault()}
-        onClick={() => {
+        onClick={(evento) => {
+          if (restrito) {
+            evento.currentTarget.focus();
+            return;
+          }
           if (editor) lerSelecaoDoNavegador(editor);
           onClick?.();
         }}
@@ -82,8 +105,11 @@ function BotaoToolbar({ ativo, disabled, onClick, label, className, children }: 
           "flex size-7 shrink-0 items-center justify-center rounded-sm transition-colors",
           "focus-visible:outline-none focus-visible:shadow-focus-ring",
           "disabled:cursor-not-allowed disabled:text-disabled disabled:hover:bg-transparent",
-          ativo ? "bg-brand-soft text-bordo-700" : "text-muted hover:bg-sunken hover:text-body",
-          className ?? "",
+          restrito
+            ? "cursor-not-allowed text-disabled"
+            : ativo
+              ? "bg-brand-soft text-bordo-700"
+              : "text-muted hover:bg-sunken hover:text-body",
         ].join(" ")}
       >
         {children}
@@ -91,6 +117,11 @@ function BotaoToolbar({ ativo, disabled, onClick, label, className, children }: 
     </Tooltip>
   );
 }
+
+// Motivos das ações só do computador (6.4.5), na dica do botão no celular.
+// Vêm dos critérios dos passos 3.6.3, 3.6.5 e 4.10 e da decisão §1.12.
+const MOTIVO_FORMULA =
+  "Criar fórmula é só no computador: o LaTeX pede a barra invertida, chaves, ^ e _ o tempo todo, e no teclado do celular cada um está a duas camadas de distância. A fórmula já criada continua editável aqui";
 
 function Divisor() {
   return <span aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-[var(--border-subtle)]" />;
@@ -334,10 +365,10 @@ export function Toolbar({
           <Icon name="quote" size={16} />
         </BotaoToolbar>
         {/*
-        Citar só no desktop, pelo mesmo `hidden md:flex` do cadastro de
-        referências (4.5): citar é escolher uma referência cadastrada, e o
-        cadastro não existe no celular. A citação já inserida continua
-        visível em qualquer largura.
+        Citar só no desktop, como o cadastro de referências (4.5): citar é
+        escolher uma referência cadastrada, e o cadastro é só no computador.
+        No celular o botão fica à vista, desabilitado, com o motivo na dica
+        (6.4.5). A citação já inserida continua visível em qualquer largura.
       */}
         <MenuCitacao
           editor={editor}
@@ -345,7 +376,7 @@ export function Toolbar({
           gatilho={({ abrir, ativo }) => (
             <BotaoToolbar
               label="Citar (só no computador) — liga o trecho selecionado a uma referência"
-              className="hidden md:flex"
+              soNoComputador="Citar é só no computador: a citação liga o trecho a uma referência, e cadastrar referências é só no computador"
               ativo={ativo}
               onClick={abrir}
             >
@@ -360,31 +391,30 @@ export function Toolbar({
           <Icon name="image" size={16} />
         </BotaoToolbar>
         {/*
-        Tabela **só no desktop** (critério do passo 3.6.3): `hidden md:flex`,
-        mesma abordagem de `PainelSecoes.tsx` pra reordenar arrastando
-        (3.2.4). Montar uma grade célula a célula com o teclado virtual
+        Tabela **só no desktop** (critério do passo 3.6.3), como reordenar
+        seções (3.2.4). Montar uma grade célula a célula com o teclado virtual
         cobrindo metade da tela não é uma tarefa que a v1 se proponha a
         resolver; a tabela já criada continua visível e editável em qualquer
-        largura — o que o breakpoint tira é o botão de CRIAR uma.
+        largura — o que fica só no computador é CRIAR uma. No celular o botão
+        fica à vista, desabilitado, com o motivo na dica (6.4.5).
       */}
         <BotaoToolbar
           label="Tabela (só no computador) — padrão IBGE, laterais abertas"
-          className="hidden md:flex"
+          soNoComputador="Criar tabela é só no computador: montar a grade célula a célula com o teclado do celular cobrindo a tela não cabe nesta versão. A tabela já criada continua editável aqui"
           onClick={() => inserirBloco(novaTabela())}
         >
           <Icon name="table" size={16} />
         </BotaoToolbar>
         {/*
-        Fórmula **só no desktop** (critério do passo 3.6.5), pelo mesmo
-        `hidden md:flex` da tabela e pelo mesmo motivo: escrever LaTeX é
-        digitar `\`, `{`, `}`, `^` e `_` o tempo todo, e num teclado virtual
-        cada um deles está a duas camadas de distância. A fórmula já criada
-        continua visível e editável em qualquer largura — o que o breakpoint
-        tira é o botão de CRIAR uma.
+        Fórmula **só no desktop** (critério do passo 3.6.5), como a tabela:
+        escrever LaTeX é digitar `\`, `{`, `}`, `^` e `_` o tempo todo, e num
+        teclado virtual cada um deles está a duas camadas de distância. A
+        fórmula já criada continua visível e editável em qualquer largura — o
+        que fica só no computador é CRIAR uma (`MOTIVO_FORMULA`, 6.4.5).
       */}
         <BotaoToolbar
           label="Fórmula (só no computador) — escrita em LaTeX, destacada e centralizada"
-          className="hidden md:flex"
+          soNoComputador={MOTIVO_FORMULA}
           onClick={() => inserirBloco(novaFormula())}
         >
           <Icon name="sigma" size={16} />
@@ -396,7 +426,7 @@ export function Toolbar({
       */}
         <BotaoToolbar
           label="Fórmula no texto (só no computador) — escrita em LaTeX, no meio da frase"
-          className="hidden md:flex"
+          soNoComputador={MOTIVO_FORMULA}
           disabled={!podeInserirFormulaInline(editor.state)}
           onClick={() => editor.commands.command(({ tr }) => inserirFormulaInline(tr))}
         >

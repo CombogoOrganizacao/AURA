@@ -108,7 +108,11 @@ test("o botão de fórmula é restrito ao desktop; a fórmula criada continua ed
 
   // Abaixo do breakpoint `md` do Tailwind (768px).
   await page.setViewportSize({ width: 420, height: 800 });
-  await expect(page.getByRole("button", { name: BOTAO_FORMULA })).toBeHidden();
+  // À vista e desabilitada, com o motivo (6.4.5); antes sumia.
+  await expect(page.getByRole("button", { name: BOTAO_FORMULA })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
 
   // O que o breakpoint tira é o botão de CRIAR uma fórmula, não a fórmula.
   await expect(page.getByLabel(CAMPO_LATEX)).toHaveValue("a^2 + b^2 = c^2");

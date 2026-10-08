@@ -64,7 +64,11 @@ test("o botão de tabela é restrito ao desktop; a figura continua em qualquer l
 
   // Abaixo do breakpoint `md` do Tailwind (768px).
   await page.setViewportSize({ width: 420, height: 800 });
-  await expect(page.getByRole("button", { name: BOTAO_TABELA })).toBeHidden();
+  // À vista e desabilitada, com o motivo (6.4.5); antes sumia.
+  await expect(page.getByRole("button", { name: BOTAO_TABELA })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
   await expect(page.getByRole("button", { name: BOTAO_FIGURA })).toBeVisible();
 });
 

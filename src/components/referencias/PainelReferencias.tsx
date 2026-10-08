@@ -6,6 +6,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { novaReferencia } from "@/core/references/campos";
 import type { Referencia } from "@/core/references/types";
+import { useDesktop } from "@/lib/useDesktop";
 
 import { FormReferencia } from "./FormReferencia";
 import { ImportarBib } from "./ImportarBib";
@@ -30,11 +31,18 @@ interface PainelReferenciasProps {
 // faria a linha que está sendo editada pular de posição a cada letra digitada
 // no sobrenome. O que a pessoa precisa ver enquanto edita é a referência que
 // ela abriu, parada onde estava.
+//
+// **No celular, só leitura** (6.4.5, decisão §1.12): a lista aparece, e o
+// aviso no topo diz por que cadastrar, importar, editar e excluir ficam para
+// o computador; os botões ficam à vista, desabilitados. Antes do 6.4.5 o
+// painel inteiro sumia no celular, sem aviso.
 export function PainelReferencias({ references, onChange }: PainelReferenciasProps) {
+  const desktop = useDesktop();
   // Qual referência está aberta para edição. Uma por vez: a lista de um TCC
   // chega a quarenta entradas, e todas abertas seriam uma coluna de formulários
-  // impossível de percorrer.
-  const [aberta, setAberta] = useState<string | null>(null);
+  // impossível de percorrer. No celular, nenhuma: o formulário é do computador.
+  const [abertaNoDesktop, setAberta] = useState<string | null>(null);
+  const aberta = desktop ? abertaNoDesktop : null;
 
   // A última excluída, para o "Desfazer". Excluir uma referência apaga uma
   // dúzia de campos digitados à mão — perder isso por um clique errado é o
@@ -80,11 +88,18 @@ export function PainelReferencias({ references, onChange }: PainelReferenciasPro
 
   return (
     <div className="flex flex-col gap-3 font-sans">
+      {!desktop && (
+        <Alert tone="info" title="Cadastrar referências é só no computador">
+          Cada referência tem de seis a doze campos separados (autoria, título, imprenta,
+          paginação), e preenchê-los no teclado do celular não cabe nesta versão. As já cadastradas
+          aparecem aqui e saem no .docx.
+        </Alert>
+      )}
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={adicionar}>
+        <Button variant="outline" size="sm" disabled={!desktop} onClick={adicionar}>
           Nova referência
         </Button>
-        <ImportarBib onImportar={importar} />
+        <ImportarBib onImportar={importar} disabled={!desktop} />
       </div>
 
       {removida && (
@@ -127,6 +142,7 @@ export function PainelReferencias({ references, onChange }: PainelReferenciasPro
                 <Button
                   variant="quiet"
                   size="sm"
+                  disabled={!desktop}
                   aria-label={`${aberta === referencia.id ? "Fechar" : "Editar"} ${nomeDaReferencia(referencia)}`}
                   onClick={() => setAberta(aberta === referencia.id ? null : referencia.id)}
                 >

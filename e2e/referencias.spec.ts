@@ -301,10 +301,15 @@ test.describe("painel de referências — listar, criar, editar, excluir (passo 
 
     await page.setViewportSize({ width: 375, height: 800 });
 
-    await expect(page.getByRole("button", { name: "Nova referência" })).toHaveCount(0);
+    // À vista e desabilitado, com o motivo no painel (6.4.5); antes sumia. No
+    // celular a coluna é uma gaveta (6.4.4), e o painel continua aberto.
+    await page.getByRole("button", { name: "Abrir: Seções e dados do trabalho" }).click();
+    await expect(page.getByRole("button", { name: "Nova referência" })).toBeDisabled();
+    await expect(painelReferencias(page)).toContainText("Cadastrar referências é só no computador");
+    await page.keyboard.press("Escape");
 
-    // A referência já cadastrada continua no documento — some o cadastro, não
-    // o dado.
+    // A referência já cadastrada continua no documento — fica de fora o
+    // cadastro, não o dado.
     await page.setViewportSize({ width: 1280, height: 800 });
     await expect(painelReferencias(page).getByText("Obra do desktop")).toBeVisible();
   });
