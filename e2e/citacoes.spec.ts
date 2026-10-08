@@ -30,11 +30,31 @@ async function documentoComReferencias(page: Page) {
 }
 
 // Escreve um parágrafo e o deixa inteiro selecionado — o trecho a citar.
+//
+// Seleciona com clique triplo, não com Home e Shift+End. Com a suíte inteira
+// em paralelo, o Chromium às vezes deixa de executar as teclas de navegação
+// que o Playwright injeta (a tecla chega, ninguém a cancela, e o cursor não
+// anda), e isso persiste naquela página; digitar continua funcionando.
+// Investigado em 08/10/2026 (docs/to-do.md, pendência do 6.4.2). A seleção
+// é conferida no navegador e no editor antes de seguir.
 async function escreverESelecionar(page: Page, texto: string) {
-  await page.locator(".ProseMirror p").first().click();
+  const paragrafo = page.locator(".ProseMirror p").first();
+  await paragrafo.click();
   await page.keyboard.type(texto);
-  await page.keyboard.press("Home");
-  await page.keyboard.press("Shift+End");
+  await paragrafo.click({ clickCount: 3 });
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe(texto);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            document.querySelector(".ProseMirror") as unknown as {
+              editor: { state: { selection: { empty: boolean } } };
+            }
+          ).editor.state.selection.empty,
+      ),
+    )
+    .toBe(false);
 }
 
 function abrirMenu(page: Page) {
