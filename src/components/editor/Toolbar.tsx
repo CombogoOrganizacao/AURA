@@ -1,7 +1,7 @@
 "use client";
 
 import type { Editor } from "@tiptap/core";
-import { useCallback, useSyncExternalStore } from "react";
+import { createContext, useCallback, useContext, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 
 import { Icon } from "@/components/ui/Icon";
@@ -20,6 +20,7 @@ import type { Referencia } from "@/core/references/types";
 
 import { MenuCitacao } from "./MenuCitacao";
 import { criarSecaoNoEditor } from "./novaSecao";
+import { lerSelecaoDoNavegador } from "./selecaoDoNavegador";
 
 // Re-renderiza a toolbar a cada transação do editor — é como o estado
 // "ativo" dos botões (negrito ligado, nível 2 selecionado...) acompanha a
@@ -54,7 +55,17 @@ interface BotaoToolbarProps {
   children: ReactNode;
 }
 
+// O editor da barra, para cada botão ler a seleção do navegador antes da
+// ação, sem passar `editor` aos dezoito botões.
+const EditorDaBarra = createContext<Editor | null>(null);
+
+// `preventDefault` no `mousedown`: o botão não tira o foco do editor nem
+// desfaz a seleção do navegador. Sem isso, o clique logo depois de
+// selecionar pelo teclado chegava antes de o ProseMirror ler a seleção, e a
+// ação valia para a seleção antiga (ver `selecaoDoNavegador.ts`). Pelo
+// teclado nada muda: Tab e Enter não passam por `mousedown`.
 function BotaoToolbar({ ativo, disabled, onClick, label, className, children }: BotaoToolbarProps) {
+  const editor = useContext(EditorDaBarra);
   return (
     <Tooltip content={label}>
       <button
@@ -62,7 +73,11 @@ function BotaoToolbar({ ativo, disabled, onClick, label, className, children }: 
         aria-label={label}
         aria-pressed={ativo}
         disabled={disabled}
-        onClick={onClick}
+        onMouseDown={(evento) => evento.preventDefault()}
+        onClick={() => {
+          if (editor) lerSelecaoDoNavegador(editor);
+          onClick?.();
+        }}
         className={[
           "flex size-7 shrink-0 items-center justify-center rounded-sm transition-colors",
           "focus-visible:outline-none focus-visible:shadow-focus-ring",
@@ -254,96 +269,97 @@ export function Toolbar({
       .run();
 
   return (
-    <div
-      role="toolbar"
-      aria-label="Formatação"
-      className="flex shrink-0 flex-wrap items-center gap-1 border-b border-[var(--border-subtle)] bg-card px-2 py-1"
-    >
-      <BotaoToolbar
-        label="Desfazer (Ctrl+Z)"
-        disabled={!editor.can().undo()}
-        onClick={() => editor.chain().focus().undo().run()}
+    <EditorDaBarra.Provider value={editor}>
+      <div
+        role="toolbar"
+        aria-label="Formatação"
+        className="flex shrink-0 flex-wrap items-center gap-1 border-b border-[var(--border-subtle)] bg-card px-2 py-1"
       >
-        <Icon name="undo-2" size={16} />
-      </BotaoToolbar>
-      <BotaoToolbar
-        label="Refazer (Ctrl+Shift+Z)"
-        disabled={!editor.can().redo()}
-        onClick={() => editor.chain().focus().redo().run()}
-      >
-        <Icon name="redo-2" size={16} />
-      </BotaoToolbar>
+        <BotaoToolbar
+          label="Desfazer (Ctrl+Z)"
+          disabled={!editor.can().undo()}
+          onClick={() => editor.chain().focus().undo().run()}
+        >
+          <Icon name="undo-2" size={16} />
+        </BotaoToolbar>
+        <BotaoToolbar
+          label="Refazer (Ctrl+Shift+Z)"
+          disabled={!editor.can().redo()}
+          onClick={() => editor.chain().focus().redo().run()}
+        >
+          <Icon name="redo-2" size={16} />
+        </BotaoToolbar>
 
-      <Divisor />
+        <Divisor />
 
-      <CaixaEstilo editor={editor} estilo={estilo.estilo} />
-      {onFonteChange && (
-        <Tooltip content="Fonte do trabalho inteiro — a ABNT aceita Times New Roman ou Arial; o tamanho não muda">
-          <Select
-            aria-label="Fonte do trabalho"
-            size="sm"
-            className="w-[150px]"
-            value={fonte ?? "times"}
-            options={[
-              { value: "times", label: "Times New Roman" },
-              { value: "arial", label: "Arial" },
-            ]}
-            onChange={(evento) => onFonteChange(evento.target.value as FonteTrabalho)}
-          />
-        </Tooltip>
-      )}
-      <IndicadorTamanho tamanhoPt={estilo.tamanhoPt} />
+        <CaixaEstilo editor={editor} estilo={estilo.estilo} />
+        {onFonteChange && (
+          <Tooltip content="Fonte do trabalho inteiro — a ABNT aceita Times New Roman ou Arial; o tamanho não muda">
+            <Select
+              aria-label="Fonte do trabalho"
+              size="sm"
+              className="w-[150px]"
+              value={fonte ?? "times"}
+              options={[
+                { value: "times", label: "Times New Roman" },
+                { value: "arial", label: "Arial" },
+              ]}
+              onChange={(evento) => onFonteChange(evento.target.value as FonteTrabalho)}
+            />
+          </Tooltip>
+        )}
+        <IndicadorTamanho tamanhoPt={estilo.tamanhoPt} />
 
-      <Divisor />
+        <Divisor />
 
-      <BotaoToolbar
-        label="Negrito (Ctrl+B)"
-        ativo={editor.isActive("negrito")}
-        onClick={() => editor.chain().focus().toggleMark("negrito").run()}
-      >
-        <Icon name="bold" size={16} />
-      </BotaoToolbar>
-      <BotaoToolbar
-        label="Itálico (Ctrl+I)"
-        ativo={editor.isActive("italico")}
-        onClick={() => editor.chain().focus().toggleMark("italico").run()}
-      >
-        <Icon name="italic" size={16} />
-      </BotaoToolbar>
-      <BotaoToolbar
-        label="Citação longa (NBR 10520 — recuo 4 cm, fonte menor, espaço simples)"
-        ativo={editor.isActive("citacao_longa")}
-        onClick={() => editor.chain().focus().toggleNode("citacao_longa", "paragraph").run()}
-      >
-        <Icon name="quote" size={16} />
-      </BotaoToolbar>
-      {/*
+        <BotaoToolbar
+          label="Negrito (Ctrl+B)"
+          ativo={editor.isActive("negrito")}
+          onClick={() => editor.chain().focus().toggleMark("negrito").run()}
+        >
+          <Icon name="bold" size={16} />
+        </BotaoToolbar>
+        <BotaoToolbar
+          label="Itálico (Ctrl+I)"
+          ativo={editor.isActive("italico")}
+          onClick={() => editor.chain().focus().toggleMark("italico").run()}
+        >
+          <Icon name="italic" size={16} />
+        </BotaoToolbar>
+        <BotaoToolbar
+          label="Citação longa (NBR 10520 — recuo 4 cm, fonte menor, espaço simples)"
+          ativo={editor.isActive("citacao_longa")}
+          onClick={() => editor.chain().focus().toggleNode("citacao_longa", "paragraph").run()}
+        >
+          <Icon name="quote" size={16} />
+        </BotaoToolbar>
+        {/*
         Citar só no desktop, pelo mesmo `hidden md:flex` do cadastro de
         referências (4.5): citar é escolher uma referência cadastrada, e o
         cadastro não existe no celular. A citação já inserida continua
         visível em qualquer largura.
       */}
-      <MenuCitacao
-        editor={editor}
-        references={references}
-        gatilho={({ abrir, ativo }) => (
-          <BotaoToolbar
-            label="Citar (só no computador) — liga o trecho selecionado a uma referência"
-            className="hidden md:flex"
-            ativo={ativo}
-            onClick={abrir}
-          >
-            <Icon name="book-marked" size={16} />
-          </BotaoToolbar>
-        )}
-      />
-      <BotaoToolbar
-        label="Figura — legenda e fonte numeradas automaticamente"
-        onClick={() => inserirBloco(novaFigura())}
-      >
-        <Icon name="image" size={16} />
-      </BotaoToolbar>
-      {/*
+        <MenuCitacao
+          editor={editor}
+          references={references}
+          gatilho={({ abrir, ativo }) => (
+            <BotaoToolbar
+              label="Citar (só no computador) — liga o trecho selecionado a uma referência"
+              className="hidden md:flex"
+              ativo={ativo}
+              onClick={abrir}
+            >
+              <Icon name="book-marked" size={16} />
+            </BotaoToolbar>
+          )}
+        />
+        <BotaoToolbar
+          label="Figura — legenda e fonte numeradas automaticamente"
+          onClick={() => inserirBloco(novaFigura())}
+        >
+          <Icon name="image" size={16} />
+        </BotaoToolbar>
+        {/*
         Tabela **só no desktop** (critério do passo 3.6.3): `hidden md:flex`,
         mesma abordagem de `PainelSecoes.tsx` pra reordenar arrastando
         (3.2.4). Montar uma grade célula a célula com o teclado virtual
@@ -351,14 +367,14 @@ export function Toolbar({
         resolver; a tabela já criada continua visível e editável em qualquer
         largura — o que o breakpoint tira é o botão de CRIAR uma.
       */}
-      <BotaoToolbar
-        label="Tabela (só no computador) — padrão IBGE, laterais abertas"
-        className="hidden md:flex"
-        onClick={() => inserirBloco(novaTabela())}
-      >
-        <Icon name="table" size={16} />
-      </BotaoToolbar>
-      {/*
+        <BotaoToolbar
+          label="Tabela (só no computador) — padrão IBGE, laterais abertas"
+          className="hidden md:flex"
+          onClick={() => inserirBloco(novaTabela())}
+        >
+          <Icon name="table" size={16} />
+        </BotaoToolbar>
+        {/*
         Fórmula **só no desktop** (critério do passo 3.6.5), pelo mesmo
         `hidden md:flex` da tabela e pelo mesmo motivo: escrever LaTeX é
         digitar `\`, `{`, `}`, `^` e `_` o tempo todo, e num teclado virtual
@@ -366,27 +382,27 @@ export function Toolbar({
         continua visível e editável em qualquer largura — o que o breakpoint
         tira é o botão de CRIAR uma.
       */}
-      <BotaoToolbar
-        label="Fórmula (só no computador) — escrita em LaTeX, destacada e centralizada"
-        className="hidden md:flex"
-        onClick={() => inserirBloco(novaFormula())}
-      >
-        <Icon name="sigma" size={16} />
-      </BotaoToolbar>
-      {/*
+        <BotaoToolbar
+          label="Fórmula (só no computador) — escrita em LaTeX, destacada e centralizada"
+          className="hidden md:flex"
+          onClick={() => inserirBloco(novaFormula())}
+        >
+          <Icon name="sigma" size={16} />
+        </BotaoToolbar>
+        {/*
         Fórmula no meio da frase (passo 6.2.11) — só no computador, pelo
         mesmo motivo da de bloco. Sem `.focus()`, como a nota: o foco vai
         para o campo do LaTeX que o node view abre.
       */}
-      <BotaoToolbar
-        label="Fórmula no texto (só no computador) — escrita em LaTeX, no meio da frase"
-        className="hidden md:flex"
-        disabled={!podeInserirFormulaInline(editor.state)}
-        onClick={() => editor.commands.command(({ tr }) => inserirFormulaInline(tr))}
-      >
-        <Icon name="radical" size={16} />
-      </BotaoToolbar>
-      {/*
+        <BotaoToolbar
+          label="Fórmula no texto (só no computador) — escrita em LaTeX, no meio da frase"
+          className="hidden md:flex"
+          disabled={!podeInserirFormulaInline(editor.state)}
+          onClick={() => editor.commands.command(({ tr }) => inserirFormulaInline(tr))}
+        >
+          <Icon name="radical" size={16} />
+        </BotaoToolbar>
+        {/*
         Nota de rodapé (passo 6.1.3c). Desligada onde a nota não cabe, como
         numa célula de tabela: `podeInserirNota()` pergunta ao schema.
 
@@ -395,79 +411,80 @@ export function Toolbar({
         do TipTap devolve o foco ao editor num quadro seguinte, e o tirava do
         campo logo depois de ele o receber.
       */}
-      <BotaoToolbar
-        label="Nota de rodapé — numerada automaticamente, no pé da página no .docx"
-        disabled={!podeInserirNota(editor.state)}
-        onClick={() => editor.commands.command(({ tr }) => inserirNotaRodape(tr))}
-      >
-        <Icon name="superscript" size={16} />
-      </BotaoToolbar>
-      {CONTROLES_FUTUROS.map((item) => (
-        <BotaoToolbar key={item.nome} label={item.label} disabled>
-          <Icon name={item.nome} size={16} />
+        <BotaoToolbar
+          label="Nota de rodapé — numerada automaticamente, no pé da página no .docx"
+          disabled={!podeInserirNota(editor.state)}
+          onClick={() => editor.commands.command(({ tr }) => inserirNotaRodape(tr))}
+        >
+          <Icon name="superscript" size={16} />
         </BotaoToolbar>
-      ))}
+        {CONTROLES_FUTUROS.map((item) => (
+          <BotaoToolbar key={item.nome} label={item.label} disabled>
+            <Icon name={item.nome} size={16} />
+          </BotaoToolbar>
+        ))}
 
-      <Divisor />
+        <Divisor />
 
-      {/*
+        {/*
         Criar seção (passo 6.2.7). Os botões de nível, ao lado, só mudam o
         nível da seção do cursor — antes disto eram o único controle de
         seção, e pareciam criar uma.
       */}
-      <BotaoToolbar
-        label="Nova seção — no mesmo nível da seção atual"
-        onClick={() => criarSecaoNoEditor(editor, false)}
-      >
-        <Icon name="list-plus" size={16} />
-      </BotaoToolbar>
-      <BotaoToolbar
-        label="Nova subseção — um nível abaixo da seção atual"
-        onClick={() => criarSecaoNoEditor(editor, true)}
-      >
-        <Icon name="list-indent-increase" size={16} />
-      </BotaoToolbar>
-      {onApagarSecao && (
         <BotaoToolbar
-          label={
-            podeApagarSecao(editor.state.doc)
-              ? "Apagar a seção atual — as subseções dela continuam"
-              : "Apagar a seção atual — o trabalho precisa de pelo menos uma seção"
-          }
-          disabled={!podeApagarSecao(editor.state.doc)}
-          onClick={onApagarSecao}
+          label="Nova seção — no mesmo nível da seção atual"
+          onClick={() => criarSecaoNoEditor(editor, false)}
         >
-          <Icon name="trash-2" size={16} />
+          <Icon name="list-plus" size={16} />
         </BotaoToolbar>
-      )}
-
-      {NIVEIS.map((item) => (
         <BotaoToolbar
-          key={item.nivel}
-          label={`${item.label} (Ctrl+Alt+${item.nivel})`}
-          ativo={nivelAtual === item.nivel}
-          onClick={() =>
-            editor.chain().focus().updateAttributes("secao", { nivel: item.nivel }).run()
-          }
+          label="Nova subseção — um nível abaixo da seção atual"
+          onClick={() => criarSecaoNoEditor(editor, true)}
         >
-          <Icon name={item.nomeIcone} size={16} />
+          <Icon name="list-indent-increase" size={16} />
         </BotaoToolbar>
-      ))}
+        {onApagarSecao && (
+          <BotaoToolbar
+            label={
+              podeApagarSecao(editor.state.doc)
+                ? "Apagar a seção atual — as subseções dela continuam"
+                : "Apagar a seção atual — o trabalho precisa de pelo menos uma seção"
+            }
+            disabled={!podeApagarSecao(editor.state.doc)}
+            onClick={onApagarSecao}
+          >
+            <Icon name="trash-2" size={16} />
+          </BotaoToolbar>
+        )}
 
-      <Divisor />
+        {NIVEIS.map((item) => (
+          <BotaoToolbar
+            key={item.nivel}
+            label={`${item.label} (Ctrl+Alt+${item.nivel})`}
+            ativo={nivelAtual === item.nivel}
+            onClick={() =>
+              editor.chain().focus().updateAttributes("secao", { nivel: item.nivel }).run()
+            }
+          >
+            <Icon name={item.nomeIcone} size={16} />
+          </BotaoToolbar>
+        ))}
 
-      {onBuscar && (
-        <BotaoToolbar label="Localizar e substituir (Ctrl+F)" onClick={onBuscar}>
-          <Icon name="search" size={16} />
+        <Divisor />
+
+        {onBuscar && (
+          <BotaoToolbar label="Localizar e substituir (Ctrl+F)" onClick={onBuscar}>
+            <Icon name="search" size={16} />
+          </BotaoToolbar>
+        )}
+
+        <BotaoToolbar
+          label="Aplicar formatação ABNT — não é preciso: o trabalho já segue a norma na tela e na exportação"
+          disabled
+        >
+          <Icon name="wand-sparkles" size={16} />
         </BotaoToolbar>
-      )}
-
-      <BotaoToolbar
-        label="Aplicar formatação ABNT — não é preciso: o trabalho já segue a norma na tela e na exportação"
-        disabled
-      >
-        <Icon name="wand-sparkles" size={16} />
-      </BotaoToolbar>
-    </div>
+      </div>
+    </EditorDaBarra.Provider>
   );
 }
