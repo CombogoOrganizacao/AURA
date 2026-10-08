@@ -14,7 +14,11 @@ import {
   type IrParaLocal,
   type MoverSecao,
 } from "@/components/editor/Editor";
-import { LayoutEdicao, mostrarColunaEsquerda } from "@/components/editor/LayoutEdicao";
+import {
+  fecharGavetas,
+  LayoutEdicao,
+  mostrarColunaEsquerda,
+} from "@/components/editor/LayoutEdicao";
 import { PainelInspetor } from "@/components/editor/PainelInspetor";
 import { PainelSecoes } from "@/components/editor/PainelSecoes";
 import { PainelReferencias } from "@/components/referencias/PainelReferencias";
@@ -276,6 +280,9 @@ function Carregado({
 
   const irParaAchado = useCallback((achado: Achado) => {
     const { local } = achado;
+    // No celular, a gaveta do inspetor sai da frente; um achado de metadado
+    // abre em seguida a gaveta dos dados (`abrirPainel`).
+    fecharGavetas();
     if (local.tipo === "bloco") {
       irParaLocalRef.current?.(local);
     } else if (local.tipo === "metadado") {

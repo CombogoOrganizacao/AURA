@@ -32,7 +32,10 @@ test("no editor: selo ao lado do status, com a explicação na dica pelo teclado
 }) => {
   await abrirDocumento(page, tresSecoes());
 
-  const selo = page.getByRole("banner").getByText("Só neste navegador");
+  // O elemento que recebe o foco e leva a dica, não o texto dentro dele.
+  const selo = page
+    .getByRole("banner")
+    .locator("[aria-describedby]", { hasText: "Só neste navegador" });
   await expect(selo).toBeVisible();
   await selo.focus();
   const dica = page.locator(`[id="${await selo.getAttribute("aria-describedby")}"]`);

@@ -19,6 +19,7 @@ import {
   FileDown,
   FileSearch,
   FileText,
+  FileUp,
   GripVertical,
   Heading1,
   Heading2,
@@ -105,6 +106,7 @@ const icones = {
   // Documento e normas
   "file-text": FileText,
   "file-down": FileDown,
+  "file-up": FileUp,
   "file-archive": FileArchive,
   "file-search": FileSearch,
   ruler: Ruler,

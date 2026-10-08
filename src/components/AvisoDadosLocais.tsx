@@ -34,7 +34,9 @@ export function SeloDadosLocais() {
         className="flex shrink-0 items-center gap-1 rounded-xs font-sans text-2xs text-warning focus-visible:outline-none focus-visible:shadow-focus-ring"
       >
         <Icon name="triangle-alert" size={13} />
-        Só neste navegador
+        {/* No celular só o ícone (6.4.4); o texto continua para o leitor de
+            tela, e a dica abre do mesmo jeito. */}
+        <span className="sr-only sm:not-sr-only">Só neste navegador</span>
       </span>
     </Tooltip>
   );

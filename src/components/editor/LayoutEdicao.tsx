@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { flushSync } from "react-dom";
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   PointerEvent as ReactPointerEvent,
@@ -8,6 +9,7 @@ import type {
 } from "react";
 
 import { Icon } from "@/components/ui/Icon";
+import { useDesktop } from "@/lib/useDesktop";
 
 // Layout de três colunas do editor (passo 2.4) — casca de composição, sem
 // conteúdo próprio: `sidebar`/`children` (centro)/`inspetor` são slots. A
@@ -187,14 +189,46 @@ interface LayoutEdicaoProps {
   inspetor: ReactNode;
 }
 
-// Reabre a coluna esquerda se estiver recolhida — passo 5.2.3: clicar num
-// achado de metadado (resumo, banca...) abre o campo nessa coluna, e ele não
-// pode abrir escondido.
-export function mostrarColunaEsquerda() {
-  prefSidebarColapsada.definir(false);
+// No celular as colunas viram gavetas (passo 6.4.4). Quem está fora do
+// layout as abre e fecha por eventos, como as preferências acima: o achado
+// da conferência que leva a um campo de metadado abre a gaveta esquerda, e
+// escolher uma seção ou um achado fecha a gaveta para mostrar o texto.
+const EVENTO_GAVETA = "aura:layout:gaveta";
+type Gaveta = "esquerda" | "direita" | null;
+
+function pedirGaveta(gaveta: Gaveta) {
+  window.dispatchEvent(new CustomEvent<Gaveta>(EVENTO_GAVETA, { detail: gaveta }));
 }
 
+// Reabre a coluna esquerda se estiver recolhida — passo 5.2.3: clicar num
+// achado de metadado (resumo, banca...) abre o campo nessa coluna, e ele não
+// pode abrir escondido. No celular, abre a gaveta esquerda.
+export function mostrarColunaEsquerda() {
+  prefSidebarColapsada.definir(false);
+  pedirGaveta("esquerda");
+}
+
+// Fecha a gaveta aberta, no celular; no desktop não faz nada.
+export function fecharGavetas() {
+  pedirGaveta(null);
+}
+
+// Celular (passo 6.4.4, decisão §1.12 "Recorte mobile"): abaixo de 768 px o
+// texto ocupa a largura toda, e as duas colunas viram gavetas por cima dele,
+// fechadas ao abrir, sem alças de redimensionar nem preferência gravada.
+//
+// **Uma árvore só para as duas larguras.** Cruzar os 768 px (girar um
+// celular grande, redimensionar a janela) muda só a aparência das colunas;
+// se trocasse de componente, o React remontaria o editor (perdendo o
+// desfazer) e os painéis (fechando o que estava aberto). Por isso cada
+// elemento fica na mesma posição nos dois modos, e o que só existe num deles
+// entra como `{condição && ...}`, que guarda o lugar. As gavetas também
+// ficam sempre montadas, só escondidas: `abrirPainel()` (DocumentoEditor)
+// procura o campo no DOM logo depois de pedir a gaveta.
 export function LayoutEdicao({ sidebar, children, inspetor }: LayoutEdicaoProps) {
+  const desktop = useDesktop();
+  const [gaveta, setGaveta] = useState<Gaveta>(null);
+
   const larguraSidebarPersistida = useSyncExternalStore(
     prefSidebarW.inscrever,
     prefSidebarW.obterSnapshot,
@@ -257,18 +291,41 @@ export function LayoutEdicao({ sidebar, children, inspetor }: LayoutEdicaoProps)
     });
   }, []);
 
-  return (
-    <div className="flex min-h-0 flex-1">
-      <aside
-        style={{ width: sidebarColapsada ? 0 : larguraSidebar }}
-        className="flex min-h-0 shrink-0 flex-col overflow-hidden border-r border-[var(--border-subtle)] bg-card transition-[width] duration-[var(--dur-normal)] ease-[var(--ease-standard)]"
-      >
-        <div className="flex min-h-0 flex-1 flex-col" style={{ width: larguraSidebar }}>
-          {sidebar}
-        </div>
-      </aside>
+  useEffect(() => {
+    function aoPedir(evento: Event) {
+      // `flushSync`: quem pediu a gaveta põe o foco num campo dela no quadro
+      // seguinte, e um elemento ainda invisível não recebe foco.
+      flushSync(() => setGaveta((evento as CustomEvent<Gaveta>).detail));
+    }
+    window.addEventListener(EVENTO_GAVETA, aoPedir);
+    return () => window.removeEventListener(EVENTO_GAVETA, aoPedir);
+  }, []);
 
-      {!sidebarColapsada && (
+  useEffect(() => {
+    if (desktop || !gaveta) return;
+    function aoTeclar(evento: KeyboardEvent) {
+      if (evento.key === "Escape") setGaveta(null);
+    }
+    document.addEventListener("keydown", aoTeclar);
+    return () => document.removeEventListener("keydown", aoTeclar);
+  }, [desktop, gaveta]);
+
+  const gavetaAberta = desktop ? null : gaveta;
+
+  return (
+    <div className="relative flex min-h-0 min-w-0 flex-1">
+      <Coluna
+        lado="esquerda"
+        desktop={desktop}
+        largura={larguraSidebar}
+        colapsada={sidebarColapsada}
+        aberta={gavetaAberta === "esquerda"}
+        onFechar={() => setGaveta(null)}
+      >
+        {sidebar}
+      </Coluna>
+
+      {desktop && !sidebarColapsada && (
         <AlcaRedimensionar
           lado="sidebar"
           onArrastar={arrastarSidebar}
@@ -279,17 +336,33 @@ export function LayoutEdicao({ sidebar, children, inspetor }: LayoutEdicaoProps)
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center gap-1 border-b border-[var(--border-subtle)] bg-card px-2 py-1">
-          <BotaoColapsar
-            lado="sidebar"
-            colapsado={sidebarColapsada}
-            onToggle={() => prefSidebarColapsada.definir(!sidebarColapsada)}
-          />
+          {desktop ? (
+            <BotaoColapsar
+              lado="sidebar"
+              colapsado={sidebarColapsada}
+              onToggle={() => prefSidebarColapsada.definir(!sidebarColapsada)}
+            />
+          ) : (
+            <BotaoGaveta
+              lado="esquerda"
+              aberta={gavetaAberta === "esquerda"}
+              onAbrir={() => setGaveta("esquerda")}
+            />
+          )}
           <div className="flex-1" />
-          <BotaoColapsar
-            lado="inspetor"
-            colapsado={inspetorColapsado}
-            onToggle={() => prefInspetorColapsado.definir(!inspetorColapsado)}
-          />
+          {desktop ? (
+            <BotaoColapsar
+              lado="inspetor"
+              colapsado={inspetorColapsado}
+              onToggle={() => prefInspetorColapsado.definir(!inspetorColapsado)}
+            />
+          ) : (
+            <BotaoGaveta
+              lado="direita"
+              aberta={gavetaAberta === "direita"}
+              onAbrir={() => setGaveta("direita")}
+            />
+          )}
         </div>
         {/*
           Único painel que rola — os dois laterais rolam por conta própria,
@@ -300,7 +373,7 @@ export function LayoutEdicao({ sidebar, children, inspetor }: LayoutEdicaoProps)
         <div className="flex min-h-0 flex-1 flex-col overflow-auto">{children}</div>
       </div>
 
-      {!inspetorColapsado && (
+      {desktop && !inspetorColapsado && (
         <AlcaRedimensionar
           lado="inspetor"
           onArrastar={arrastarInspetor}
@@ -309,14 +382,125 @@ export function LayoutEdicao({ sidebar, children, inspetor }: LayoutEdicaoProps)
         />
       )}
 
-      <aside
-        style={{ width: inspetorColapsado ? 0 : larguraInspetor }}
-        className="flex min-h-0 shrink-0 flex-col overflow-hidden border-l border-[var(--border-subtle)] bg-card transition-[width] duration-[var(--dur-normal)] ease-[var(--ease-standard)]"
+      <Coluna
+        lado="direita"
+        desktop={desktop}
+        largura={larguraInspetor}
+        colapsada={inspetorColapsado}
+        aberta={gavetaAberta === "direita"}
+        onFechar={() => setGaveta(null)}
       >
-        <div className="flex min-h-0 flex-1 flex-col" style={{ width: larguraInspetor }}>
-          {inspetor}
-        </div>
-      </aside>
+        {inspetor}
+      </Coluna>
+
+      {gavetaAberta && (
+        <div
+          aria-hidden="true"
+          onClick={() => setGaveta(null)}
+          className="fixed inset-0 z-40 bg-ink-900/40"
+        />
+      )}
     </div>
+  );
+}
+
+const ROTULO_GAVETA = {
+  esquerda: "Seções e dados do trabalho",
+  direita: "Conferência, histórico e exportação",
+} as const;
+
+function BotaoGaveta({
+  lado,
+  aberta,
+  onAbrir,
+}: {
+  lado: "esquerda" | "direita";
+  aberta: boolean;
+  onAbrir: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={`Abrir: ${ROTULO_GAVETA[lado]}`}
+      aria-expanded={aberta}
+      onClick={onAbrir}
+      className="flex shrink-0 items-center justify-center rounded-sm p-1.5 text-muted transition-colors hover:bg-sunken hover:text-body focus-visible:outline-none focus-visible:shadow-focus-ring"
+    >
+      <Icon name={lado === "esquerda" ? "panel-left" : "panel-right"} size={18} />
+    </button>
+  );
+}
+
+// Uma coluna lateral: no desktop, coluna redimensionável e recolhível; no
+// celular, gaveta por cima do texto, com cabeçalho e botão de fechar, e
+// `inert` quando fechada (fora da tela, do Tab e do leitor de tela, sem
+// desmontar o conteúdo). O mesmo `<aside>` e o mesmo invólucro do conteúdo
+// nos dois modos: o conteúdo nunca remonta.
+function Coluna({
+  lado,
+  desktop,
+  largura,
+  colapsada,
+  aberta,
+  onFechar,
+  children,
+}: {
+  lado: "esquerda" | "direita";
+  desktop: boolean;
+  largura: number;
+  colapsada: boolean;
+  aberta: boolean;
+  onFechar: () => void;
+  children: ReactNode;
+}) {
+  const esquerda = lado === "esquerda";
+  return (
+    <aside
+      role={desktop ? undefined : "dialog"}
+      aria-modal={desktop ? undefined : aberta}
+      aria-label={desktop ? undefined : ROTULO_GAVETA[lado]}
+      inert={!desktop && !aberta}
+      style={desktop ? { width: colapsada ? 0 : largura } : undefined}
+      className={
+        desktop
+          ? [
+              "flex min-h-0 shrink-0 flex-col overflow-hidden bg-card",
+              "transition-[width] duration-[var(--dur-normal)] ease-[var(--ease-standard)]",
+              esquerda
+                ? "border-r border-[var(--border-subtle)]"
+                : "border-l border-[var(--border-subtle)]",
+            ].join(" ")
+          : [
+              "fixed inset-y-0 z-50 flex w-[min(88vw,340px)] flex-col bg-card shadow-lg",
+              "transition-transform duration-[var(--dur-normal)] ease-[var(--ease-standard)]",
+              esquerda ? "left-0" : "right-0",
+              aberta
+                ? "translate-x-0"
+                : esquerda
+                  ? "invisible -translate-x-full"
+                  : "invisible translate-x-full",
+            ].join(" ")
+      }
+    >
+      {!desktop && (
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-4 py-2">
+          <span className="font-sans text-xs font-semibold text-body">{ROTULO_GAVETA[lado]}</span>
+          <button
+            type="button"
+            aria-label="Fechar painel"
+            onClick={onFechar}
+            className="flex rounded-sm p-1.5 text-muted hover:bg-sunken hover:text-body focus-visible:outline-none focus-visible:shadow-focus-ring"
+          >
+            <Icon name="x" size={18} />
+          </button>
+        </div>
+      )}
+      <div
+        className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        style={desktop ? { width: largura } : undefined}
+      >
+        {children}
+      </div>
+    </aside>
   );
 }

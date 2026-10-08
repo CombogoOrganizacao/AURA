@@ -39,8 +39,23 @@ export function AppTopBar({ mode, docTitle, statusAutosave, aviso, acoes }: AppT
   const caminho = usePathname();
 
   return (
-    <header className="flex h-[var(--topbar-h)] shrink-0 items-center gap-6 border-b border-[var(--border-subtle)] bg-card px-6">
-      <Brand href={mode === "guest" ? "/" : "/documentos"} />
+    <header
+      className={[
+        "flex h-[var(--topbar-h)] shrink-0 items-center border-b border-[var(--border-subtle)] bg-card",
+        // No celular, o editor aperta a barra (6.4.4); as outras telas ficam
+        // como estavam.
+        mode === "editor" ? "gap-2 px-3 md:gap-6 md:px-6" : "gap-6 px-6",
+      ].join(" ")}
+    >
+      {/* No editor em tela estreita, a seta de voltar já leva a "Meus
+          documentos", o mesmo destino da marca: ela sai para caber o resto. */}
+      {mode === "editor" ? (
+        <span className="hidden md:flex">
+          <Brand href="/documentos" />
+        </span>
+      ) : (
+        <Brand href={mode === "guest" ? "/" : "/documentos"} />
+      )}
 
       {mode === "guest" && (
         <>
@@ -108,13 +123,15 @@ export function AppTopBar({ mode, docTitle, statusAutosave, aviso, acoes }: AppT
             >
               <Icon name="arrow-left" size={17} />
             </Link>
-            <span className="truncate font-serif text-md text-body">
+            {/* No celular o título não cabe ao lado das ações e sai; o status
+                do autosave fica, porque é ele que diz se o trabalho salvou. */}
+            <span className="hidden truncate font-serif text-md text-body md:block">
               {docTitle || "Documento sem título"}
             </span>
             {statusAutosave && (
               <span
                 role="status"
-                className="flex shrink-0 items-center gap-1 font-sans text-2xs text-subtle"
+                className="min-w-0 truncate font-sans text-2xs text-subtle md:flex md:shrink-0 md:items-center md:gap-1"
               >
                 {statusAutosave}
               </span>

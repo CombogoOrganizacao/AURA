@@ -6,6 +6,7 @@ import type { ChangeEvent } from "react";
 
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
 import type { Documento } from "@/core/document/types";
 import {
   decodificarUtf8,
@@ -279,12 +280,20 @@ export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoRei
 
   return (
     <>
+      {/* No celular só o ícone (6.4.4), para a barra caber; o nome do botão
+          continua "Importar LaTeX". */}
       <Button
         variant="outline"
         disabled={!persistencia}
         onClick={() => entradaArquivo.current?.click()}
+        aria-label="Importar LaTeX"
+        icon={
+          <span className="flex md:hidden">
+            <Icon name="file-up" size={16} />
+          </span>
+        }
       >
-        Importar LaTeX
+        <span className="sr-only md:not-sr-only">Importar LaTeX</span>
       </Button>
       <input
         ref={entradaArquivo}

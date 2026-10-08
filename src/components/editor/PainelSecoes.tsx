@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 
 import { PanelHeading } from "@/components/app/PanelHeading";
+import { fecharGavetas } from "@/components/editor/LayoutEdicao";
 import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
 import { numerarSecoes } from "@/core/document/numbering";
@@ -24,7 +25,9 @@ function ehViewportDesktop(): boolean {
 // `data-id` (não `id`) é o que `SectionView.tsx` (passo 3.2.2) grava no
 // `<section>` do node view; `CSS.escape` evita qualquer problema de
 // caractere especial no seletor, mesmo o id sendo sempre um UUID hoje.
+// No celular, fecha a gaveta das seções para mostrar o texto (6.4.4).
 function irParaSecao(id: string) {
+  fecharGavetas();
   const elemento = document.querySelector<HTMLElement>(`section[data-id="${CSS.escape(id)}"]`);
   elemento?.scrollIntoView({ behavior: "smooth", block: "start" });
 }

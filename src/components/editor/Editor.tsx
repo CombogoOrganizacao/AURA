@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { EstadoCarregando } from "@/components/ui/Estados";
 import { PaperSheet } from "@/components/ui/PaperSheet";
+import { useDesktop } from "@/lib/useDesktop";
 import { novaSecao } from "@/core/document/factory";
 import { fromDocumento, toDocumento } from "@/core/document/serialize";
 import type { FonteTrabalho, Secao } from "@/core/document/types";
@@ -223,6 +224,7 @@ export function Editor({
   fonte,
   onFonteChange,
 }: EditorProps) {
+  const desktop = useDesktop();
   // `useState` com inicializador preguiçoso — roda uma vez só, no mount, e
   // ler o valor durante o render é normal (diferente de `ref.current`, que
   // a regra `react-hooks/refs` proíbe fora de efeito/handler).
@@ -499,8 +501,18 @@ export function Editor({
         simula quebra de página — a paginação real só existe no `.docx`, e o
         `AvisoPaginacao`, acima, fica fora da rolagem para não sumir.
       */}
-      <div className="flex min-h-0 flex-1 flex-col items-center gap-6 overflow-auto bg-ink-100 p-8">
-        <PaperSheet continua font={fonte ?? "times"}>
+      {/*
+        No celular (6.4.4) a folha ocupa a largura da tela, com as margens na
+        mesma proporção 30/20 da A4 (o `PaperSheet` as calcula sobre a
+        largura). A fonte fica em 12 pt: encolher a A4 inteira para caber
+        deixaria o texto ilegível. A forma da página é do .docx, não daqui.
+      */}
+      <div className="flex min-h-0 flex-1 flex-col items-center gap-6 overflow-auto bg-ink-100 p-2 md:p-8">
+        <PaperSheet
+          continua
+          font={fonte ?? "times"}
+          width={desktop ? undefined : "calc(100vw - 16px)"}
+        >
           {/*
             Clicar no vazio da folha, abaixo do texto, põe o cursor na última
             linha — criando-a se o documento terminar em tabela, figura ou
