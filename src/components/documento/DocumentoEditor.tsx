@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AppTopBar } from "@/components/app/AppTopBar";
+import { SeloDadosLocais } from "@/components/AvisoDadosLocais";
 import { BotaoExportar } from "@/components/editor/BotaoExportar";
 import { BotaoReimportar } from "@/components/editor/BotaoReimportar";
 import { ProvedorImagens } from "@/components/editor/ImagensDoDocumento";
@@ -296,6 +297,7 @@ function Carregado({
         mode="editor"
         docTitle={documento.metadados.titulo}
         statusAutosave={TEXTO_STATUS[status]}
+        aviso={<SeloDadosLocais />}
         acoes={
           <div className="flex shrink-0 items-center gap-2">
             {/* A volta do Overleaf (6.2.4): o documento de agora vira versão. */}

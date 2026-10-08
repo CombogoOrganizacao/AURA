@@ -18,6 +18,8 @@ interface AppTopBarProps {
   docTitle?: string;
   /** Modo `editor`: status do autosave ("Salvo", "Salvando…"...), já pronto. */
   statusAutosave?: ReactNode;
+  /** Modo `editor`: aviso fixo depois do status (o de dados locais, 6.4.2). */
+  aviso?: ReactNode;
   /** Modo `editor`: slot de ações — o botão "Exportar .docx" existente. */
   acoes?: ReactNode;
 }
@@ -33,7 +35,7 @@ const NAV_APP = [
 // soma um botão de voltar contextual — redundante com a marca em destino,
 // mas é o padrão do próprio UI kit de referência (Overleaf-like: logo
 // sempre no canto, voltar contextual dentro da barra de trabalho).
-export function AppTopBar({ mode, docTitle, statusAutosave, acoes }: AppTopBarProps) {
+export function AppTopBar({ mode, docTitle, statusAutosave, aviso, acoes }: AppTopBarProps) {
   const caminho = usePathname();
 
   return (
@@ -117,6 +119,9 @@ export function AppTopBar({ mode, docTitle, statusAutosave, acoes }: AppTopBarPr
                 {statusAutosave}
               </span>
             )}
+            {/* Fora do `role="status"`: é fixo, não muda, e não deve ser
+                anunciado de novo a cada mudança do autosave. */}
+            {aviso}
           </div>
           {acoes}
           <UserChip />

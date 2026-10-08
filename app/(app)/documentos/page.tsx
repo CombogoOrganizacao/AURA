@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { AvisoDadosLocais } from "@/components/AvisoDadosLocais";
 import { TabelaDocumentos } from "@/components/documentos/TabelaDocumentos";
 import { Button } from "@/components/ui/Button";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/components/ui/Estados";
@@ -97,21 +98,24 @@ export default function DocumentosPage() {
       ) : documentos.length === 0 ? (
         <EstadoVazio titulo="Nenhum documento ainda." />
       ) : (
-        <TabelaDocumentos
-          documentos={documentos}
-          onExcluido={(id) =>
-            setDocumentos((lista) => lista?.filter((doc) => doc.id !== id) ?? null)
-          }
-          // Gravar o título conta como edição: a linha sobe em "Recentes".
-          onRenomeado={(id, titulo) =>
-            setDocumentos(
-              (lista) =>
-                lista?.map((doc) =>
-                  doc.id === id ? { ...doc, titulo, atualizadoEm: new Date() } : doc,
-                ) ?? null,
-            )
-          }
-        />
+        <>
+          <AvisoDadosLocais />
+          <TabelaDocumentos
+            documentos={documentos}
+            onExcluido={(id) =>
+              setDocumentos((lista) => lista?.filter((doc) => doc.id !== id) ?? null)
+            }
+            // Gravar o título conta como edição: a linha sobe em "Recentes".
+            onRenomeado={(id, titulo) =>
+              setDocumentos(
+                (lista) =>
+                  lista?.map((doc) =>
+                    doc.id === id ? { ...doc, titulo, atualizadoEm: new Date() } : doc,
+                  ) ?? null,
+              )
+            }
+          />
+        </>
       )}
     </div>
   );

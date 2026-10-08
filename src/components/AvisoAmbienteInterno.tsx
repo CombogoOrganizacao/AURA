@@ -1,6 +1,7 @@
 // Aviso permanente: a v1 é para testes internos, não para uso em produção
 // por usuários finais. Fica em todas as telas, no topo do layout raiz —
-// não é dispensável (ver AvisoPaginacao/AvisoDadosLocais, esses sim opcionais).
+// não é dispensável (o `AvisoPaginacao`, esse sim, é). O `AvisoDadosLocais`
+// também é fixo, mas discreto e só na lista e no editor.
 export function AvisoAmbienteInterno() {
   return (
     <div
