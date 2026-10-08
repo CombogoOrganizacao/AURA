@@ -35,6 +35,7 @@ import {
   Minus,
   PanelLeft,
   PanelRight,
+  PencilLine,
   Plus,
   Quote,
   Radical,
@@ -86,6 +87,7 @@ const icones = {
   "circle-question-mark": CircleQuestionMark,
   "log-out": LogOut,
   star: Star,
+  "pencil-line": PencilLine,
   "trash-2": Trash2,
   "grip-vertical": GripVertical,
 

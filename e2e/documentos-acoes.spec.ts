@@ -7,11 +7,12 @@ import JSZip from "jszip";
 import { novoDocumento } from "../src/core/document/factory";
 import type { Documento } from "../src/core/document/types";
 
-import { abrirDocumento, secao } from "./apoio";
+import { abrirDocumento, documentoSalvo, secao } from "./apoio";
 
-// Ações de cada linha de "Meus documentos" (07/10/2026, parte do 6.4.1):
-// exportar o `.docx`, baixar o projeto LaTeX e excluir com confirmação. Os
-// arquivos saem do documento salvo, pelas mesmas funções do editor.
+// "Meus documentos" (passo 6.4.1): as ações de cada linha (renomear,
+// exportar o `.docx`, baixar o projeto LaTeX e excluir com confirmação) e o
+// estado vazio. Os arquivos saem do documento salvo, pelas mesmas funções do
+// editor.
 
 function trabalho(titulo: string, completo: boolean): Documento {
   const documento = novoDocumento();
@@ -112,4 +113,78 @@ test("sem os dados da capa, a lista avisa e oferece abrir o trabalho", async ({ 
   await expect(dialogo).toContainText("o nome do autor");
   await dialogo.getByRole("button", { name: "Abrir o trabalho" }).click();
   await page.waitForURL(`**/documento/${documento.id}`);
+});
+
+test("renomear troca o título do trabalho, e cancelar ou deixar em branco não muda nada", async ({
+  page,
+}) => {
+  const antigo = trabalho("Antigo", true);
+  const outro = trabalho("Outro", true);
+  // `abrirLista` grava na ordem: o "Outro" é o mais recente e vem primeiro.
+  await abrirLista(page, [antigo, outro]);
+  await expect(page.getByRole("link").filter({ hasText: /^(Antigo|Outro)$/ })).toHaveText([
+    "Outro",
+    "Antigo",
+  ]);
+
+  // Cancelar: nada muda.
+  await linha(page, "Antigo").getByRole("button", { name: "Renomear Antigo" }).click();
+  let dialogo = page.getByRole("dialog", { name: "Renomear o trabalho" });
+  const campo = dialogo.getByLabel("Título do trabalho");
+  // O campo abre focado, com o título todo selecionado para digitar por cima.
+  await expect(campo).toBeFocused();
+  await expect(campo).toHaveValue("Antigo");
+  expect(
+    await campo.evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd]),
+  ).toEqual([0, "Antigo".length]);
+  await expect(dialogo).toContainText("muda também na capa");
+  await page.keyboard.type("Descartado");
+  await dialogo.getByRole("button", { name: "Cancelar" }).click();
+  await expect(dialogo).toBeHidden();
+  await expect(linha(page, "Antigo")).toHaveCount(1);
+
+  // Em branco: não dá para confirmar.
+  await linha(page, "Antigo").getByRole("button", { name: "Renomear Antigo" }).click();
+  dialogo = page.getByRole("dialog", { name: "Renomear o trabalho" });
+  await dialogo.getByLabel("Título do trabalho").fill("   ");
+  await expect(dialogo.getByRole("button", { name: "Renomear" })).toBeDisabled();
+
+  // Enter grava, sem os espaços das pontas, e a linha sobe em "Recentes".
+  await dialogo.getByLabel("Título do trabalho").fill("  Novo título  ");
+  await page.keyboard.press("Enter");
+  await expect(dialogo).toBeHidden();
+  await expect(linha(page, "Novo título")).toHaveCount(1);
+  await expect(linha(page, "Antigo")).toHaveCount(0);
+  await expect(page.getByRole("link").filter({ hasText: /^(Novo título|Outro)$/ })).toHaveText([
+    "Novo título",
+    "Outro",
+  ]);
+
+  // É o título do trabalho (o da capa), e está gravado.
+  expect((await documentoSalvo(page, antigo.id)).metadados.titulo).toBe("Novo título");
+  await page.reload();
+  await expect(linha(page, "Novo título")).toHaveCount(1);
+  // O resto do trabalho não foi tocado.
+  const salvo = await documentoSalvo(page, antigo.id);
+  expect(salvo.metadados.autores).toEqual(["Ana Lima"]);
+  expect(salvo.sections.map((s) => s.titulo)).toEqual(["Introdução"]);
+});
+
+test("sem nenhum documento: só a mensagem e o botão de criar, sem lista nem filtro", async ({
+  page,
+}) => {
+  await page.goto("/documentos");
+  await expect(page.getByRole("heading", { name: "Meus documentos" })).toBeVisible();
+  await expect(page.getByText("Nenhum documento ainda.")).toBeVisible();
+
+  await expect(page.getByRole("table")).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: "Buscar documentos" })).toHaveCount(0);
+  await expect(page.getByRole("tab")).toHaveCount(0);
+  await expect(page.getByText(/\d+ documentos? ·/)).toHaveCount(0);
+  // Fora da barra de cima, a única ação é criar.
+  const conteudo = page.getByRole("banner").locator("xpath=following-sibling::*[1]");
+  await expect(conteudo.getByRole("button")).toHaveText(["Novo documento"]);
+
+  await page.getByRole("button", { name: "Novo documento" }).click();
+  await page.waitForURL(/\/documento\/[^/]+$/);
 });

@@ -15,6 +15,7 @@ type Ordenacao = "recentes" | "nome";
 interface TabelaDocumentosProps {
   documentos: ResumoDocumento[];
   onExcluido: (id: string) => void;
+  onRenomeado: (id: string, titulo: string) => void;
 }
 
 // Lista no estilo Overleaf — sem pastas (decisão de produto,
@@ -28,14 +29,13 @@ interface TabelaDocumentosProps {
 // docs/aura-decisoes-e-pendencias.md §1.15) e colunas "Conformidade" /
 // "Páginas" (não existe motor de conformidade nem paginação real —
 // `ResumoDocumento` só tem `id`/`titulo`/`atualizadoEm`; inventar um
-// número aqui é o erro que o CLAUDE.md proíbe). Renomear continua aberto no
-// passo 6.4.1.
+// número aqui é o erro que o CLAUDE.md proíbe).
 //
-// **Ações por linha** (`AcoesDocumento`: exportar `.docx`, baixar LaTeX,
-// excluir), à moda do Overleaf: aparecem ao passar o mouse na linha ou ao
+// **Ações por linha** (`AcoesDocumento`: renomear, exportar `.docx`, baixar
+// LaTeX, excluir), à moda do Overleaf: aparecem ao passar o mouse na linha ou ao
 // chegar nelas pelo teclado (`group-focus-within`), e ficam sempre à vista
 // em tela estreita, onde não há hover.
-export function TabelaDocumentos({ documentos, onExcluido }: TabelaDocumentosProps) {
+export function TabelaDocumentos({ documentos, onExcluido, onRenomeado }: TabelaDocumentosProps) {
   const [busca, setBusca] = useState("");
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("recentes");
 
@@ -110,7 +110,11 @@ export function TabelaDocumentos({ documentos, onExcluido }: TabelaDocumentosPro
                 </td>
                 <td className="w-px px-3 py-3 whitespace-nowrap">
                   <div className="transition-opacity duration-[var(--dur-fast)] md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100">
-                    <AcoesDocumento documento={documento} onExcluido={onExcluido} />
+                    <AcoesDocumento
+                      documento={documento}
+                      onExcluido={onExcluido}
+                      onRenomeado={onRenomeado}
+                    />
                   </div>
                 </td>
               </tr>

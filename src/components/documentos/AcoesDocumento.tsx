@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AvisoDadosFaltando } from "@/components/editor/AvisoDadosFaltando";
 import { baixar, nomeArquivo } from "@/components/editor/baixarArquivo";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { Input } from "@/components/ui/Input";
 import type { NomeIcone } from "@/components/ui/Icon";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -20,23 +21,30 @@ interface AcoesDocumentoProps {
   documento: ResumoDocumento;
   // A lista tira a linha depois que a exclusão é gravada.
   onExcluido: (id: string) => void;
+  // E troca o título da linha depois que o novo é gravado.
+  onRenomeado: (id: string, titulo: string) => void;
 }
 
 type Janela =
   | { tipo: "faltando"; documento: Documento; faltando: ReturnType<typeof dadosFaltando> }
+  | { tipo: "renomear" }
   | { tipo: "excluir" }
   | { tipo: "erro"; mensagem: string };
 
 // Ações de uma linha de "Meus documentos" (pedido da usuária em 07/10/2026,
-// à moda do Overleaf; parte do passo 6.4.1): exportar o `.docx`, baixar o
+// à moda do Overleaf; passo 6.4.1): renomear, exportar o `.docx`, baixar o
 // projeto LaTeX e excluir. Os arquivos saem do documento **salvo**, que é o
 // que existe fora do editor, pelas mesmas funções do editor
 // (`lib/exportar.ts`), com o mesmo aviso de dados da capa.
 //
+// Renomear troca o **título do trabalho** (`metadados.titulo`), o mesmo campo
+// de "Dados do trabalho": não há nome de projeto separado (decisão da usuária
+// em 08/10/2026). Por isso a janela avisa que a capa muda junto.
+//
 // Excluir pede confirmação e diz o que se perde: o trabalho, o histórico e as
 // imagens deste navegador (`excluirDocumento()` apaga em cascata). Não há
 // lixeira nem desfazer: os dados só existem aqui.
-export function AcoesDocumento({ documento, onExcluido }: AcoesDocumentoProps) {
+export function AcoesDocumento({ documento, onExcluido, onRenomeado }: AcoesDocumentoProps) {
   const persistencia = usePersistencia();
   const router = useRouter();
   const [ocupado, setOcupado] = useState(false);
@@ -86,6 +94,20 @@ export function AcoesDocumento({ documento, onExcluido }: AcoesDocumentoProps) {
     }, "Não foi possível montar o projeto LaTeX.");
   }
 
+  function renomear(novo: string) {
+    setJanela(null);
+    if (novo === documento.titulo) return;
+    void executar(async () => {
+      const completo = await carregar();
+      if (!completo || !persistencia) return;
+      await persistencia.salvarDocumento({
+        ...completo,
+        metadados: { ...completo.metadados, titulo: novo },
+      });
+      onRenomeado(documento.id, novo);
+    }, "Não foi possível renomear o trabalho.");
+  }
+
   function excluir() {
     setJanela(null);
     void executar(async () => {
@@ -98,6 +120,13 @@ export function AcoesDocumento({ documento, onExcluido }: AcoesDocumentoProps) {
   return (
     <>
       <div className="flex items-center justify-end gap-1">
+        <Acao
+          icone="pencil-line"
+          dica="Renomear"
+          rotulo={`Renomear ${titulo}`}
+          disabled={!persistencia || ocupado}
+          onClick={() => setJanela({ tipo: "renomear" })}
+        />
         <Acao
           icone="file-down"
           dica="Exportar .docx"
@@ -135,6 +164,14 @@ export function AcoesDocumento({ documento, onExcluido }: AcoesDocumentoProps) {
             rotulo: "Abrir o trabalho",
             onClick: () => router.push(`/documento/${documento.id}`),
           }}
+        />
+      )}
+
+      {janela?.tipo === "renomear" && (
+        <JanelaRenomear
+          atual={documento.titulo}
+          onCancelar={() => setJanela(null)}
+          onRenomear={renomear}
         />
       )}
 
@@ -176,6 +213,70 @@ export function AcoesDocumento({ documento, onExcluido }: AcoesDocumentoProps) {
         </Dialog>
       )}
     </>
+  );
+}
+
+// O campo começa com o título atual, todo selecionado, para digitar por cima.
+// O foco vem deste efeito, e não de `autoFocus`: o `Dialog` foca o primeiro
+// focável (o X do cabeçalho) no efeito dele, que roda antes deste, porque o
+// efeito do pai roda depois do efeito do filho.
+// Título só de espaços não vale: a linha viraria "Documento sem título" e a
+// capa sairia sem título.
+function JanelaRenomear({
+  atual,
+  onCancelar,
+  onRenomear,
+}: {
+  atual: string;
+  onCancelar: () => void;
+  onRenomear: (titulo: string) => void;
+}) {
+  const [titulo, setTitulo] = useState(atual);
+  const campo = useRef<HTMLInputElement>(null);
+  const limpo = titulo.trim();
+
+  useEffect(() => {
+    campo.current?.focus();
+    campo.current?.select();
+  }, []);
+
+  return (
+    <Dialog
+      open
+      width={460}
+      title="Renomear o trabalho"
+      onClose={onCancelar}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onCancelar}>
+            Cancelar
+          </Button>
+          <Button type="submit" form="form-renomear" disabled={!limpo}>
+            Renomear
+          </Button>
+        </>
+      }
+    >
+      <form
+        id="form-renomear"
+        className="flex flex-col gap-3"
+        onSubmit={(evento) => {
+          evento.preventDefault();
+          if (limpo) onRenomear(limpo);
+        }}
+      >
+        <Input
+          ref={campo}
+          label="Título do trabalho"
+          value={titulo}
+          onChange={(evento) => setTitulo(evento.target.value)}
+        />
+        <p className="text-sm text-body">
+          É o mesmo título de &ldquo;Dados do trabalho&rdquo;: muda também na capa, na folha de
+          rosto e no nome dos arquivos exportados.
+        </p>
+      </form>
+    </Dialog>
   );
 }
 

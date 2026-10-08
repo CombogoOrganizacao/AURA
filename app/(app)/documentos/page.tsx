@@ -15,8 +15,9 @@ import { usePersistencia } from "@/lib/persistence-provider";
 // landing (2B.6) tomar essa rota; a lógica de carregar/criar/repetir em
 // erro é a mesma de lá, só a casca mudou (agora dentro do grupo `(app)`,
 // com `AppTopBar` no modo `app`). A tabela com busca e ordenação é nova
-// (`TabelaDocumentos.tsx`) — cumpre o passo 6.4.1 exceto renomear, que
-// continua aberto; excluir e exportar ficam nas ações de cada linha.
+// (`TabelaDocumentos.tsx`), passo 6.4.1; renomear, exportar e excluir ficam
+// nas ações de cada linha. Com zero documentos, só o estado vazio e o botão
+// de criar: sem tabela, busca nem ordenação.
 export default function DocumentosPage() {
   const persistencia = usePersistencia();
   const router = useRouter();
@@ -65,10 +66,13 @@ export default function DocumentosPage() {
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl">Meus documentos</h1>
-          <p className="mt-1 font-sans text-xs text-muted">
-            {documentos?.length ?? 0} documento{documentos?.length === 1 ? "" : "s"} · nenhum limite
-            de uso
-          </p>
+          {/* Sem contador zerado: o estado vazio só oferece criar (§1.12). */}
+          {documentos && documentos.length > 0 && (
+            <p className="mt-1 font-sans text-xs text-muted">
+              {documentos.length} documento{documentos.length === 1 ? "" : "s"} · nenhum limite de
+              uso
+            </p>
+          )}
         </div>
         <Button
           onClick={criarDocumento}
@@ -97,6 +101,15 @@ export default function DocumentosPage() {
           documentos={documentos}
           onExcluido={(id) =>
             setDocumentos((lista) => lista?.filter((doc) => doc.id !== id) ?? null)
+          }
+          // Gravar o título conta como edição: a linha sobe em "Recentes".
+          onRenomeado={(id, titulo) =>
+            setDocumentos(
+              (lista) =>
+                lista?.map((doc) =>
+                  doc.id === id ? { ...doc, titulo, atualizadoEm: new Date() } : doc,
+                ) ?? null,
+            )
           }
         />
       )}
