@@ -1,8 +1,8 @@
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 
-import { CLASSES_BASE_BOTAO, classesTamanho, classesVariante } from "./Button";
-import type { ButtonSize, ButtonVariant } from "./Button";
+import { CLASSES_BASE_BOTAO, classesTamanho, classesVariante } from "./classesBotao";
+import type { ButtonSize, ButtonVariant } from "./classesBotao";
 
 interface LinkButtonProps extends Omit<ComponentProps<typeof Link>, "className"> {
   variant?: ButtonVariant;
