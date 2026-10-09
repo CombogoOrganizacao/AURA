@@ -25,6 +25,9 @@ test("seção vazia sai pela barra sem pedir confirmação", async ({ page }) =>
 test("seção com texto: o menu do painel pede confirmação, e Ctrl+Z traz de volta", async ({ page }) => {
   await page.getByLabel("1 Título da seção").fill("Introdução");
   await page.getByRole("button", { name: "Nova seção", exact: true }).click();
+  // O foco chega ao título novo depois do render. Contra o build de produção
+  // (6.6.5) a digitação ganhava dele, e "Mé" caía no título da seção 1.
+  await expect(page.getByLabel("2 Título da seção")).toBeFocused();
   await page.keyboard.type("Método");
   await page.keyboard.press("Enter");
   await page.keyboard.type("Texto do método.");
