@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import JSZip from "jszip";
 
-import { clicarExportar } from "./apoio";
+import { clicarExportar, documentoSalvo } from "./apoio";
 
 // Caminho completo da fatia vertical (passo 1.4.5) — a mesma pergunta que
 // motivou o passo 1.3.7: o que a pessoa digita realmente sobrevive a um
@@ -48,6 +48,12 @@ test("criar, digitar, recarregar, persistir e exportar", async ({ page }) => {
   // real, não um sleep fixo.
   const statusAutosave = page.locator('span[role="status"]');
   await expect(statusAutosave).toHaveText("Salvo", { timeout: 10_000 });
+
+  // "Salvo" quer dizer gravado: o IndexedDB já tem o texto inteiro, até a
+  // última tecla. Até o 6.6.5, sob carga, a última tecla às vezes ficava só
+  // na tela (o TipTap não emitia `update`), e o recarregamento a perdia.
+  const id = page.url().split("/documento/")[1];
+  expect(JSON.stringify((await documentoSalvo(page, id)).sections)).toContain(corpo);
 
   await page.reload();
 

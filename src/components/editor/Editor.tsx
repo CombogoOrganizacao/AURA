@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import TiptapHistory from "@tiptap/extension-history";
 import TiptapParagraph from "@tiptap/extension-paragraph";
 import TiptapText from "@tiptap/extension-text";
-import { Fragment, Slice } from "@tiptap/pm/model";
+import { Fragment, Slice, type Node as NoProseMirror } from "@tiptap/pm/model";
 import { EditorContent, ReactNodeViewRenderer, useEditor } from "@tiptap/react";
 import type { Editor as TiptapEditor } from "@tiptap/core";
 
@@ -209,7 +209,7 @@ interface EditorProps {
 // decisão explícita, um passo do plano de cada vez.
 //
 // Controlado: `sections` só alimenta o conteúdo INICIAL (via `useRef`, uma
-// vez só) — mudanças depois vêm de dentro do próprio editor (`onUpdate`),
+// vez só) — mudanças depois vêm de dentro do próprio editor (`onTransaction`),
 // nunca de fora, pra uma escrita externa não brigar com o que a pessoa está
 // digitando. Documento inexistente ganha uma seção-semente
 // (`novaSecao()`), porque `doc` exige pelo menos um bloco e um `secao`
@@ -229,6 +229,9 @@ export function Editor({
   // `useState` com inicializador preguiçoso — roda uma vez só, no mount, e
   // ler o valor durante o render é normal (diferente de `ref.current`, que
   // a regra `react-hooks/refs` proíbe fora de efeito/handler).
+  // O último documento do ProseMirror repassado em `onSectionsChange`. Lido e
+  // escrito só nos eventos do editor, nunca durante o render.
+  const ultimoDocRef = useRef<NoProseMirror | null>(null);
   const [conteudoInicial] = useState(() =>
     fromDocumento(sections.length > 0 ? sections : [novaSecao(0)]),
   );
@@ -316,7 +319,23 @@ export function Editor({
         return true;
       },
     },
-    onUpdate({ editor }) {
+    // As seções saem a cada TRANSAÇÃO que trocou o documento, e não no
+    // evento `update` do TipTap (achado no 6.6.5). Quando o ProseMirror lê do
+    // DOM uma tecla pendente no meio da atualização de outra transação, a
+    // segunda é despachada por dentro da primeira; o TipTap compara o estado
+    // de antes com o de depois, vê o mesmo documento nos dois e não emite
+    // `update`. A tecla ficava na tela e no ProseMirror, mas não no
+    // documento: o autosave gravava sem ela e dizia "Salvo". Sob carga (a
+    // suíte com 8 navegadores) acontecia em uma de cada ~20 digitações. O
+    // evento `transaction` sai para toda transação aplicada, e a comparação
+    // por referência do `doc` deixa passar só as que mudaram o texto.
+    onCreate({ editor }) {
+      ultimoDocRef.current = editor.state.doc;
+    },
+    onTransaction({ editor }) {
+      const doc = editor.state.doc;
+      if (doc === ultimoDocRef.current) return;
+      ultimoDocRef.current = doc;
       try {
         onSectionsChange(toDocumento(editor.getJSON()));
       } catch (erro) {
@@ -332,7 +351,7 @@ export function Editor({
   // comando imperativo pro pai — `sections` (a prop) só alimenta o conteúdo
   // inicial (comentário acima), então reordenar não pode passar por ela: só
   // uma transação de verdade dentro do editor move o nó de fato, e o
-  // `onUpdate` de cima já reage a ela do mesmo jeito que reage a qualquer
+  // `onTransaction` de cima já reage a ela do mesmo jeito que reage a qualquer
   // outra digitação.
   useEffect(() => {
     if (!editor || !onReorderReady) return;
