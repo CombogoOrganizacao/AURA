@@ -48,7 +48,7 @@ npm run lint           # ESLint
 npm run typecheck      # checagem de tipos
 npm test               # Vitest, sobre src/core/
 npm run test:coverage  # o mesmo, com relatório de cobertura em coverage/
-npm run e2e            # Playwright (sobe o `next dev` sozinho, ou reaproveita um aberto)
+npm run e2e            # Playwright, contra o build de produção (ou reaproveita um servidor aberto na 3000)
 ```
 
 O CI (`.github/workflows/ci.yml`) roda typecheck, lint, testes com cobertura e
