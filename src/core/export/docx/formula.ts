@@ -388,7 +388,11 @@ function converter(no: NoMathml, registro: Registro): MathComponent[] {
       if (variante && variante !== "normal" && variante !== "italic") {
         registro.add("estilo de letra (\\mathbf, \\mathcal, \\mathbb…)");
       }
-      return no.texto ? [new MathRun(no.texto)] : [];
+      // Token sem texto próprio pode embrulhar estrutura: o KaTeX põe o
+      // `\overset` dentro de um `<mo>` e o `\underset` dentro de um `<mi>`
+      // (a classe de espaçamento do LaTeX). Lido só pelo texto, ele saía
+      // vazio, e a fórmula sumia do .docx sem aviso (achado no 6.6.2).
+      return no.texto ? [new MathRun(no.texto)] : lista(no.filhos, registro);
     }
     case "mspace":
     case "mphantom":

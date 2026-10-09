@@ -119,6 +119,87 @@ describe("fórmula no .docx como equação do Word (OMML)", () => {
   });
 });
 
+// Passo 6.6.2: caminhos do conversor que a cobertura mostrou sem teste. Todos
+// alcançáveis por LaTeX que um aluno digita.
+describe("fórmula no .docx — delimitadores, limites e espaços", () => {
+  it.each([
+    ["colchetes", String.raw`\left[ x \right]`, "["],
+    ["chaves", String.raw`\left\{ x \right\}`, "{"],
+    // A biblioteca `docx` grava o ângulo como U+2329, e não o ⟨ (U+27E8) do
+    // KaTeX. Os dois se desenham iguais; o escape deixa explícito qual é.
+    ["ângulos", String.raw`\left\langle x \right\rangle`, "〈"],
+  ])("%s com \\left \\right viram delimitador do Word", async (_, latex, abre) => {
+    const xml = await paragrafoDaFormula(latex);
+    expect(xml).toContain("<m:d>");
+    expect(xml).toContain(`<m:begChr m:val="${abre}"/>`);
+    expect(textos(xml)).toEqual(["x"]);
+  });
+
+  it("delimitadores aninhados fecham cada um no seu par", async () => {
+    const xml = await paragrafoDaFormula(String.raw`\left( \left[ x \right] + 1 \right)`);
+    expect(xml.match(/<m:d>/g)).toHaveLength(2);
+    // O "+ 1" fica dentro dos parênteses, fora dos colchetes.
+    expect(xml).toMatch(/<m:begChr m:val="\["\/>[\s\S]*<m:t[^>]*>x<\/m:t>[\s\S]*<\/m:d>[\s\S]*<m:t[^>]*>\+<\/m:t>/);
+    expect(textos(xml)).toEqual(["x", "+", "1"]);
+  });
+
+  it("delimitador sem par (\\right.) sai como caractere solto", async () => {
+    const xml = await paragrafoDaFormula(String.raw`\left( x \right.`);
+    expect(xml).not.toContain("<m:d>");
+    expect(textos(xml)).toContain("(");
+  });
+
+  it("somatório só com limite inferior, só com superior, e sem limite", async () => {
+    const inferior = await paragrafoDaFormula(String.raw`\sum_{i} x_i`);
+    expect(inferior).toContain("<m:nary>");
+    expect(inferior).toContain('<m:supHide m:val="1"/>');
+
+    const superior = await paragrafoDaFormula(String.raw`\sum^{n} x`);
+    expect(superior).toContain("<m:nary>");
+    expect(superior).toContain('<m:subHide m:val="1"/>');
+
+    const sem = await paragrafoDaFormula(String.raw`\sum x`);
+    expect(sem).toContain("<m:nary>");
+    expect(textos(sem)).toContain("x");
+  });
+
+  // Regressão do 6.6.2: o KaTeX embrulha estes dois num `<mo>`/`<mi>`, e o
+  // conversor lia só o texto do token. A equação saía vazia (`<m:oMath/>`).
+  it("\\overset e \\underset viram limite superior e inferior, sem sumir", async () => {
+    const sobre = await paragrafoDaFormula(String.raw`\overset{!}{=}`);
+    expect(sobre).toContain("<m:limUpp>");
+    expect(textos(sobre)).toEqual(["=", "!"]);
+
+    const sob = await paragrafoDaFormula(String.raw`\underset{x}{y}`);
+    expect(sob).toContain("<m:limLow>");
+    expect(textos(sob)).toEqual(["y", "x"]);
+
+    // No meio de uma expressão, o termo do meio não se perde.
+    expect(textos(await paragrafoDaFormula(String.raw`a \overset{!}{=} b`))).toEqual([
+      "a",
+      "=",
+      "!",
+      "b",
+    ]);
+  });
+
+  it("espaço (\\quad) não vira texto", async () => {
+    expect(textos(await paragrafoDaFormula(String.raw`a \quad b`))).toEqual(["a", "b"]);
+  });
+
+  it("\\binom sai como fração e \\boxed perde a moldura, os dois avisados", async () => {
+    expect(await paragrafoDaFormula(String.raw`\binom{n}{k}`)).toContain("<m:f>");
+    expect(recursosForaDoWord(String.raw`\binom{n}{k}`)).toEqual([
+      "coeficiente binomial (\\binom), sai como fração",
+    ]);
+
+    expect(textos(await paragrafoDaFormula(String.raw`\boxed{x}`))).toEqual(["x"]);
+    expect(recursosForaDoWord(String.raw`\boxed{x}`)).toEqual([
+      "moldura ou risco (\\boxed, \\cancel)",
+    ]);
+  });
+});
+
 describe("o que não chega ao Word fica registrado", () => {
   it("fórmula comum: nada fora", () => {
     expect(recursosForaDoWord("\\bar{x} = \\frac{1}{n}\\sum_{i=1}^{n} x_i")).toEqual([]);
