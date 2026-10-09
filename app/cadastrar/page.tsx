@@ -23,7 +23,8 @@ export default function CadastrarPage() {
       subtitulo="Gratuita, sem limite de documentos e sem cartão de crédito."
       rodape={
         <>
-          Já tem conta? <Link href="/entrar" className="text-bordo-700 underline hover:text-bordo-800">
+          Já tem conta?{" "}
+          <Link href="/entrar" className="text-bordo-700 underline hover:text-bordo-800">
             Entrar
           </Link>
         </>

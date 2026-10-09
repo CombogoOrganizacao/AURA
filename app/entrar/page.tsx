@@ -23,7 +23,8 @@ export default function EntrarPage() {
       subtitulo="Acesse seus trabalhos de qualquer computador."
       rodape={
         <>
-          Ainda não tem conta? <Link href="/cadastrar" className="text-bordo-700 underline hover:text-bordo-800">
+          Ainda não tem conta?{" "}
+          <Link href="/cadastrar" className="text-bordo-700 underline hover:text-bordo-800">
             Criar conta gratuita
           </Link>
         </>

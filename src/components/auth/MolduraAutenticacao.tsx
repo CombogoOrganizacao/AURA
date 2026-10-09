@@ -16,7 +16,12 @@ interface MolduraAutenticacaoProps {
 // centralizado, sobre o fundo da aplicação. Substituiu (passo 6.6.4) a tela
 // partida ao meio, com o painel bordô à esquerda: o formulário ficava
 // espremido num canto, e o painel repetia a promessa da página inicial.
-export function MolduraAutenticacao({ titulo, subtitulo, rodape, children }: MolduraAutenticacaoProps) {
+export function MolduraAutenticacao({
+  titulo,
+  subtitulo,
+  rodape,
+  children,
+}: MolduraAutenticacaoProps) {
   return (
     <div className="flex flex-1 flex-col items-center overflow-auto px-4 py-10">
       <div className="flex w-full max-w-[400px] flex-1 flex-col justify-center gap-6">
