@@ -133,9 +133,12 @@ function useGradeAtiva(editor: Editor, getPos: () => number | undefined): Estado
 // célula, e acima empurraria para baixo a célula em que a pessoa acabou de
 // clicar.
 //
-// `onMouseDown` com `preventDefault` em vez de `onClick`: o clique normal
-// tiraria o foco do editor antes de a operação ler a seleção, e ela não
-// saberia mais em que célula agir.
+// `onMouseDown` com `preventDefault` segura o foco no editor durante o clique
+// do mouse; a operação roda no `onClick`, que o Enter e o Espaço também
+// disparam. Pelo teclado o foco está no botão, mas a seleção continua no
+// estado do ProseMirror, e é dela que a operação lê a célula. Até o 6.6.4 a
+// operação rodava no próprio `mousedown`, e pelo teclado o botão não fazia
+// nada.
 function BarraGrade({ editor, grade }: { editor: Editor; grade: EstadoGrade }) {
   function executar(operacao: (tr: Transaction) => boolean) {
     const tr = editor.state.tr;
@@ -173,10 +176,12 @@ function BarraGrade({ editor, grade }: { editor: Editor; grade: EstadoGrade }) {
           variant={pressionado ? "outline" : "ghost"}
           aria-pressed={pressionado}
           disabled={desabilitado}
-          onMouseDown={(evento) => {
-            evento.preventDefault();
-            executar(operacao);
-          }}
+          // `mousedown` só segura a seleção no editor; a ação vai no
+          // `click`, que o Enter e o Espaço também disparam. Antes ela
+          // estava no `mousedown`, e pelo teclado o botão não fazia nada
+          // (achado no 6.6.4).
+          onMouseDown={(evento) => evento.preventDefault()}
+          onClick={() => executar(operacao)}
         >
           {rotulo}
         </Button>
@@ -184,10 +189,8 @@ function BarraGrade({ editor, grade }: { editor: Editor; grade: EstadoGrade }) {
       <Button
         size="sm"
         variant="ghost"
-        onMouseDown={(evento) => {
-          evento.preventDefault();
-          executar(excluirTabela);
-        }}
+        onMouseDown={(evento) => evento.preventDefault()}
+        onClick={() => executar(excluirTabela)}
       >
         Excluir tabela
       </Button>

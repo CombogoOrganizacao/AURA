@@ -123,7 +123,7 @@ function MenuDaSecao({
         disabled={!podeApagar}
         title={podeApagar ? undefined : "O trabalho precisa de pelo menos uma seção"}
         onClick={onApagar}
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-sans text-sm text-danger hover:bg-sunken focus-visible:bg-sunken focus-visible:outline-none disabled:cursor-not-allowed disabled:text-disabled disabled:hover:bg-transparent"
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-sans text-sm text-danger hover:bg-sunken focus-visible:bg-sunken focus-visible:shadow-focus-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:text-disabled disabled:hover:bg-transparent"
       >
         <Icon name="trash-2" size={14} />
         Apagar seção

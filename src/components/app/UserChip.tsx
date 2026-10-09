@@ -40,6 +40,8 @@ export function UserChip() {
         onClick={() => setAberto((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={aberto}
+        // Só ícones dentro: sem isto o botão não tem nome (axe, 6.6.4).
+        aria-label="Conta"
         className="flex items-center gap-2 rounded-sm border border-transparent bg-transparent p-1 transition-colors hover:bg-sunken focus-visible:outline-none focus-visible:shadow-focus-ring"
       >
         <span

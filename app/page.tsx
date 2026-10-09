@@ -263,7 +263,7 @@ export default function LandingPage() {
             </ul>
           </div>
         </div>
-        <div className="mx-auto mt-8 flex max-w-[1160px] justify-between border-t border-[rgba(254,212,136,0.16)] pt-4.5 text-2xs opacity-70">
+        <div className="mx-auto mt-8 flex max-w-[1160px] justify-between border-t border-[rgba(254,212,136,0.16)] pt-4.5 text-2xs">
           <span>© 2026 AURA. Todos os direitos reservados.</span>
           <span>Feito no Brasil</span>
         </div>

@@ -90,6 +90,8 @@ interface AlcaRedimensionarProps {
   /** Chamado uma vez, ao soltar (ou a cada tecla de seta) — grava a preferência. */
   onConfirmar: () => void;
   label: string;
+  /** Largura atual da coluna, em px — o valor que o leitor de tela anuncia. */
+  largura: number;
 }
 
 // Borda arrastável entre uma coluna lateral e o centro. `pointermove`/
@@ -99,7 +101,13 @@ interface AlcaRedimensionarProps {
 // `useEffect`), sem estado de "arrastando" — mais simples que sincronizar
 // `useCallback`s cruzados pra um par de handlers que só existe entre
 // pointerdown e pointerup.
-function AlcaRedimensionar({ lado, onArrastar, onConfirmar, label }: AlcaRedimensionarProps) {
+function AlcaRedimensionar({
+  lado,
+  onArrastar,
+  onConfirmar,
+  label,
+  largura,
+}: AlcaRedimensionarProps) {
   // "Latest ref": mutar `ref.current` fora de render (aqui, num efeito que
   // roda a cada render) é o padrão aceito pra ler a versão mais recente de
   // uma prop dentro de um listener nativo de vida mais longa que o render
@@ -141,12 +149,19 @@ function AlcaRedimensionar({ lado, onArrastar, onConfirmar, label }: AlcaRedimen
       role="separator"
       aria-orientation="vertical"
       aria-label={label}
+      // Separador focável é um controle (ARIA 1.2): precisa dizer o valor
+      // atual e os limites, senão o leitor de tela anuncia uma borda muda
+      // (achado do axe no 6.6.4).
+      aria-valuenow={Math.round(largura)}
+      aria-valuemin={LARGURA_MIN}
+      aria-valuemax={LARGURA_MAX}
+      aria-valuetext={`${Math.round(largura)} pixels`}
       tabIndex={0}
       onPointerDown={aoPressionar}
       onKeyDown={aoTeclar}
       className="group relative w-1 shrink-0 cursor-col-resize touch-none select-none focus-visible:outline-none"
     >
-      <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-[var(--border-subtle)] transition-colors group-hover:bg-bordo-300 group-focus-visible:bg-bordo-600" />
+      <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-[var(--border-subtle)] transition-colors group-hover:bg-bordo-300 group-focus-visible:w-[3px] group-focus-visible:bg-bordo-600" />
     </div>
   );
 }
@@ -331,6 +346,7 @@ export function LayoutEdicao({ sidebar, children, inspetor }: LayoutEdicaoProps)
           onArrastar={arrastarSidebar}
           onConfirmar={confirmarSidebar}
           label="Redimensionar painel de seções"
+          largura={larguraSidebar}
         />
       )}
 
@@ -379,6 +395,7 @@ export function LayoutEdicao({ sidebar, children, inspetor }: LayoutEdicaoProps)
           onArrastar={arrastarInspetor}
           onConfirmar={confirmarInspetor}
           label="Redimensionar painel inspetor"
+          largura={larguraInspetor}
         />
       )}
 

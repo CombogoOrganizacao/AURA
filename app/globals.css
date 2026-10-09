@@ -69,7 +69,9 @@
      bordô sem virar semáforo. */
   --color-success: #1f6f4a;
   --color-success-soft: #e3f2e9;
-  --color-warning: #a8710b;
+  /* Escurecido no 6.6.4: #a8710b dava 4,17:1 sobre branco e 3,72:1 sobre
+     `warning-soft`, abaixo do AA (4,5:1) para texto. #8f5f08 dá 5,51 e 4,92. */
+  --color-warning: #8f5f08;
   --color-warning-soft: #fdf1d6;
   --color-danger: #b3261e;
   --color-danger-soft: #fbe6e4;
@@ -89,7 +91,12 @@
   --color-title: var(--color-bordo-700);
   --color-body: var(--color-ink-900);
   --color-muted: var(--color-ink-600);
-  --color-subtle: var(--color-ink-500);
+  /* Texto secundário. Era `ink-500` (#8a807a), com 3,85:1 sobre branco e
+     3,61:1 sobre o papel: abaixo do AA (4,5:1), e o axe o apontou em todas as
+     telas (6.6.4). #736a64 dá de 4,82 a 5,28 sobre branco, papel, creme-100 e
+     `sunken`, e continua mais claro que `muted` (ink-600). `ink-500` segue na
+     escala para bordas e ícones, que pedem 3:1. */
+  --color-subtle: #736a64;
   --color-disabled: var(--color-ink-400);
   --color-on-bordo: var(--color-creme-100);
   --color-on-creme: var(--color-bordo-800);

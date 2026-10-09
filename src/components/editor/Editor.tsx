@@ -291,6 +291,10 @@ export function Editor({
     // Next.js. Ver https://tiptap.dev/docs/guides/ssr.
     immediatelyRender: false,
     editorProps: {
+      // Nome acessível da área de texto: o `contenteditable` do TipTap tem
+      // `role="textbox"`, e sem rótulo o leitor de tela anuncia só "caixa de
+      // texto" (axe, 6.6.4).
+      attributes: { "aria-label": "Texto do trabalho" },
       // Colar do Word e de outras fontes (passo 3.3.4). Sem isto, o
       // `DOMParser` de fábrica do ProseMirror já recusaria tag/marca fora do
       // schema (fechado, docs/schema-tiptap.md) — mas o resultado disso é
