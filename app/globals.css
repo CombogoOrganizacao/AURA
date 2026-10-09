@@ -297,24 +297,33 @@
     box-shadow var(--dur-fast) var(--ease-standard);
 }
 
-body {
-  background: var(--color-page);
-  color: var(--color-body);
-  font-family: var(--font-sans);
-  font-size: var(--text-base);
-  line-height: var(--leading-normal);
-}
+/* Estilo base dos elementos, DENTRO de `@layer base`. Fora de camada, uma regra
+   vence qualquer utilitário do Tailwind v4, e foi o que aconteceu até o 6.6.4:
+   `h2 { color: var(--color-title) }` ignorava o `text-creme-200` dos títulos
+   sobre bordô, que ficavam bordô sobre bordô, invisíveis, e o `margin: 0`
+   apagava o `mt-*` deles. O padrão continua o mesmo; agora a classe da tela
+   pode trocá-lo. As regras `.ProseMirror` abaixo ficam fora de camada de
+   propósito: são a tipografia da folha, que não cede a utilitário. */
+@layer base {
+  body {
+    background: var(--color-page);
+    color: var(--color-body);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+  }
 
-h1,
-h2,
-h3,
-h4,
-h5 {
-  font-family: var(--font-serif);
-  color: var(--color-title);
-  font-weight: var(--font-weight-semibold);
-  line-height: var(--leading-snug);
-  margin: 0;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
+    font-family: var(--font-serif);
+    color: var(--color-title);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--leading-snug);
+    margin: 0;
+  }
 }
 
 /* Recuo de primeira linha do parágrafo de corpo (passo 3.3.2, NBR 14724).
