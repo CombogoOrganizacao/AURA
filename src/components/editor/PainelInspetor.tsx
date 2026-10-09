@@ -3,8 +3,6 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Switch } from "@/components/ui/Switch";
 import { Tabs } from "@/components/ui/Tabs";
@@ -12,6 +10,7 @@ import type { Achado } from "@/core/rules/compliance";
 import type { EstadoConferencia } from "@/lib/useConferencia";
 import type { EstadoHistorico } from "@/lib/useVersaoAutomatica";
 
+import { EspacoIA } from "./EspacoIA";
 import { PainelConferencia } from "./PainelConferencia";
 import { PainelHistorico } from "./PainelHistorico";
 
@@ -31,7 +30,7 @@ type Aba = "ia" | "historico" | "conformidade";
 // desde o passo 5.2.3, e o `count` dela é a contagem real de achados da
 // conferência: só agora existe um número que não seria fabricado (mesma regra
 // do 2B.8/2B.10). O histórico tem conteúdo desde o 5.3.2; a IA segue sem
-// lógica.
+// lógica: a aba é o espaço reservado do 6.5.4 (`EspacoIA`).
 // A chave do rodapé liga e desliga a conferência na pausa da digitação
 // (passo 5.2.4).
 export function PainelInspetor({
@@ -64,7 +63,7 @@ export function PainelInspetor({
       </div>
 
       <div className="flex-1 overflow-auto p-4">
-        {aba === "ia" && <PainelIA />}
+        {aba === "ia" && <EspacoIA />}
         {aba === "historico" && <PainelHistorico historico={historico} />}
         {aba === "conformidade" && (
           <PainelConferencia
@@ -90,51 +89,6 @@ export function PainelInspetor({
           }
         />
         {botaoExportar}
-      </div>
-    </div>
-  );
-}
-
-// Estado desativado — sem integração de API ainda (CLAUDE.md, "Escopo da
-// v1"). As três sugestões esmaecidas sob o véu são exemplo do que a Fase 6
-// vai oferecer, não algo que se possa clicar hoje (`pointerEvents: none`
-// coberto pelo véu por cima, não um estado real de "carregando").
-function PainelIA() {
-  const sugestoes = [
-    "Resuma esta seção em um parágrafo",
-    "Sugira uma transição entre as seções",
-    "Reescreva o trecho selecionado em tom formal",
-  ];
-
-  return (
-    <div className="relative flex flex-col gap-4">
-      <div aria-hidden="true" className="flex flex-col gap-3 opacity-35 grayscale">
-        {sugestoes.map((sugestao) => (
-          <div
-            key={sugestao}
-            className="flex items-center gap-2.5 rounded-md border border-[var(--border-subtle)] px-3 py-2.5 font-sans text-xs text-body"
-          >
-            <Icon name="sparkles" size={15} />
-            {sugestao}
-          </div>
-        ))}
-        <div className="min-h-16 rounded-md border border-[var(--border-subtle)] px-3 py-2.5 font-sans text-xs text-subtle">
-          Pergunte algo sobre o documento…
-        </div>
-      </div>
-
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-[rgba(250,247,242,0.72)] to-card px-1 text-center">
-        <span className="flex size-10.5 items-center justify-center rounded-lg bg-sunken text-subtle">
-          <Icon name="sparkles" size={20} />
-        </span>
-        <Badge>Desativado</Badge>
-        <p className="max-w-[30ch] font-sans text-xs leading-relaxed text-muted">
-          O assistente de escrita será ativado quando a integração de API estiver disponível. Você
-          também poderá usar sua própria chave.
-        </p>
-        <Button size="sm" variant="outline" disabled>
-          Conectar chave de API
-        </Button>
       </div>
     </div>
   );
