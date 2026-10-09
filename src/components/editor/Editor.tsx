@@ -32,6 +32,7 @@ import { RealceBusca } from "@/core/editor/busca";
 import { Citacao } from "@/core/editor/marks/citation";
 import { Italico } from "@/core/editor/marks/italico";
 import { Negrito } from "@/core/editor/marks/negrito";
+import { Sugestao } from "@/core/editor/marks/suggestion";
 import { Documento as DocumentoNode } from "@/core/editor/nodes/documento";
 import { NotaRodape as NotaRodapeNode } from "@/core/editor/nodes/footnote";
 import { FormulaInline as FormulaInlineNode } from "@/core/editor/nodes/formulaInline";
@@ -265,6 +266,9 @@ export function Editor({
       // documento salvo com a marca precisa carregar, e o schema recusaria
       // uma marca que não conhece.
       Citacao,
+      // Sugestão de alteração (passo 6.5.1), preparação para a IA. Sem
+      // interface na v1; registrada pelo mesmo motivo da `citacao`.
+      Sugestao,
       // Aspas e chamada ao lado de cada citação (4.10) — decoração, não texto.
       ChamadasDeCitacao,
       // Realce de localizar e substituir (5.4.3) — também decoração.

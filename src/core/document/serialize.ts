@@ -1,6 +1,7 @@
 import type { JSONContent } from "@tiptap/core";
 
 import { lerAtributosCitacao } from "../editor/marks/citation";
+import { lerAtributosSugestao } from "../editor/marks/suggestion";
 import type {
   CelulaTabela,
   LinhaTabela,
@@ -13,7 +14,7 @@ import type {
   TipoMarca,
 } from "./types";
 
-const TIPOS_MARCA: readonly TipoMarca[] = ["negrito", "italico", "citacao"];
+const TIPOS_MARCA: readonly TipoMarca[] = ["negrito", "italico", "citacao", "sugestao"];
 
 function ehTipoMarca(valor: string): valor is TipoMarca {
   return (TIPOS_MARCA as readonly string[]).includes(valor);
@@ -201,6 +202,13 @@ function paraMarcas(marks: JSONContent["marks"]): Marca[] {
     if (!ehTipoMarca(marca.type)) {
       throw new Error(`Marca ainda não suportada: "${marca.type}"`);
     }
+    if (marca.type === "sugestao") {
+      // Mesma política da citação: um estado consertado em silêncio poderia
+      // dar por aceita uma sugestão que o aluno nunca aceitou.
+      const attrs = lerAtributosSugestao(marca.attrs);
+      if (!attrs) throw new Error("Marca de sugestão com atributos inválidos");
+      return { type: "sugestao", attrs };
+    }
     if (marca.type !== "citacao") return { type: marca.type };
 
     // Citação com atributo fora de forma lança em vez de cair para um
@@ -260,9 +268,7 @@ function deNoTexto(texto: NoTexto): JSONContent {
     ...(texto.marks && texto.marks.length > 0
       ? {
           marks: texto.marks.map((marca) =>
-            marca.type === "citacao"
-              ? { type: marca.type, attrs: { ...marca.attrs } }
-              : { type: marca.type },
+            "attrs" in marca ? { type: marca.type, attrs: { ...marca.attrs } } : { type: marca.type },
           ),
         }
       : {}),

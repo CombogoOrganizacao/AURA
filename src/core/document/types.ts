@@ -14,8 +14,8 @@ export type NivelSecao = 1 | 2 | 3;
 // Lista fechada de marcas (docs/schema-tiptap.md §5) — cresce um membro de
 // cada vez, só quando a marca ganha código próprio em
 // src/core/editor/marks/. `negrito`/`italico` desde o passo 2.5, `citacao`
-// desde o 4.8; `sugestao` (estado da IA) entra quando ganhar código.
-export type TipoMarca = "negrito" | "italico" | "citacao";
+// desde o 4.8, `sugestao` desde o 6.5.1.
+export type TipoMarca = "negrito" | "italico" | "citacao" | "sugestao";
 
 // Citação no texto ligada a uma referência (NBR 10520, docs/schema-tiptap.md
 // §5.2) — passo 4.8. O trecho marcado é o texto DO ALUNO: o excerto citado
@@ -59,8 +59,33 @@ export interface AtributosCitacao {
   apud: FonteOriginal | null;
 }
 
+// Sugestão de alteração sobre o texto (docs/schema-tiptap.md §5.3) — passo
+// 6.5.1, preparação para a IA, que fica fora da v1 (§1.2). Declarada agora
+// para que o documento salvo não precise de migração quando a IA entrar.
+//
+// **Decidir não é aplicar.** Aceitar ou rejeitar muda só `estado`; o texto
+// marcado continua no documento, e o que vale na versão final é DERIVADO
+// (`naVersaoFinal()`, src/core/editor/marks/suggestion.ts): a inserção entra
+// só se aceita, a remoção sai só se aceita. É o fluxo de §1.1: revisar cada
+// sugestão e, depois, decidir a versão final. Enquanto não há decisão, o
+// texto do aluno vale e o da sugestão não.
+//
+// Uma substituição é um par, uma remoção e uma inserção com o mesmo `id`, e
+// as duas são aceitas ou rejeitadas juntas.
+export type TipoSugestao = "insercao" | "remocao";
+export type EstadoSugestao = "pendente" | "aceita" | "rejeitada";
+
+export interface AtributosSugestao {
+  id: string;
+  tipo: TipoSugestao;
+  estado: EstadoSugestao;
+}
+
 export type Marca =
-  { type: "negrito" } | { type: "italico" } | { type: "citacao"; attrs: AtributosCitacao };
+  | { type: "negrito" }
+  | { type: "italico" }
+  | { type: "citacao"; attrs: AtributosCitacao }
+  | { type: "sugestao"; attrs: AtributosSugestao };
 
 // Texto inline dentro de um parágrafo.
 export interface NoTexto {
