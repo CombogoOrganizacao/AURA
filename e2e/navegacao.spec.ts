@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// Fase 2B deu à AURA uma casca de verdade — landing, autenticação estática,
+// Fase 2B deu ao AURA uma casca de verdade — landing, autenticação estática,
 // meus documentos, editor de três colunas, central de editais — todas
 // ligadas por navegação real do Next.js (não protótipo estático). Este
 // teste percorre o caminho principal entre elas; cada tela já tem cobertura

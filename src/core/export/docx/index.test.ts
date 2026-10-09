@@ -54,7 +54,7 @@ function idsDeEstilo(xmlEstilos: string): string[] {
 // A PoC não nomeia todo estilo — citação longa, por exemplo, é formatação
 // solta no `Paragraph` (`poc/docx/gerar.js`, `case "citacao_longa"`), nunca
 // um `paragraphStyles` próprio. `CitacaoLonga` (passo 3.4.2) é o primeiro
-// estilo que a AURA nomeia e a PoC nunca nomeou — a paridade abaixo passa a
+// estilo que o AURA nomeia e a PoC nunca nomeou — a paridade abaixo passa a
 // ser "referência + isto", não mais igualdade estrita; 6.1.1 (Corpo,
 // Referencia, Legenda) vai crescer esta lista do mesmo jeito, um de cada vez.
 // `Legenda` chegou junto com a correção da lista de figuras/tabelas (o número
@@ -102,7 +102,7 @@ describe("montarDocumento — esqueleto das três seções OOXML (passo 1.4.1)",
     expect(padraoGerado).toEqual(padraoReferencia);
   });
 
-  it("word/styles.xml declara os estilos nomeados da PoC, mais os que a AURA nomeou além dela", async () => {
+  it("word/styles.xml declara os estilos nomeados da PoC, mais os que o AURA nomeou além dela", async () => {
     const referencia = await abrirZip(readFileSync(CAMINHO_REFERENCIA));
     const idsReferencia = idsDeEstilo(await referencia.file("word/styles.xml")!.async("string"));
 

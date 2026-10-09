@@ -151,7 +151,7 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
 
     // O `<w:p>` que envolve o texto referencia o estilo nomeado — não
     // formatação solta (`w:ind`/`w:spacing` direto no parágrafo), que é
-    // como a PoC congelada faz e a AURA decidiu não repetir neste passo.
+    // como a PoC congelada faz e o AURA decidiu não repetir neste passo.
     const paragrafo = xml.slice(xml.lastIndexOf("<w:p>", posTexto), posTexto);
     expect(paragrafo).toContain('<w:pStyle w:val="CitacaoLonga"/>');
   });

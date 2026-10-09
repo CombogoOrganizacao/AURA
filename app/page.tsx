@@ -9,7 +9,7 @@
 // docs/aura-decisoes-e-pendencias.md §1.15); a faixa final trocou a
 // promessa de "vincular sua universidade" (não existe esse campo) por
 // "sem custo, sem limite de documentos"; nenhuma tela ou frase menciona
-// PDF, plano, preço ou cota — a AURA é gratuita, sempre.
+// PDF, plano, preço ou cota — o AURA é gratuito, sempre.
 import Link from "next/link";
 
 import { AppTopBar } from "@/components/app/AppTopBar";
@@ -33,7 +33,7 @@ const RECURSOS = [
     icone: "quote",
     titulo: "Citações conferidas",
     descricao:
-      "Cada chamada no texto é cruzada com a lista de referências. A AURA aponta o que falta e sugere a forma correta.",
+      "Cada chamada no texto é cruzada com a lista de referências. O AURA aponta o que falta e sugere a forma correta.",
   },
   {
     icone: "spell-check-2",
@@ -91,7 +91,7 @@ export default function LandingPage() {
               sem retrabalho.
             </h1>
             <p className="mt-5 max-w-[46ch] font-serif text-lg leading-relaxed text-body">
-              A AURA formata, revisa e organiza trabalhos acadêmicos em um só lugar — do sumário às
+              O AURA formata, revisa e organiza trabalhos acadêmicos em um só lugar — do sumário às
               referências, com as normas da ABNT verificadas linha por linha.
             </p>
             <div className="mt-7 flex gap-3">

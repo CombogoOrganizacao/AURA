@@ -15,7 +15,7 @@ export default function EditaisPage() {
       </span>
       <h1 className="text-2xl">Central de editais</h1>
       <p className="font-sans text-sm leading-relaxed text-muted">
-        Em breve. Aqui a AURA vai ajudar a conferir o seu trabalho contra as regras de um edital
+        Em breve. Aqui o AURA vai ajudar a conferir o seu trabalho contra as regras de um edital
         específico — prazos, limites e formatação exigidos pela instituição.
       </p>
       <p className="font-sans text-sm leading-relaxed text-muted">

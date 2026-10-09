@@ -9,7 +9,7 @@ interface RevisionMarkProps extends HTMLAttributes<HTMLElement> {
 }
 
 // Marcação inline no corpo do documento — a linguagem visual da camada de
-// revisão da AURA. Cada `kind` mapeia 1:1 pra um `--revision-*`; essas cinco
+// revisão do AURA. Cada `kind` mapeia 1:1 pra um `--revision-*`; essas cinco
 // cores **nunca** aparecem fora do texto do documento (regra da paleta,
 // docs/design.md). Cores em valor literal (não classe Tailwind) porque
 // cada `kind` mistura cor de texto, decoração e fundo com opacidade

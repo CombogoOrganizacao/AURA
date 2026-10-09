@@ -30,7 +30,7 @@ const iconePorTom: Record<ToastTone, { nome: NomeIcone; classe: string }> = {
   danger: { nome: "circle-alert", classe: "text-[#f0a6a0]" },
 };
 
-// Confirmação flutuante (passo 2.2) — a única superfície escura da AURA.
+// Confirmação flutuante (passo 2.2) — a única superfície escura do AURA.
 // Relata fato consumado ("Documento exportado"), nunca promessa
 // ("Exportando…") — ver `readme.md` da skill, seção CONTENT FUNDAMENTALS.
 // Só o componente de apresentação; fila/posicionamento/auto-dismiss ficam
