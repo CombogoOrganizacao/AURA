@@ -22,6 +22,16 @@ jobs:
 
       - run: npm run lint
 
-      - run: npm test
+      # Testes de unidade com cobertura de src/core/ (passo 6.6.2). Os pisos
+      # por área estão em vitest.config.mts; abaixo deles, o CI falha.
+      - run: npm run test:coverage
+
+      - name: Relatório de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-src-core
+          path: coverage/
+          retention-days: 14
 
       - run: npm run build

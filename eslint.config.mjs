@@ -59,6 +59,8 @@ const eslintConfig = defineConfig([
     "legacy/**",
     // PoC do exportador .docx — congelada a partir do commit que a introduziu.
     "poc/**",
+    // Relatório de cobertura gerado pelo Vitest (passo 6.6.2).
+    "coverage/**",
   ]),
 ]);
 
