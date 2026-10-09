@@ -27,19 +27,19 @@ const RECURSOS = [
     icone: "ruler",
     titulo: "Formatação automática",
     descricao:
-      "Margens, entrelinha, numeração de seções e paginação aplicadas conforme a NBR 14724 — em um clique, sem mexer em estilos.",
+      "Margens, entrelinha, numeração progressiva e paginação conforme a NBR 14724, aplicadas no arquivo exportado, sem mexer em estilos.",
   },
   {
     icone: "quote",
     titulo: "Citações conferidas",
     descricao:
-      "Cada chamada no texto é cruzada com a lista de referências. O AURA aponta o que falta e sugere a forma correta.",
+      "Cada citação fica ligada a uma referência cadastrada, e a chamada sai no padrão da NBR 10520. O AURA aponta citação sem página ou sem referência.",
   },
   {
-    icone: "spell-check-2",
-    titulo: "Revisão de texto",
+    icone: "check-check",
+    titulo: "Conferência por regras",
     descricao:
-      "Ortografia, concordância e repetições sinalizadas parágrafo a parágrafo, com sugestão pronta para aplicar.",
+      "Siglas sem a forma por extenso, resumo e palavras-chave fora do que a norma pede, elementos obrigatórios faltando: cada ponto com o item da NBR.",
   },
   {
     icone: "list-ordered",
@@ -51,28 +51,28 @@ const RECURSOS = [
     icone: "history",
     titulo: "Histórico de versões",
     descricao:
-      "Cada aplicação de norma fica registrada. Volte a qualquer ponto do documento sem perder o texto.",
+      "Uma versão é gravada a cada 10 minutos de edição, e você pode dar nome às suas. Volte a qualquer uma sem perder o texto atual.",
   },
   {
     icone: "file-down",
     titulo: "Exportação em .docx",
     descricao:
-      "O arquivo sai em Word com a formatação preservada, pronto para o depósito institucional.",
+      "O arquivo sai em Word com a formatação da ABNT. Também sai em LaTeX, para continuar no Overleaf.",
   },
 ] as const;
 
 const PASSOS = [
   {
     titulo: "Escreva ou cole o texto",
-    descricao: "A estrutura de seções é reconhecida automaticamente.",
+    descricao: "Cada seção com seu título. A numeração progressiva sai da ordem, sem digitar.",
   },
   {
     titulo: "Revise as pendências",
-    descricao: "Normas, citações e texto em uma lista única, com sugestão pronta para aplicar.",
+    descricao: "Normas, citações e referências numa lista só, cada item com o trecho da norma e um clique até o problema.",
   },
   {
     titulo: "Exporte em .docx",
-    descricao: "Arquivo Word com a formatação da norma escolhida preservada.",
+    descricao: "Arquivo Word com a formatação da ABNT, para conferir e entregar.",
   },
 ] as const;
 
@@ -92,7 +92,7 @@ export default function LandingPage() {
             </h1>
             <p className="mt-5 max-w-[46ch] font-serif text-lg leading-relaxed text-body">
               O AURA formata, revisa e organiza trabalhos acadêmicos em um só lugar — do sumário às
-              referências, com as normas da ABNT verificadas linha por linha.
+              referências, com as regras da ABNT conferidas a cada pausa na digitação.
             </p>
             <div className="mt-7 flex gap-3">
               <LinkButton
@@ -115,7 +115,7 @@ export default function LandingPage() {
             Ilustração de marca — não é um painel funcional nem o documento
             de um usuário real: é o mesmo papel que uma captura de tela
             ilustrativa cumpre em qualquer landing. As marcas de revisão e o
-            "86% · 3 pendências" abaixo são exemplo fixo, igual ao que a
+            "3 pendências" abaixo são exemplo fixo, igual ao que a
             própria folha A4 do design system usa como elemento visual
             (readme da skill, "Fundos, imagens e texturas").
           */}
@@ -134,7 +134,7 @@ export default function LandingPage() {
                 A pesquisa <RevisionMark kind="delete">foi feita</RevisionMark>{" "}
                 <RevisionMark kind="insert">realizou-se</RevisionMark> em três etapas sucessivas{" "}
                 <RevisionMark kind="citation" note="Falta a página">
-                  (SILVA, 2021)
+                  (Silva, 2021)
                 </RevisionMark>
                 . O corpus reuniu <RevisionMark kind="comment">documentos diversos</RevisionMark>{" "}
                 coletados entre 2019 e 2023 em repositórios institucionais.
@@ -154,8 +154,8 @@ export default function LandingPage() {
                 <Icon name="circle-check-big" size={18} />
               </span>
               <div className="flex flex-col">
-                <span className="font-sans text-xs font-medium">Conformidade ABNT</span>
-                <span className="font-mono text-2xs text-muted">86% · 3 pendências</span>
+                <span className="font-sans text-xs font-medium">Conferência ABNT</span>
+                <span className="font-mono text-2xs text-muted">3 pendências</span>
               </div>
             </div>
           </div>
@@ -216,7 +216,7 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-[1160px] flex-wrap items-center justify-between gap-8">
           <div>
             <h2 className="text-2xl text-on-creme">
-              Pronta para entregar sem susto de formatação?
+              Pronto para entregar sem susto de formatação?
             </h2>
             <p className="mt-2 text-sm text-bordo-800 opacity-80">
               Crie sua conta — sem custo, sem limite de documentos.

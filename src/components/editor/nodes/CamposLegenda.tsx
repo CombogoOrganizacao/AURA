@@ -68,7 +68,7 @@ export function CampoFonte({ rotulo, numero, valor, onChange }: CampoProps) {
         type="text"
         value={valor}
         onChange={(evento) => onChange(evento.target.value)}
-        placeholder="obrigatória — ex.: Elaborado pela autora (2026)"
+        placeholder="obrigatória — ex.: Elaborado pelo autor (2026)"
         aria-label={`Fonte — ${indicativoDe(rotulo, numero)}`}
         className={CLASSE_CAMPO}
       />
