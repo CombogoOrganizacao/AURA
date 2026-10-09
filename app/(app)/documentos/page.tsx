@@ -8,7 +8,7 @@ import { TabelaDocumentos } from "@/components/documentos/TabelaDocumentos";
 import { Button } from "@/components/ui/Button";
 import { EstadoCarregando, EstadoErro, EstadoVazio } from "@/components/ui/Estados";
 import { Icon } from "@/components/ui/Icon";
-import { novoDocumento } from "@/core/document/factory";
+import { novaSecao, novoDocumento } from "@/core/document/factory";
 import type { ResumoDocumento } from "@/core/persistence/types";
 import { usePersistencia } from "@/lib/persistence-provider";
 
@@ -48,7 +48,11 @@ export default function DocumentosPage() {
 
   async function criarDocumento() {
     if (!persistencia) return;
-    const documento = novoDocumento();
+    // Já com a seção 1 que o editor mostra num documento vazio. Gravado sem
+    // ela, o painel de seções dizia "Nenhuma seção ainda" ao lado da seção
+    // na folha até a primeira edição, e a lista não tinha onde o teclado
+    // parar (achado do axe no 6.6.4).
+    const documento = { ...novoDocumento(), sections: [novaSecao(0)] };
     await persistencia.salvarDocumento(documento);
     router.push(`/documento/${documento.id}`);
   }

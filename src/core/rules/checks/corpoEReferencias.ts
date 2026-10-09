@@ -1,3 +1,4 @@
+import { semVaziosNasPontas } from "../../document/vaziosNasPontas";
 import type { Verificacao } from "../compliance";
 
 // Corpo e referências presentes — NBR 14724:2024. O Esquema 1 lista os
@@ -14,16 +15,23 @@ import type { Verificacao } from "../compliance";
 
 export const corpoPresente: Verificacao = {
   regra: "corpo-presente",
+  // Corpo presente é algo ESCRITO: um título ou conteúdo além de parágrafos
+  // em branco. Até o 6.6.4 bastava existir uma seção, e a regra só pegava o
+  // documento novo porque a seção-semente não era gravada. Gravada (a lista
+  // de documentos passou a criar o documento com ela), e também depois de o
+  // aluno apagar tudo, a seção vazia escondia o corpo vazio. "Em branco" é o
+  // mesmo critério da exportação (`semVaziosNasPontas`).
   verificar: ({ documento }) =>
-    documento.sections.length > 0
+    documento.sections.some(
+      (secao) => secao.titulo.trim() !== "" || semVaziosNasPontas(secao.content).length > 0,
+    )
       ? []
       : [
           {
             gravidade: "erro",
             item: "NBR 14724:2024 Esquema 1 e §4.2.2",
-            // "Está vazio", e não "não tem seção": num documento novo o editor mostra
-            // uma seção-semente em branco, que só entra no documento quando o aluno
-            // escreve nela (`novaSecao()`, passo 1.3.7).
+            // "Está vazio", e não "não tem seção": num documento novo há a
+            // seção 1, em branco (`novaSecao()`).
             mensagem: "O corpo do texto está vazio: nada foi escrito ainda.",
             local: { tipo: "documento" },
           },

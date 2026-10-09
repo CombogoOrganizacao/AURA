@@ -169,6 +169,43 @@ describe("corpo-presente e referencias-presentes", () => {
     ]);
   });
 
+  // 6.6.4: a seção-semente do documento novo, gravada, não conta como corpo.
+  it("só a seção 1 em branco (título vazio, parágrafo vazio): corpo vazio", () => {
+    expect(
+      conferirCom(corpoPresente, (d) => {
+        d.sections = [
+          { id: "s1", ordem: 0, nivel: 1, titulo: "", content: [{ type: "paragraph" }] },
+        ];
+      }),
+    ).toEqual([expect.objectContaining({ gravidade: "erro", local: { tipo: "documento" } })]);
+  });
+
+  it("parágrafo só com espaços também é corpo vazio", () => {
+    expect(
+      conferirCom(corpoPresente, (d) => {
+        d.sections = [
+          {
+            id: "s1",
+            ordem: 0,
+            nivel: 1,
+            titulo: "  ",
+            content: [{ type: "paragraph", content: [{ type: "text", text: "   " }] }],
+          },
+        ];
+      }),
+    ).toHaveLength(1);
+  });
+
+  it("um título escrito já é corpo, mesmo sem texto embaixo", () => {
+    expect(
+      conferirCom(corpoPresente, (d) => {
+        d.sections = [
+          { id: "s1", ordem: 0, nivel: 1, titulo: "Introdução", content: [{ type: "paragraph" }] },
+        ];
+      }),
+    ).toEqual([]);
+  });
+
   it("sem referência nenhuma: erro pelo §4.2.3.1", () => {
     expect(conferirCom(referenciasPresentes, (d) => (d.references = []))).toEqual([
       expect.objectContaining({ gravidade: "erro", item: "NBR 14724:2024 §4.2.3.1" }),
