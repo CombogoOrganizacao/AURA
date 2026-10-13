@@ -13,7 +13,26 @@ import type { Page } from "@playwright/test";
 
 const WCAG = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 
+// Botão que nasce desabilitado e fica pronto ("Novo documento", quando a
+// persistência abre; "Baixar .zip", quando o projeto fica montado) troca de
+// cor com transição, e o axe chegou a medir o contraste no meio dela
+// (13/10/2026). Antes de varrer, espera a página parar. Animação infinita
+// (indicador de carregamento) não conta, ou a espera não terminaria.
+async function semTransicaoEmCurso(page: Page) {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          document
+            .getAnimations()
+            .filter((animacao) => animacao.effect?.getTiming().iterations !== Infinity).length,
+      ),
+    )
+    .toBe(0);
+}
+
 async function semViolacoes(page: Page, onde: string) {
+  await semTransicaoEmCurso(page);
   const resultado = await new AxeBuilder({ page }).withTags(WCAG).analyze();
   const resumo = resultado.violations.map(
     (violacao) =>
@@ -33,6 +52,11 @@ test.describe("axe: nenhuma violação WCAG 2.1 AA detectável", () => {
   for (const rota of ["/", "/entrar", "/cadastrar", "/documentos", "/editais"]) {
     test(rota, async ({ page }) => {
       await page.goto(rota);
+      // O botão fica pronto quando a persistência abre; varrer antes deixa a
+      // transição de cor começar no meio da varredura.
+      if (rota === "/documentos") {
+        await expect(page.getByRole("button", { name: "Novo documento" })).toBeEnabled();
+      }
       await semViolacoes(page, rota);
     });
   }
@@ -62,11 +86,9 @@ test.describe("axe: nenhuma violação WCAG 2.1 AA detectável", () => {
     await page.getByRole("banner").getByRole("button", { name: "Exportar", exact: true }).click();
     // O .zip é montado ao abrir a janela; varrer no meio da montagem pega o
     // botão em transição de cor, entre desabilitado e pronto. Habilitado não
-    // basta: o atributo muda na hora, e a cor leva a transição do botão
-    // (`--dur-fast`). O axe chegou a medir no meio dela (13/10/2026).
-    const baixarZip = page.getByRole("button", { name: "Baixar .zip" });
-    await expect(baixarZip).toBeEnabled();
-    await expect.poll(() => baixarZip.evaluate((botao) => botao.getAnimations().length)).toBe(0);
+    // basta: o atributo muda na hora, e a cor leva a transição do botão, que
+    // `semViolacoes()` espera terminar.
+    await expect(page.getByRole("button", { name: "Baixar .zip" })).toBeEnabled();
     await semViolacoes(page, "janela de exportação");
   });
 });
