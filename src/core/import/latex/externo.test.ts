@@ -360,8 +360,8 @@ describe("fonte solta em figura e tabela (6.2.8)", () => {
     expect(lido.secoes[0].content).toHaveLength(1);
   });
 
-  // `\multicolumn{1}` só troca o alinhamento (é como o AURA centraliza o
-  // cabeçalho, desde 13/10/2026): não é mescla, e não avisa.
+  // `\multicolumn{1}` só troca o alinhamento da célula: não é mescla, e não
+  // avisa.
   it("\\multicolumn{1} entra sem aviso; o de mais colunas avisa a mescla", () => {
     const lido = ler(
       corpo(

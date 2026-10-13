@@ -65,10 +65,10 @@ import { runsDeTrechos } from "./trechos";
 // `CelulaTabela` (styles.ts).
 //
 // Cabeçalho em negrito é **convenção**, a mesma da tela: o IBGE não fala de
-// destaque tipográfico no cabeçalho. **Centralizado** também (estilo
-// `CabecalhoTabela`): o IBGE não fixa o alinhamento, mas os exemplos do
-// Anexo B centralizam; decisão da usuária em 13/10/2026. As duas regras são
-// por célula, como na tela e no `.tex`.
+// destaque tipográfico no cabeçalho. **Toda célula centralizada**, cabeçalho
+// e dados (estilo `CelulaTabela`): o IBGE não fixa o alinhamento, e os
+// exemplos dele e os que a usuária trouxe centralizam; decisão dela em
+// 13/10/2026. O mesmo na tela e no `.tex`.
 //
 // **Respiro acima da primeira linha do cabeçalho.** Com entrelinha 1,5, o
 // Word põe a meia linha a mais embaixo do texto, e entre os dois traços o
@@ -116,7 +116,7 @@ function celulaDocx(
     children: [
       new Paragraph({
         children: runs,
-        style: celula.cabecalho ? "CabecalhoTabela" : "CelulaTabela",
+        style: "CelulaTabela",
         ...(respiro ? { spacing: { before: RESPIRO_DO_CABECALHO } } : {}),
       }),
     ],

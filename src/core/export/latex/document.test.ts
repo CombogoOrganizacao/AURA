@@ -151,13 +151,11 @@ describe("gerarTex — fórmula, figura e tabela", () => {
     const inicio = tex.indexOf("\\begin{longtable}");
     const tabela = tex.slice(inicio, tex.indexOf("\\end{longtable}"));
     expect(tabela).toContain("\\caption{Resultados por grupo}");
-    // Cada célula de cabeçalho centralizada na largura da própria coluna.
-    const coluna = (milesimos: number) =>
-      `\\multicolumn{1}{>{\\centering\\arraybackslash}p{\\dimexpr(\\linewidth-4\\tabcolsep)*${milesimos}/1000\\relax}}`;
-    const especificacao = tabela.match(/\*(\d+)\/1000\\relax\}p\{[^*]*\*(\d+)\/1000/)!;
-    const cabecalho = `${coluna(Number(especificacao[1]))}{\\textbf{Grupo}} & ${coluna(Number(especificacao[2]))}{\\textbf{Total (\\%)}} \\\\`;
-    expect(tabela).toContain(`\\toprule\n${cabecalho}\n\\midrule\n\\endfirsthead`);
-    expect(tabela).toContain(`\\endfirsthead\n\\toprule\n${cabecalho}\n\\midrule\n\\endhead`);
+    expect(tabela).toContain("\\toprule\n\\textbf{Grupo} & \\textbf{Total (\\%)} \\\\\n\\midrule\n\\endfirsthead");
+    expect(tabela).toContain("\\endfirsthead\n\\toprule\n\\textbf{Grupo} & \\textbf{Total (\\%)} \\\\\n\\midrule\n\\endhead");
+    // As duas colunas centralizadas, como o `.docx` (13/10/2026).
+    const especificacao = tabela.slice("\\begin{longtable}{".length, tabela.indexOf("\n") - 1);
+    expect(especificacao.match(/>\{\\centering\\arraybackslash\}p\{/g)).toHaveLength(2);
     expect(tabela).toContain("\\bottomrule\n\\endlastfoot");
     expect(tabela).not.toContain("|");
   });

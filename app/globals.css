@@ -518,20 +518,19 @@
   height: 1.75rem;
 }
 
+/* Centralizada, cabeçalho e dados, como o estilo `CelulaTabela` do `.docx`:
+   o IBGE não fixa o alinhamento, e os exemplos dele centralizam (13/10/2026). */
 .ProseMirror .doc-tabela th,
 .ProseMirror .doc-tabela td {
   padding: 0.25rem 0.5rem;
-  text-align: left;
+  text-align: center;
   text-indent: 0;
   vertical-align: top;
 }
 
-/* Centralizado como o estilo `CabecalhoTabela` do `.docx`: o IBGE não fixa o
-   alinhamento, e os exemplos do Anexo B dele centralizam (13/10/2026). */
 .ProseMirror .doc-tabela th {
   border-bottom: 1px solid var(--doc-ink);
   font-weight: 700;
-  text-align: center;
 }
 
 /* Barra de grade (passo 6.1.3b): interface, não documento — fonte da UI e

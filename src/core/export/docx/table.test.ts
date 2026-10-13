@@ -262,25 +262,12 @@ describe("grade da tabela no .docx (passo 6.1.3)", () => {
 // A célula não está entre as exceções da NBR 14724:2024 §5.1 (tamanho menor)
 // nem da §5.2 (espaço simples): sai como o corpo, 12 pt e 1,5.
 describe("estilo CelulaTabela", () => {
-  it("toda célula usa um estilo nomeado: o de cabeçalho ou o de célula", async () => {
-    const [cabecalho, ...corpo] = linhasXml(tabelas((await pacote(TRES_POR_TRES)).documento)[0]);
+  it("toda célula usa o estilo nomeado", async () => {
+    const tbl = tabelas((await pacote(TRES_POR_TRES)).documento)[0];
 
-    for (const tc of celulasXml(cabecalho)) {
-      expect(tc).toContain('<w:pStyle w:val="CabecalhoTabela"/>');
-    }
-    for (const tc of corpo.flatMap(celulasXml)) {
+    for (const tc of linhasXml(tbl).flatMap(celulasXml)) {
       expect(tc).toContain('<w:pStyle w:val="CelulaTabela"/>');
     }
-  });
-
-  it("cabeçalho: o mesmo estilo, centralizado (exemplos do IBGE, Anexo B)", async () => {
-    const { estilos } = await pacote(TRES_POR_TRES);
-    const estilo = estilos.match(
-      /<w:style [^>]*w:styleId="CabecalhoTabela"[^>]*>[\s\S]*?<\/w:style>/,
-    )![0];
-
-    expect(estilo).toContain('<w:basedOn w:val="CelulaTabela"/>');
-    expect(estilo).toContain('<w:jc w:val="center"/>');
   });
 
   // A entrelinha 1,5 põe a meia linha a mais embaixo do texto; o respiro a
@@ -301,7 +288,9 @@ describe("estilo CelulaTabela", () => {
     expect(tabelas((await pacote(semCabecalho)).documento)[0]).not.toContain("w:before");
   });
 
-  it("12 pt, entrelinha 1,5, à esquerda e sem recuo", async () => {
+  // Centralizada desde 13/10/2026, cabeçalho e dados: o IBGE não fixa o
+  // alinhamento, e os exemplos dele centralizam.
+  it("12 pt, entrelinha 1,5, centralizada e sem recuo", async () => {
     const { estilos } = await pacote(TRES_POR_TRES);
     const estilo = estilos.match(
       /<w:style [^>]*w:styleId="CelulaTabela"[^>]*>[\s\S]*?<\/w:style>/,
@@ -309,7 +298,7 @@ describe("estilo CelulaTabela", () => {
 
     expect(estilo).toContain('<w:sz w:val="24"/>');
     expect(estilo).toMatch(/<w:spacing [^>]*w:line="360"/);
-    expect(estilo).toContain('<w:jc w:val="left"/>');
+    expect(estilo).toContain('<w:jc w:val="center"/>');
     expect(estilo).toMatch(/<w:ind [^>]*w:firstLine="0"/);
   });
 });

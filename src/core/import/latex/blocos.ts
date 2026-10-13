@@ -1028,8 +1028,8 @@ function tabelaLonga(
 // Célula de cabeçalho sai com o texto inteiro em `\textbf{}`. Célula toda em
 // negrito também volta como cabeçalho: é a mesma marcação, e a mesma
 // aparência. `\multicolumn` e `\multirow` ficam com o texto. O
-// `\multicolumn{1}` não mescla nada, só troca o alinhamento da célula (é como
-// o AURA centraliza o cabeçalho), e entra sem aviso.
+// `\multicolumn{1}` não mescla nada, só troca o alinhamento da célula, e
+// entra sem aviso.
 function lerCelula(ctx: ContextoInline, faixa: Faixa, linhaDeCabecalho: boolean): CelulaTabela {
   const t = ctx.fonte.texto;
   let inicio = pularEspacos(t, faixa.inicio, faixa.fim);
