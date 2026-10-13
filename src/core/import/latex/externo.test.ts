@@ -360,6 +360,39 @@ describe("fonte solta em figura e tabela (6.2.8)", () => {
     expect(lido.secoes[0].content).toHaveLength(1);
   });
 
+  // `\multicolumn{1}` só troca o alinhamento (é como o AURA centraliza o
+  // cabeçalho, desde 13/10/2026): não é mescla, e não avisa.
+  it("\\multicolumn{1} entra sem aviso; o de mais colunas avisa a mescla", () => {
+    const lido = ler(
+      corpo(
+        [
+          "\\begin{table}",
+          "\\caption{Canais}",
+          "\\begin{tabular}{ll}",
+          "\\multicolumn{1}{c}{\\textbf{Tipo}} & \\multicolumn{1}{>{\\centering\\arraybackslash}p{3cm}}{\\textbf{Uso}} \\\\",
+          "\\multicolumn{2}{c}{Juntas} \\\\",
+          "\\end{tabular}",
+          "\\end{table}",
+        ].join("\n"),
+      ),
+    );
+    expect(lido.secoes[0].content[0]).toMatchObject({
+      type: "tabela",
+      linhas: [
+        {
+          celulas: [
+            { cabecalho: true, content: [{ type: "text", text: "Tipo" }] },
+            { cabecalho: true, content: [{ type: "text", text: "Uso" }] },
+          ],
+        },
+        { celulas: [{ cabecalho: false, content: [{ type: "text", text: "Juntas" }] }] },
+      ],
+    });
+    expect(lido.avisos.map((aviso) => aviso.mensagem)).toEqual([
+      "Célula mesclada (\\multicolumn): o AURA não mescla células, e ficou o texto numa célula só.",
+    ]);
+  });
+
   it("fonte em grupo logo depois da longtable", () => {
     const lido = ler(
       corpo(

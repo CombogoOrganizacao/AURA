@@ -1027,7 +1027,9 @@ function tabelaLonga(
 
 // Célula de cabeçalho sai com o texto inteiro em `\textbf{}`. Célula toda em
 // negrito também volta como cabeçalho: é a mesma marcação, e a mesma
-// aparência. `\multicolumn` e `\multirow` ficam com o texto.
+// aparência. `\multicolumn` e `\multirow` ficam com o texto. O
+// `\multicolumn{1}` não mescla nada, só troca o alinhamento da célula (é como
+// o AURA centraliza o cabeçalho), e entra sem aviso.
 function lerCelula(ctx: ContextoInline, faixa: Faixa, linhaDeCabecalho: boolean): CelulaTabela {
   const t = ctx.fonte.texto;
   let inicio = pularEspacos(t, faixa.inicio, faixa.fim);
@@ -1039,17 +1041,23 @@ function lerCelula(ctx: ContextoInline, faixa: Faixa, linhaDeCabecalho: boolean)
   ] as const) {
     if (!t.startsWith(comando, inicio)) continue;
     let i = inicio + comando.length;
+    let primeiro = null;
     let ultimo = null;
     for (let k = 0; k < argumentos; k++) {
       ultimo = lerGrupo(t, lerOpcional(t, pularEspacos(t, i, fim), fim)?.depois ?? i, fim);
       if (!ultimo) break;
+      primeiro ??= ultimo;
       i = ultimo.depois;
     }
     if (ultimo) {
-      ctx.avisos.push({
-        ...ctx.fonte.posicao(inicio),
-        mensagem: `Célula mesclada (${comando}): o AURA não mescla células, e ficou o texto numa célula só.`,
-      });
+      const umaColuna =
+        comando === "\\multicolumn" && t.slice(primeiro!.inicio, primeiro!.fim).trim() === "1";
+      if (!umaColuna) {
+        ctx.avisos.push({
+          ...ctx.fonte.posicao(inicio),
+          mensagem: `Célula mesclada (${comando}): o AURA não mescla células, e ficou o texto numa célula só.`,
+        });
+      }
       inicio = ultimo.inicio;
       fim = ultimo.fim;
     }

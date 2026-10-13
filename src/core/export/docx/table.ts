@@ -65,12 +65,27 @@ import { runsDeTrechos } from "./trechos";
 // `CelulaTabela` (styles.ts).
 //
 // Cabeçalho em negrito é **convenção**, a mesma da tela: o IBGE não fala de
-// destaque tipográfico no cabeçalho. Largura das colunas pelo texto das
+// destaque tipográfico no cabeçalho. **Centralizado** também (estilo
+// `CabecalhoTabela`): o IBGE não fixa o alinhamento, mas os exemplos do
+// Anexo B centralizam; decisão da usuária em 13/10/2026. As duas regras são
+// por célula, como na tela e no `.tex`.
+//
+// **Respiro acima da primeira linha do cabeçalho.** Com entrelinha 1,5, o
+// Word põe a meia linha a mais embaixo do texto, e entre os dois traços o
+// cabeçalho ficava colado no de cima. `RESPIRO_DO_CABECALHO` devolve essa
+// meia linha em cima (a usuária pediu na conferência de 13/10/2026). Na tela
+// não precisa: o navegador já divide a entrelinha meio a meio.
+//
+// Largura das colunas pelo texto das
 // células (`proporcoesDasColunas`, document/elements/tabela.ts), a mesma do
 // `.tex` e da tela; até 04/10/2026 eram iguais, como na PoC.
 
 const TRACO: IBorderOptions = { style: BorderStyle.SINGLE, size: 4, color: "000000" };
 const SEM_TRACO: IBorderOptions = { style: BorderStyle.NONE, size: 0, color: "auto" };
+
+// Meia linha simples de 12 pt, em twips: a linha da Times e da Arial mede
+// ~13,8 pt (1,15 do corpo), e a entrelinha 1,5 soma metade disso, ~6,9 pt.
+const RESPIRO_DO_CABECALHO = 140;
 
 // Quantas linhas formam o cabeçalho: `document/elements/tabela.ts`, desde o
 // passo 6.2.1, porque o `.tex` usa a mesma divisão.
@@ -80,6 +95,7 @@ function celulaDocx(
   celula: CelulaTabela,
   largura: number,
   bordas: { top: boolean; bottom: boolean },
+  respiro: boolean,
   references: readonly Referencia[],
 ): TableCell {
   const runs = runsDeTrechos(
@@ -97,7 +113,13 @@ function celulaDocx(
     },
     // Célula vazia também leva um parágrafo: o OOXML não aceita `<w:tc>` sem
     // nenhum, e o Word acusa o arquivo como corrompido.
-    children: [new Paragraph({ children: runs, style: "CelulaTabela" })],
+    children: [
+      new Paragraph({
+        children: runs,
+        style: celula.cabecalho ? "CabecalhoTabela" : "CelulaTabela",
+        ...(respiro ? { spacing: { before: RESPIRO_DO_CABECALHO } } : {}),
+      }),
+    ],
   });
 }
 
@@ -122,6 +144,7 @@ export function tabelaDocx(no: NoTabela, references: readonly Referencia[]): Tab
             celula,
             larguras[coluna],
             { top: indice === 0, bottom: indice === cabecalho - 1 },
+            indice === 0 && cabecalho > 0,
             references,
           ),
         ),

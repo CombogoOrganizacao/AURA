@@ -8,7 +8,8 @@ import { ABNT } from "./constants";
 // nomeado do exportador. A lista fechou no passo 6.1.1: Título 1–3, Corpo,
 // Citação Longa, Referência, Legenda, os dois títulos sem indicativo e as
 // três entradas de sumário; `CelulaTabela` entrou no 6.1.3, com a grade da
-// tabela. Nunca de volta pra `index.ts`, que fica só com a
+// tabela, e `CabecalhoTabela` na conferência de 13/10/2026. Nunca de volta
+// pra `index.ts`, que fica só com a
 // montagem do `Document`.
 //
 // **Por que estilo nomeado, e não formatação em cada parágrafo.** O aluno
@@ -195,6 +196,18 @@ export function estilosDocumento(fonte: string = ABNT.fonte): IStylesOptions {
           spacing: { before: 0, after: 0, line: ABNT.espacamento15 },
           indent: { left: 0, firstLine: 0 },
         },
+      },
+      // Célula de cabeçalho: a mesma, centralizada sobre a coluna. O IBGE não
+      // fixa o alinhamento (o prefácio deixa a escolha ao editor), mas todos
+      // os exemplos do Anexo B centralizam o cabeçalho; decisão da usuária em
+      // 13/10/2026.
+      {
+        id: "CabecalhoTabela",
+        name: "Cabecalho de Tabela",
+        basedOn: "CelulaTabela",
+        next: "CelulaTabela",
+        quickFormat: true,
+        paragraph: { alignment: AlignmentType.CENTER },
       },
       estiloSumario(fonte, 1, { bold: true, allCaps: true }),
       estiloSumario(fonte, 2, { bold: true }),

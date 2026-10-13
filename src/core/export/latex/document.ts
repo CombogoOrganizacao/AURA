@@ -212,6 +212,11 @@ function figura(no: NoFigura, imagens: ImagensParaTex): string {
 // abaixo do cabeçalho e traço no fim, sem laterais. O cabeçalho se repete na
 // página seguinte (`\endhead`). Largura das colunas pelo texto das células,
 // a mesma conta do `.docx` (`proporcoesDasColunas`).
+//
+// Célula de cabeçalho em negrito e centralizada, como o `CabecalhoTabela` do
+// `.docx` (13/10/2026). A coluna é `p{}`, que não centraliza; o
+// `\multicolumn{1}` troca o alinhamento só daquela célula, com a mesma
+// largura, e não mescla nada (o leitor do `.tex` sabe disso).
 function tabela(no: NoTabela, references: readonly Referencia[]): string {
   if (no.linhas.length === 0) {
     return [
@@ -228,12 +233,11 @@ function tabela(no: NoTabela, references: readonly Referencia[]): string {
   const colunas = proporcoes.length;
   // Milésimos da largura útil sem o respiro das células: `\dimexpr` só
   // multiplica e divide por inteiro.
-  const especificacao = proporcoes
-    .map(
-      (proporcao) =>
-        `p{\\dimexpr(\\linewidth-${2 * colunas}\\tabcolsep)*${Math.round(proporcao * 1000)}/1000\\relax}`,
-    )
-    .join("");
+  const larguras = proporcoes.map(
+    (proporcao) =>
+      `p{\\dimexpr(\\linewidth-${2 * colunas}\\tabcolsep)*${Math.round(proporcao * 1000)}/1000\\relax}`,
+  );
+  const especificacao = larguras.join("");
   const cabecalho = linhasDeCabecalho(no.linhas);
 
   const linhaLatex = (indice: number) => {
@@ -242,7 +246,8 @@ function tabela(no: NoTabela, references: readonly Referencia[]): string {
       const celula = linha.celulas[coluna];
       if (!celula) return "";
       const texto = inlineLatex(celula.content, references);
-      return celula.cabecalho && texto ? `\\textbf{${texto}}` : texto;
+      if (!celula.cabecalho || !texto) return texto;
+      return `\\multicolumn{1}{>{\\centering\\arraybackslash}${larguras[coluna]}}{\\textbf{${texto}}}`;
     });
     return `${celulas.join(" & ")} \\\\`;
   };

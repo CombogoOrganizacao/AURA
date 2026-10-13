@@ -71,6 +71,7 @@ function idsDeEstilo(xmlEstilos: string): string[] {
 // `CelulaTabela` entrou no 6.1.3, com a grade da tabela: a PoC formatava cada
 // célula solta, em 10 pt, e a NBR 14724:2024 §5.1/§5.2 pede 12 pt e 1,5.
 const ESTILOS_ALEM_DA_POC = [
+  "CabecalhoTabela",
   "CelulaTabela",
   "CitacaoLonga",
   "Corpo",
