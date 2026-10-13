@@ -102,6 +102,32 @@ describe("fórmula no .docx como equação do Word (OMML)", () => {
     expect(xml).toMatch(/<m:fName>[\s\S]*sin[\s\S]*<\/m:fName>/);
   });
 
+  // Achado na conferência do fechamento: o "lim" saía em itálico no Word, e
+  // na tela (KaTeX) sai em pé.
+  it("nome de função, \\mathrm, \\text e maiúscula grega saem em pé; letra comum, em itálico", async () => {
+    const emPe = (xml: string) =>
+      [...xml.matchAll(/<m:r><m:rPr><m:sty m:val="p"\/><\/m:rPr><m:t[^>]*>([^<]*)<\/m:t>/g)].map(
+        (achado) => achado[1],
+      );
+
+    expect(emPe(await paragrafoDaFormula(String.raw`\lim_{x \to 0} \sin x`))).toEqual([
+      "lim",
+      "sin",
+    ]);
+    expect(emPe(await paragrafoDaFormula(String.raw`\underset{x \to 0}{\lim} f(x)`))).toEqual([
+      "lim",
+    ]);
+    expect(emPe(await paragrafoDaFormula(String.raw`\operatorname{sen} x + \mathrm{d}x`))).toEqual([
+      "sen",
+      "d",
+    ]);
+    expect(emPe(await paragrafoDaFormula(String.raw`\Gamma(n)`))).toEqual(["Γ"]);
+    expect(emPe(await paragrafoDaFormula(String.raw`\text{média} = 5`))).toEqual(["m", "é", "dia"]);
+
+    const comum = await paragrafoDaFormula("E = mc^2");
+    expect(comum).not.toContain("<m:sty");
+  });
+
   it("acento matemático (x̄) vira acento da equação; acento de texto vira a letra", async () => {
     const barra = await paragrafoDaFormula("\\bar{x}");
     expect(barra).toContain("<m:acc>");

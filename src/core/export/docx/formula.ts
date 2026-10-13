@@ -23,6 +23,7 @@ import {
   MathSum,
   MathSuperScript,
   Paragraph,
+  StringContainer,
   TextRun,
   type MathComponent,
   type XmlComponent,
@@ -41,9 +42,10 @@ import { mathmlDoLatex, type NoMathml } from "./mathml";
 // `mathml.ts`) → OMML, com as peças de equação da biblioteca `docx`. Nunca
 // OOXML escrito em string (CLAUDE.md).
 //
-// **`BuilderElement` em três casos, e só neles:** n-ário com símbolo sem
-// classe própria (∏, ∮, ⋃...), acento (x̄, β̂, u⃗) e delimitador com outro
-// caractere que não parênteses, colchetes, chaves ou ângulos (|x|, ‖v‖, ⌊x⌋).
+// **`BuilderElement` em quatro casos, e só neles:** n-ário com símbolo sem
+// classe própria (∏, ∮, ⋃...), acento (x̄, β̂, u⃗), delimitador com outro
+// caractere que não parênteses, colchetes, chaves ou ângulos (|x|, ‖v‖, ⌊x⌋)
+// e o texto em pé (`corrida()`), porque o `MathRun` não aceita propriedades.
 // É o construtor genérico da própria biblioteca, o mesmo com que ela monta
 // `MathSum` por dentro; a serialização e o escape continuam sendo dela.
 //
@@ -163,6 +165,38 @@ export function paragrafoFormula(no: NoFormula): Paragraph {
 
 function ehMo(no: NoMathml | undefined, texto?: string): boolean {
   return no?.tag === "mo" && (texto === undefined || no.texto === texto);
+}
+
+// Letra em pé, e não itálica: nome de função (`lim`, `sin`,
+// `\operatorname`), `\mathrm`, `\text` e maiúscula grega. É a regra do
+// MathML: `<mi>` de um caractere só é itálico; de mais de um, ou com
+// `mathvariant="normal"`, não. É também como o KaTeX desenha na tela. A
+// equação do Word põe toda letra em itálico, a menos que o run peça o estilo
+// "plain" (`m:sty`); sem isso, o "lim" saía inclinado (achado no fechamento).
+function emPe(no: NoMathml): boolean {
+  if (no.tag === "mtext" || no.atributos.mathvariant === "normal") return true;
+  return ["mi", "mo"].includes(no.tag) && [...no.texto].length > 1 && /\p{L}/u.test(no.texto);
+}
+
+function corrida(texto: string, pe: boolean): MathComponent {
+  if (!pe) return new MathRun(texto);
+  return componente(
+    new BuilderElement({
+      name: "m:r",
+      children: [
+        new BuilderElement({
+          name: "m:rPr",
+          children: [
+            new BuilderElement<{ val: string }>({
+              name: "m:sty",
+              attributes: { val: { key: "m:val", value: "p" } },
+            }),
+          ],
+        }),
+        new StringContainer("m:t", texto),
+      ],
+    }),
+  );
 }
 
 // Token sem texto próprio, com um filho só: o embrulho que o KaTeX põe em
@@ -405,7 +439,7 @@ function converter(no: NoMathml, registro: Registro): MathComponent[] {
       // `\overset` dentro de um `<mo>` e o `\underset` dentro de um `<mi>`
       // (a classe de espaçamento do LaTeX). Lido só pelo texto, ele saía
       // vazio, e a fórmula sumia do .docx sem aviso (achado no 6.6.2).
-      return no.texto ? [new MathRun(no.texto)] : lista(no.filhos, registro);
+      return no.texto ? [corrida(no.texto, emPe(no))] : lista(no.filhos, registro);
     }
     case "mspace":
     case "mphantom":
@@ -460,7 +494,7 @@ function converter(no: NoMathml, registro: Registro): MathComponent[] {
         // Acento sobre texto comum vira a letra acentuada, que é o que ele é.
         if (a && (a.tag === "mtext" || a.tag === "mi") && a.texto.length === 1) {
           const letra = (textoDe(a) + sinal).normalize("NFC");
-          if (letra.length === 1) return [new MathRun(letra)];
+          if (letra.length === 1) return [corrida(letra, emPe(a))];
         }
         return [acento(a ? converter(a, registro) : [], sinal)];
       }
