@@ -42,8 +42,9 @@ test("tabela digitada na tela sai como grade no .docx", async ({ page }) => {
   const grade = xml.match(/<w:tbl>[\s\S]*?<\/w:tbl>/)?.[0];
   expect(grade).toBeDefined();
   for (const texto of textos) expect(grade).toContain(`>${texto}</w:t>`);
-  // Só a linha de cabeçalho repete quando a tabela quebra página.
-  expect(grade!.match(/<w:tblHeader\/>/g)).toHaveLength(1);
+  // Repetem na quebra de página a linha de cabeçalho e a linha vazia de
+  // respiro logo abaixo do traço dele (`table.ts`); as de dados, não.
+  expect(grade!.match(/<w:tblHeader\/>/g)).toHaveLength(2);
   expect(xml).not.toContain("grade da tabela ainda não exportada");
 });
 
@@ -83,9 +84,13 @@ test("tabela criada 2×2 vira 3×3 pela barra de grade e sai assim no .docx", as
   const grade = xml.match(/<w:tbl>[\s\S]*?<\/w:tbl>/)?.[0];
   expect(grade).toBeDefined();
 
-  const linhas = grade!.match(/<w:tr>[\s\S]*?<\/w:tr>/g) ?? [];
+  // Sem a linha vazia de respiro abaixo do traço do cabeçalho (`table.ts`),
+  // que tem altura exata e também repete.
+  const linhas = (grade!.match(/<w:tr>[\s\S]*?<\/w:tr>/g) ?? []).filter(
+    (linha) => !linha.includes('w:hRule="exact"'),
+  );
   expect(linhas).toHaveLength(3);
   for (const linha of linhas) expect(linha.match(/<w:tc>/g)).toHaveLength(3);
-  expect(grade!.match(/<w:tblHeader\/>/g)).toHaveLength(1);
+  expect(grade!.match(/<w:tblHeader\/>/g)).toHaveLength(2);
   expect(grade).toContain(">novo</w:t>");
 });

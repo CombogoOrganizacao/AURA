@@ -1,5 +1,6 @@
 import {
   BorderStyle,
+  HeightRule,
   type IBorderOptions,
   Paragraph,
   Table,
@@ -74,10 +75,20 @@ import { runsDeTrechos } from "./trechos";
 // 1,5, o Word põe a meia linha a mais embaixo do texto. O cabeçalho ficava
 // colado no traço de cima, e a primeira linha de dados no traço do
 // cabeçalho, enquanto a última linha ficava longe do traço de baixo.
-// `RESPIRO` devolve essa meia linha em cima, na primeira linha do cabeçalho
-// e na primeira linha de dados, e o espaço fica igual dos dois lados de cada
-// traço (a usuária pediu na conferência de 13/10/2026). Na tela não precisa:
-// o navegador já divide a entrelinha meio a meio.
+// `RESPIRO` devolve essa meia linha em cima, e o espaço fica igual dos dois
+// lados de cada traço (a usuária pediu na conferência de 13/10/2026). Na
+// tela não precisa: o navegador já divide a entrelinha meio a meio.
+//
+// - Na primeira linha do cabeçalho, como espaço antes do texto. Ela se
+//   repete em cada página, e o espaço vai junto.
+// - Abaixo do traço do cabeçalho, como uma **linha vazia de altura exata**,
+//   também marcada para repetir (`linhaDeRespiro()`). O espaço não pode ir na
+//   primeira linha de dados: o `.docx` não sabe onde o Word vai quebrar a
+//   página, e na página seguinte a primeira linha de dados é outra, que
+//   encostava no traço. Escolha da usuária, sabendo o custo: ao editar no
+//   Word aparece essa linha fina, e o Verificador de Acessibilidade dele pode
+//   apontar célula vazia usada para formatação.
+// - Sem cabeçalho, nada se repete, e o espaço vai antes do texto da linha 0.
 //
 // Largura das colunas pelo texto das
 // células (`proporcoesDasColunas`, document/elements/tabela.ts), a mesma do
@@ -126,6 +137,23 @@ function celulaDocx(
   });
 }
 
+// A linha vazia abaixo do traço do cabeçalho (ver o cabeçalho deste arquivo).
+// Altura exata: o parágrafo vazio de 12 pt não a estica.
+function linhaDeRespiro(larguras: readonly number[]): TableRow {
+  return new TableRow({
+    tableHeader: true,
+    height: { value: RESPIRO, rule: HeightRule.EXACT },
+    children: larguras.map(
+      (largura) =>
+        new TableCell({
+          width: { size: largura, type: WidthType.DXA },
+          borders: { top: SEM_TRACO, bottom: SEM_TRACO, left: SEM_TRACO, right: SEM_TRACO },
+          children: [new Paragraph({ style: "CelulaTabela" })],
+        }),
+    ),
+  });
+}
+
 // `null` para tabela sem linha nenhuma: `<w:tbl>` sem `<w:tr>` é OOXML
 // inválido. O schema do editor não a produz (`linha_tabela+`), mas o
 // `Documento` pode chegar de outro caminho, e o arquivo não pode quebrar por
@@ -147,14 +175,16 @@ export function tabelaDocx(no: NoTabela, references: readonly Referencia[]): Tab
             celula,
             larguras[coluna],
             { top: indice === 0, bottom: indice === cabecalho - 1 },
-            // A primeira do cabeçalho e a primeira de dados. Sem cabeçalho,
-            // as duas são a mesma: a linha 0.
-            indice === 0 || indice === cabecalho,
+            // A primeira do cabeçalho, ou a primeira de todas sem cabeçalho.
+            indice === 0,
             references,
           ),
         ),
       }),
   );
+  if (cabecalho > 0 && cabecalho < no.linhas.length) {
+    rows.splice(cabecalho, 0, linhaDeRespiro(larguras));
+  }
 
   return new Table({
     width: { size: larguras.reduce((total, largura) => total + largura, 0), type: WidthType.DXA },

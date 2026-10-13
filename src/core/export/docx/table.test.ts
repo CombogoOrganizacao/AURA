@@ -49,8 +49,19 @@ function tabelas(xml: string): string[] {
   return xml.match(/<w:tbl>[\s\S]*?<\/w:tbl>/g) ?? [];
 }
 
-function linhasXml(tbl: string): string[] {
+function todasAsLinhasXml(tbl: string): string[] {
   return tbl.match(/<w:tr>[\s\S]*?<\/w:tr>|<w:tr [\s\S]*?<\/w:tr>/g) ?? [];
+}
+
+// A linha vazia de altura exata abaixo do traço do cabeçalho (o respiro que
+// se repete a cada página) não é linha do aluno.
+function ehLinhaDeRespiro(tr: string): boolean {
+  return /<w:trHeight [^>]*w:hRule="exact"/.test(tr);
+}
+
+// As linhas do aluno, sem a de respiro.
+function linhasXml(tbl: string): string[] {
+  return todasAsLinhasXml(tbl).filter((tr) => !ehLinhaDeRespiro(tr));
 }
 
 function celulasXml(tr: string): string[] {
@@ -271,9 +282,9 @@ describe("estilo CelulaTabela", () => {
   });
 
   // A entrelinha 1,5 põe a meia linha a mais embaixo do texto; o respiro a
-  // devolve em cima, na linha logo depois de cada traço: a primeira do
-  // cabeçalho e a primeira de dados.
-  it("a primeira linha do cabeçalho e a primeira de dados levam respiro acima do texto", async () => {
+  // devolve logo depois de cada traço. Abaixo do traço do cabeçalho ele é uma
+  // linha vazia que se repete, para valer também nas páginas seguintes.
+  it("respiro acima do cabeçalho e, abaixo do traço dele, numa linha vazia que repete", async () => {
     const respiro = /<w:spacing w:before="140"\/>/;
     const duas = tabela([
       linha(["Região", "Ano"], true),
@@ -281,19 +292,42 @@ describe("estilo CelulaTabela", () => {
       linha(["Brasil", "42,74"]),
       linha(["Região I", "45,38"]),
     ]);
-    const [primeira, segunda, dados, outra] = linhasXml(tabelas((await pacote(duas)).documento)[0]);
+    const trs = todasAsLinhasXml(tabelas((await pacote(duas)).documento)[0]);
+    const [primeira, segunda, vazia, dados, outra] = trs;
 
     for (const tc of celulasXml(primeira)) expect(tc).toMatch(respiro);
     expect(segunda).not.toContain("w:before");
-    for (const tc of celulasXml(dados)) expect(tc).toMatch(respiro);
-    expect(outra).not.toContain("w:before");
 
-    // Sem cabeçalho, só a primeira linha, a que fica sob o traço do topo.
-    const [unica, seguinte] = linhasXml(
+    // A linha vazia logo depois do cabeçalho: 7 pt exatos, repetida, sem
+    // texto e sem traço (o traço é o de baixo da linha anterior).
+    expect(ehLinhaDeRespiro(vazia)).toBe(true);
+    expect(vazia).toContain('<w:trHeight w:val="140" w:hRule="exact"/>');
+    expect(vazia).toContain("<w:tblHeader/>");
+    expect(vazia).not.toMatch(/<w:t[ >]/);
+    expect(celulasXml(vazia)).toHaveLength(2);
+    for (const tc of celulasXml(vazia)) expect(borda(bordasDaCelula(tc), "top")).toBe("none");
+
+    for (const tr of [dados, outra]) {
+      expect(tr).not.toContain("w:before");
+      expect(tr).not.toContain("<w:tblHeader/>");
+    }
+    expect(trs.filter(ehLinhaDeRespiro)).toHaveLength(1);
+  });
+
+  it("sem cabeçalho, ou só com cabeçalho, não há linha vazia", async () => {
+    const respiro = /<w:spacing w:before="140"\/>/;
+    // Sem cabeçalho nada repete: o respiro vai na linha 0, sob o traço do topo.
+    const semCabecalho = todasAsLinhasXml(
       tabelas((await pacote(tabela([linha(["Brasil", "42,74"]), linha(["Sul", "50"])]))).documento)[0],
     );
-    for (const tc of celulasXml(unica)) expect(tc).toMatch(respiro);
-    expect(seguinte).not.toContain("w:before");
+    expect(semCabecalho.filter(ehLinhaDeRespiro)).toHaveLength(0);
+    for (const tc of celulasXml(semCabecalho[0])) expect(tc).toMatch(respiro);
+    expect(semCabecalho[1]).not.toContain("w:before");
+
+    const soCabecalho = todasAsLinhasXml(
+      tabelas((await pacote(tabela([linha(["Região", "Ano"], true)]))).documento)[0],
+    );
+    expect(soCabecalho.filter(ehLinhaDeRespiro)).toHaveLength(0);
   });
 
   // Centralizada desde 13/10/2026, cabeçalho e dados: o IBGE não fixa o
