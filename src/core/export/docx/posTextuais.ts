@@ -12,6 +12,7 @@ import type { Documento, ElementoPosTextual, NoConteudo } from "../../document/t
 import { semVaziosNasPontas } from "../../document/vaziosNasPontas";
 import type { Referencia } from "../../references/types";
 import { ABNT } from "./constants";
+import { paragrafoFormula } from "./formula";
 import { paragrafoTituloPosTextual } from "./preTextuais";
 import type { NotasDeRodape } from "./notas";
 import { runsDeTrechos } from "./trechos";
@@ -49,10 +50,11 @@ function paragrafoDeTexto(children: ParagraphChild[]): Paragraph {
 // daria "Figura 0" em silêncio, e numerar ilustração de apêndice é regra que a
 // auditoria do 3.1.1 não cobriu.
 //
-// Hoje isto é inalcançável: não existe UI que crie apêndice (registrado no
-// 3.7.1), então `content` é sempre vazio. O aviso existe para o dia em que
-// existir — perder uma figura em silêncio é o desfecho que este projeto já
-// recusou na grade da tabela (`fromDocumento.ts`).
+// A tela não edita o conteúdo de apêndice e anexo (registrado no 3.7.1); ele
+// chega pela importação do `.tex` (6.2.4 e 6.2.5), que traz parágrafo,
+// citação e fórmula, e figura e tabela como marca de posição. O aviso existe
+// para esses dois: perder uma figura em silêncio é o desfecho que este
+// projeto já recusou na grade da tabela (`fromDocumento.ts`).
 //
 // Negrito, itálico e citações pelos mesmos trechos do corpo (passo 4B.2).
 function paragrafoDeConteudo(
@@ -70,7 +72,10 @@ function paragrafoDeConteudo(
     });
   }
 
-  if (no.type === "formula") return paragrafoDeTexto([new TextRun(no.texto)]);
+  // A mesma equação do corpo: a fórmula não leva número (a v1 não numera),
+  // então o motivo acima não vale para ela. Até o fechamento ela saía como
+  // o código LaTeX, em texto: sobra de antes do passo 6.1.4.
+  if (no.type === "formula") return paragrafoFormula(no);
 
   return new Paragraph({
     children: [

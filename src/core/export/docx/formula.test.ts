@@ -138,6 +138,20 @@ describe("fórmula no .docx como equação do Word (OMML)", () => {
     expect(texto).not.toContain("<m:acc>");
   });
 
+  // Achado na conferência do fechamento: no anexo, a fórmula saía como o
+  // código LaTeX, em texto ("E = mc^2").
+  it("fórmula em apêndice e em anexo sai como equação, como no corpo", async () => {
+    const documento: Documento = novoDocumento();
+    documento.apendices = [{ id: "ap1", titulo: "Cálculo", content: [{ type: "formula", texto: "a^2" }] }];
+    documento.anexos = [{ id: "an1", titulo: "Lei", content: [{ type: "formula", texto: "E = mc^2" }] }];
+    const zip = await JSZip.loadAsync(await Packer.toBuffer(fromDocumento(documento)));
+    const xml = await zip.file("word/document.xml")!.async("string");
+
+    expect(xml.match(/<m:oMath>/g)).toHaveLength(2);
+    expect(xml).not.toContain("mc^2");
+    expect(xml).toMatch(/ANEXO A — LEI[\s\S]*<m:sSup>/);
+  });
+
   it("LaTeX inválido sai como o próprio código-fonte, em texto", async () => {
     const xml = await paragrafoDaFormula("\\frac{a");
     expect(xml).not.toContain("<m:oMath>");
