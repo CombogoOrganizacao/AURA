@@ -183,6 +183,27 @@ describe("fórmula no .docx — delimitadores, limites e espaços", () => {
     ]);
   });
 
+  // Achado na conferência do fechamento: o `lim` sob `\underset` virava uma
+  // função do Word sem argumento, que o Word desenha como um quadrado
+  // tracejado, e o `f` ficava de fora. Agora sai igual ao `\lim_{x \to 0}`.
+  it("\\underset{x \\to 0}{\\lim} f(x) leva o f como argumento, sem função vazia", async () => {
+    const sob = await paragrafoDaFormula(String.raw`\underset{x \to 0}{\lim} f(x)`);
+    expect(sob).not.toContain("<m:e/>");
+    expect(sob.match(/<m:func>/g)).toHaveLength(1);
+    expect(sob).toMatch(/<m:fName><m:limLow>[\s\S]*<\/m:fName><m:e><m:r>(<w:rPr>[\s\S]*?<\/w:rPr>)?<m:t>f<\/m:t>/);
+
+    const direto = await paragrafoDaFormula(String.raw`\lim_{x \to 0} f(x)`);
+    expect(textos(sob)).toEqual(textos(direto));
+  });
+
+  it("nome de função sem argumento sai só como o nome", async () => {
+    for (const latex of [String.raw`\sin`, String.raw`\underset{x \to 0}{\lim}`]) {
+      const xml = await paragrafoDaFormula(latex);
+      expect(xml).not.toContain("<m:func>");
+      expect(xml).not.toContain("<m:e/>");
+    }
+  });
+
   it("espaço (\\quad) não vira texto", async () => {
     expect(textos(await paragrafoDaFormula(String.raw`a \quad b`))).toEqual(["a", "b"]);
   });

@@ -165,6 +165,12 @@ function ehMo(no: NoMathml | undefined, texto?: string): boolean {
   return no?.tag === "mo" && (texto === undefined || no.texto === texto);
 }
 
+// Token sem texto próprio, com um filho só: o embrulho que o KaTeX põe em
+// `\overset` e `\underset` (ver `converter()`).
+function ehTokenQueEmbrulha(no: NoMathml): boolean {
+  return ["mi", "mo"].includes(no.tag) && no.texto === "" && no.filhos.length === 1;
+}
+
 function ehFence(no: NoMathml | undefined): no is NoMathml {
   return ehMo(no) && no!.atributos.fence === "true";
 }
@@ -181,8 +187,12 @@ function operadorNario(no: NoMathml): string | null {
 
 // `sin x`, `log_2 x`, `lim_{x→0} f`: o KaTeX marca o nome da função com o
 // caractere invisível de aplicação de função (U+2061), logo depois dele — ou
-// no fim da base, no caso do `lim` com limite embaixo.
+// no fim da base, no caso do `lim` com limite embaixo. O token sem texto que
+// embrulha estrutura (`\underset{x \to 0}{\lim}` sai como `<mi>` em volta do
+// `<munder>`, ver `converter()`) é transparente: a pergunta vale para o que
+// ele embrulha.
 function terminaEmAplicacao(no: NoMathml): boolean {
+  if (ehTokenQueEmbrulha(no)) return terminaEmAplicacao(no.filhos[0]);
   const ultimo = no.filhos.at(-1);
   if (ehMo(ultimo, "⁡")) return true;
   const base = no.filhos[0];
@@ -225,23 +235,26 @@ function lista(nos: readonly NoMathml[], registro: Registro): MathComponent[] {
     }
 
     const seguinte = nos[i + 1];
-    // Nome de função sem nada depois: é o `lim` dentro do próprio limite
-    // (`munder`), e a função já é montada um nível acima, com o argumento.
-    if (ehMo(seguinte, "⁡") && nos[i + 2] === undefined) {
-      saida.push(...converter(no, registro));
-      i += 1;
-      continue;
-    }
-    if (ehMo(seguinte, "⁡") ||(no.tag !== "mrow" && terminaEmAplicacao(no))) {
+    if (ehMo(seguinte, "⁡") || (no.tag !== "mrow" && terminaEmAplicacao(no))) {
       const pulo = ehMo(seguinte, "⁡") ? 1 : 0;
       const argumento = nos[i + 1 + pulo];
+      // Nome de função sem nada depois sai só como o nome. É o `lim` dentro
+      // do próprio limite (`munder`), cuja função é montada um nível acima,
+      // com o argumento; ou um `\sin` sozinho. Função do Word com argumento
+      // vazio aparece como um quadrado tracejado (achado no fechamento, com
+      // o `\underset{x \to 0}{\lim} f(x)`).
+      if (!argumento) {
+        saida.push(...converter(no, registro));
+        i += pulo;
+        continue;
+      }
       saida.push(
         new MathFunction({
           name: converter(no, registro),
-          children: argumento ? converter(argumento, registro) : [],
+          children: converter(argumento, registro),
         }),
       );
-      i += pulo + (argumento ? 1 : 0);
+      i += pulo + 1;
       continue;
     }
 
