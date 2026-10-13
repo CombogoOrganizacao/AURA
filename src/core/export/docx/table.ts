@@ -70,11 +70,14 @@ import { runsDeTrechos } from "./trechos";
 // exemplos dele e os que a usuária trouxe centralizam; decisão dela em
 // 13/10/2026. O mesmo na tela e no `.tex`.
 //
-// **Respiro acima da primeira linha do cabeçalho.** Com entrelinha 1,5, o
-// Word põe a meia linha a mais embaixo do texto, e entre os dois traços o
-// cabeçalho ficava colado no de cima. `RESPIRO_DO_CABECALHO` devolve essa
-// meia linha em cima (a usuária pediu na conferência de 13/10/2026). Na tela
-// não precisa: o navegador já divide a entrelinha meio a meio.
+// **Respiro acima da linha que vem logo depois de um traço.** Com entrelinha
+// 1,5, o Word põe a meia linha a mais embaixo do texto. O cabeçalho ficava
+// colado no traço de cima, e a primeira linha de dados no traço do
+// cabeçalho, enquanto a última linha ficava longe do traço de baixo.
+// `RESPIRO` devolve essa meia linha em cima, na primeira linha do cabeçalho
+// e na primeira linha de dados, e o espaço fica igual dos dois lados de cada
+// traço (a usuária pediu na conferência de 13/10/2026). Na tela não precisa:
+// o navegador já divide a entrelinha meio a meio.
 //
 // Largura das colunas pelo texto das
 // células (`proporcoesDasColunas`, document/elements/tabela.ts), a mesma do
@@ -85,7 +88,7 @@ const SEM_TRACO: IBorderOptions = { style: BorderStyle.NONE, size: 0, color: "au
 
 // Meia linha simples de 12 pt, em twips: a linha da Times e da Arial mede
 // ~13,8 pt (1,15 do corpo), e a entrelinha 1,5 soma metade disso, ~6,9 pt.
-const RESPIRO_DO_CABECALHO = 140;
+const RESPIRO = 140;
 
 // Quantas linhas formam o cabeçalho: `document/elements/tabela.ts`, desde o
 // passo 6.2.1, porque o `.tex` usa a mesma divisão.
@@ -117,7 +120,7 @@ function celulaDocx(
       new Paragraph({
         children: runs,
         style: "CelulaTabela",
-        ...(respiro ? { spacing: { before: RESPIRO_DO_CABECALHO } } : {}),
+        ...(respiro ? { spacing: { before: RESPIRO } } : {}),
       }),
     ],
   });
@@ -144,7 +147,9 @@ export function tabelaDocx(no: NoTabela, references: readonly Referencia[]): Tab
             celula,
             larguras[coluna],
             { top: indice === 0, bottom: indice === cabecalho - 1 },
-            indice === 0 && cabecalho > 0,
+            // A primeira do cabeçalho e a primeira de dados. Sem cabeçalho,
+            // as duas são a mesma: a linha 0.
+            indice === 0 || indice === cabecalho,
             references,
           ),
         ),

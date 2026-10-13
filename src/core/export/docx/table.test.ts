@@ -271,21 +271,29 @@ describe("estilo CelulaTabela", () => {
   });
 
   // A entrelinha 1,5 põe a meia linha a mais embaixo do texto; o respiro a
-  // devolve em cima, só na primeira linha do cabeçalho.
-  it("só a primeira linha do cabeçalho leva respiro acima do texto", async () => {
+  // devolve em cima, na linha logo depois de cada traço: a primeira do
+  // cabeçalho e a primeira de dados.
+  it("a primeira linha do cabeçalho e a primeira de dados levam respiro acima do texto", async () => {
+    const respiro = /<w:spacing w:before="140"\/>/;
     const duas = tabela([
       linha(["Região", "Ano"], true),
       linha(["", "1940"], true),
       linha(["Brasil", "42,74"]),
+      linha(["Região I", "45,38"]),
     ]);
-    const [primeira, segunda, corpo] = linhasXml(tabelas((await pacote(duas)).documento)[0]);
+    const [primeira, segunda, dados, outra] = linhasXml(tabelas((await pacote(duas)).documento)[0]);
 
-    for (const tc of celulasXml(primeira)) expect(tc).toMatch(/<w:spacing w:before="140"\/>/);
+    for (const tc of celulasXml(primeira)) expect(tc).toMatch(respiro);
     expect(segunda).not.toContain("w:before");
-    expect(corpo).not.toContain("w:before");
+    for (const tc of celulasXml(dados)) expect(tc).toMatch(respiro);
+    expect(outra).not.toContain("w:before");
 
-    const semCabecalho = tabela([linha(["Brasil", "42,74"])]);
-    expect(tabelas((await pacote(semCabecalho)).documento)[0]).not.toContain("w:before");
+    // Sem cabeçalho, só a primeira linha, a que fica sob o traço do topo.
+    const [unica, seguinte] = linhasXml(
+      tabelas((await pacote(tabela([linha(["Brasil", "42,74"]), linha(["Sul", "50"])]))).documento)[0],
+    );
+    for (const tc of celulasXml(unica)) expect(tc).toMatch(respiro);
+    expect(seguinte).not.toContain("w:before");
   });
 
   // Centralizada desde 13/10/2026, cabeçalho e dados: o IBGE não fixa o
