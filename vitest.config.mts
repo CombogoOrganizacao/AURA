@@ -4,6 +4,10 @@ export default defineConfig({
   test: {
     include: ["src/core/**/*.test.ts"],
     environment: "node",
+    // Avisa os testes de tempo que a cobertura está ligada: a instrumentação
+    // conta cada volta de laço e deixa o código até 20 vezes mais lento, e um
+    // orçamento medido sem ela não vale com ela (ver lerTex.test.ts).
+    env: { AURA_COBERTURA: process.argv.some((arg) => arg.startsWith("--coverage")) ? "1" : "" },
 
     // Cobertura de `src/core/` (passo 6.6.2): `npm run test:coverage`, e no
     // CI a cada push, com o relatório HTML como artefato.

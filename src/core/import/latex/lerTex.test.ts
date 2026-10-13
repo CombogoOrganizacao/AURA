@@ -210,6 +210,15 @@ describe("lerTex: arquivo hostil não trava a aba", () => {
   const comParagrafo = (paragrafo: string) => tex.replace("Perguntas aplicadas.", paragrafo);
 
   // Cada caso seria quadrático (ou estouraria a pilha) com a busca ingênua.
+  //
+  // Sob cobertura, o orçamento é maior. O pior caso ("opcionais sem
+  // fechamento") percorre 2.000 caracteres por `[` sem par, num laço que a
+  // instrumentação deixa 20 vezes mais lento: 0,4 s viram 7 s, e o teste
+  // caía no `npm run test:coverage` do CI sem nada ter piorado. A busca
+  // quadrática, que é o que este teste pega, levou 28 s sem cobertura
+  // (medido em 13/10/2026, tirando o limite de `fechaColchete()`); com ela,
+  // passa longe dos 60 s.
+  const orcamento = process.env.AURA_COBERTURA ? 60_000 : 5_000;
   it.each([
     ["chaves sem fechamento", "{".repeat(200_000)],
     ["chaves aninhadas", `${"{".repeat(100_000)}x${"}".repeat(100_000)}`],
@@ -230,8 +239,10 @@ describe("lerTex: arquivo hostil não trava a aba", () => {
     const inicio = performance.now();
     const resultado = lerTex(comParagrafo(paragrafo));
     expect(resultado.ok).toBe(true);
-    expect(performance.now() - inicio).toBeLessThan(5_000);
-  });
+    expect(performance.now() - inicio).toBeLessThan(orcamento);
+    // O tempo-limite do Vitest (5 s por padrão) também precisa da folga; com
+    // o dobro, quem acusa o estouro é a asserção acima, que diz quanto levou.
+  }, 2 * orcamento);
 
   it("chaves aninhadas demais entram como texto, com aviso", () => {
     const lido = ler(comParagrafo(`${"{".repeat(100)}x${"}".repeat(100)}`));
