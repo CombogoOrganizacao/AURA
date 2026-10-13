@@ -61,8 +61,12 @@ test.describe("axe: nenhuma violação WCAG 2.1 AA detectável", () => {
 
     await page.getByRole("banner").getByRole("button", { name: "Exportar", exact: true }).click();
     // O .zip é montado ao abrir a janela; varrer no meio da montagem pega o
-    // botão em transição de cor, entre desabilitado e pronto.
-    await expect(page.getByRole("button", { name: "Baixar .zip" })).toBeEnabled();
+    // botão em transição de cor, entre desabilitado e pronto. Habilitado não
+    // basta: o atributo muda na hora, e a cor leva a transição do botão
+    // (`--dur-fast`). O axe chegou a medir no meio dela (13/10/2026).
+    const baixarZip = page.getByRole("button", { name: "Baixar .zip" });
+    await expect(baixarZip).toBeEnabled();
+    await expect.poll(() => baixarZip.evaluate((botao) => botao.getAnimations().length)).toBe(0);
     await semViolacoes(page, "janela de exportação");
   });
 });
