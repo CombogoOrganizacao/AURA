@@ -49,7 +49,8 @@ test("seção com texto: o menu do painel pede confirmação, e Ctrl+Z traz de v
 });
 
 test("a única seção não pode ser apagada", async ({ page }) => {
-  // O painel só lista a seção depois da primeira edição do documento novo.
+  // O documento novo já nasce com a seção 1 no painel; o título só dá a ela um
+  // nome para achar o botão.
   await page.getByLabel("1 Título da seção").fill("Introdução");
   await page.locator(".ProseMirror p").first().click();
   await expect(page.getByRole("button", { name: /^Apagar a seção atual/ })).toBeDisabled();
