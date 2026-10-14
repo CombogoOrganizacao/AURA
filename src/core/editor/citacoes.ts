@@ -1,6 +1,7 @@
 import type { Mark, Node as NoPM } from "@tiptap/pm/model";
 
-import type { AtributosCitacao } from "../document/types";
+import type { AcrescimosCitacao, AtributosCitacao } from "../document/types";
+import { lerAtributosCitacao } from "./marks/citation";
 
 // Onde estão as citações dentro da árvore do editor, em posições do
 // ProseMirror — passo 4.10. É o que o plugin da tela
@@ -18,7 +19,7 @@ export type FaixaCitacao =
   // Citação longa: a ligação é do bloco, e a chamada vai no fim do conteúdo
   // dele (10520 §7.1.1, exemplo: "... de qualquer dimensão (Nichols, 1993,
   // p. 181).").
-  | { tipo: "longa"; fimDoConteudo: number; refId: string; pagina: string };
+  | ({ tipo: "longa"; fimDoConteudo: number; refId: string; pagina: string } & AcrescimosCitacao);
 
 export function faixasDeCitacao(doc: NoPM): FaixaCitacao[] {
   const faixas: FaixaCitacao[] = [];
@@ -30,6 +31,8 @@ export function faixasDeCitacao(doc: NoPM): FaixaCitacao[] {
         fimDoConteudo: pos + no.nodeSize - 1,
         refId: no.attrs.refId,
         pagina: typeof no.attrs.pagina === "string" ? no.attrs.pagina : "",
+        ...(no.attrs.grifoNosso === true ? { grifoNosso: true as const } : {}),
+        ...(no.attrs.traducaoNossa === true ? { traducaoNossa: true as const } : {}),
       });
     }
     if (!no.isTextblock) return true;
@@ -54,7 +57,9 @@ export function faixasDeCitacao(doc: NoPM): FaixaCitacao[] {
         tipo: "marca",
         de: inicio,
         ate: inicio + filho.nodeSize,
-        attrs: marca.attrs as AtributosCitacao,
+        // Pelo mesmo leitor da serialização: no editor o grifo desmarcado é
+        // `false`, e no tipo ele é ausente.
+        attrs: lerAtributosCitacao(marca.attrs) ?? (marca.attrs as AtributosCitacao),
       };
       marcaAberta = marca;
       faixas.push(aberta);

@@ -13,6 +13,7 @@
 //   `citacoesOrfas()` — não há estado "órfã" para sincronizar.
 
 import type {
+  AcrescimosCitacao,
   AtributosCitacao,
   Documento,
   ElementoPosTextual,
@@ -149,7 +150,9 @@ export function mesmaCitacao(a: AtributosCitacao, b: AtributosCitacao): boolean 
     a.refId === b.refId &&
     a.modo === b.modo &&
     a.pagina === b.pagina &&
-    JSON.stringify(a.apud) === JSON.stringify(b.apud)
+    JSON.stringify(a.apud) === JSON.stringify(b.apud) &&
+    Boolean(a.grifoNosso) === Boolean(b.grifoNosso) &&
+    Boolean(a.traducaoNossa) === Boolean(b.traducaoNossa)
   );
 }
 
@@ -172,15 +175,19 @@ export interface ChamadaExibida {
 // se a referência sumiu, o aviso de órfã. Uma função só para as duas formas
 // de citar — marca inline e citação longa — para a tela e, depois, a
 // exportação não terem cada uma a sua regra.
+export type CitacaoParaChamada = Pick<AtributosCitacao, "refId" | "pagina"> &
+  AcrescimosCitacao & { apud?: AtributosCitacao["apud"] };
+
 export function chamadaDaCitacao(
-  citacao: Pick<AtributosCitacao, "refId" | "pagina"> & { apud?: AtributosCitacao["apud"] },
+  citacao: CitacaoParaChamada,
   references: readonly Referencia[],
   opcoes?: OpcoesChamada,
 ): ChamadaExibida {
   const referencia = references.find((item) => item.id === citacao.refId);
   if (!referencia) return { texto: "(referência excluída)", orfa: true };
+  const { pagina, apud, grifoNosso, traducaoNossa } = citacao;
   return {
-    texto: formatarChamada(referencia, { pagina: citacao.pagina, apud: citacao.apud }, opcoes),
+    texto: formatarChamada(referencia, { pagina, apud, grifoNosso, traducaoNossa }, opcoes),
     orfa: false,
   };
 }

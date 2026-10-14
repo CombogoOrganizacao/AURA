@@ -7,6 +7,8 @@ export interface CitacaoLongaOptions {
 export interface CitacaoLongaAttributes {
   refId: string | null;
   pagina: string;
+  grifoNosso: boolean;
+  traducaoNossa: boolean;
 }
 
 // Nó `citacao_longa` do editor — ver docs/schema-tiptap.md §4.3 (NBR 10520:
@@ -62,6 +64,18 @@ export const CitacaoLonga = Node.create<CitacaoLongaOptions>({
         default: "",
         parseHTML: (element) => element.getAttribute("data-pagina") ?? "",
         renderHTML: (attributes) => ({ "data-pagina": attributes.pagina }),
+      },
+      // "Grifo nosso" e "tradução nossa" (NBR 10520:2023 §7.1.5 e §7.1.6), os
+      // mesmos da marca `citacao`: a longa também é citação direta.
+      grifoNosso: {
+        default: false,
+        parseHTML: (element) => element.hasAttribute("data-grifo-nosso"),
+        renderHTML: (attributes) => (attributes.grifoNosso ? { "data-grifo-nosso": "" } : {}),
+      },
+      traducaoNossa: {
+        default: false,
+        parseHTML: (element) => element.hasAttribute("data-traducao-nossa"),
+        renderHTML: (attributes) => (attributes.traducaoNossa ? { "data-traducao-nossa": "" } : {}),
       },
     };
   },

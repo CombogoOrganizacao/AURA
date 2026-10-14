@@ -142,6 +142,49 @@ test.describe("inserir citação pela interface (passo 4.10)", () => {
     await expect(chamadas(page)).toHaveText([" (Freire, 1987 apud Silva, 2019)"]);
   });
 
+  // NBR 10520:2023 §7.1.5 e §7.1.6: "como último elemento da chamada".
+  test("grifo nosso entra na chamada e sai ao ser desmarcado", async ({ page }) => {
+    await documentoComReferencias(page);
+    await escreverESelecionar(page, "O mundo se globaliza");
+    await abrirMenu(page);
+
+    await escolherModo(page, "Direta");
+    await dialogo(page).getByLabel("Página ou localização").fill("45");
+    await dialogo(page).getByText("Grifo nosso", { exact: true }).click();
+    await expect(dialogo(page).getByLabel("Prévia da chamada")).toHaveText(
+      "(Bauman, 1999, p. 45, grifo nosso)",
+    );
+    await dialogo(page).getByRole("button", { name: "Inserir citação" }).click();
+    await expect(chamadas(page)).toHaveText([" (Bauman, 1999, p. 45, grifo nosso)"]);
+
+    // Editar e desmarcar: o `setMark` mescla com os atributos antigos, e o
+    // grifo ficava se o menu não mandasse o `false`.
+    await page.locator(".ProseMirror .doc-citado").click();
+    await abrirMenu(page);
+    await dialogo(page).getByText("Grifo nosso", { exact: true }).click();
+    await dialogo(page).getByRole("button", { name: "Salvar citação" }).click();
+    await expect(chamadas(page)).toHaveText([" (Bauman, 1999, p. 45)"]);
+  });
+
+  test("tradução nossa na citação longa; a indireta não oferece as duas", async ({ page }) => {
+    await documentoComReferencias(page);
+    await page.locator(".ProseMirror p").first().click();
+    await page.keyboard.type("Um trecho traduzido de mais de três linhas.");
+    await abrirMenu(page);
+
+    await escolherModo(page, "Indireta");
+    await expect(dialogo(page).getByText("Tradução nossa", { exact: true })).toHaveCount(0);
+
+    await escolherModo(page, "Longa");
+    await dialogo(page).getByLabel("Página ou localização").fill("21");
+    await dialogo(page).getByText("Tradução nossa", { exact: true }).click();
+    await dialogo(page).getByRole("button", { name: "Inserir citação" }).click();
+
+    await expect(page.locator(".ProseMirror blockquote .doc-chamada")).toHaveText(
+      " (Bauman, 1999, p. 21, tradução nossa)",
+    );
+  });
+
   test("direta e indireta pedem um trecho selecionado", async ({ page }) => {
     await documentoComReferencias(page);
     await page.locator(".ProseMirror p").first().click();

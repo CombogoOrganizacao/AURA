@@ -29,7 +29,7 @@ describe("nó citacao_longa (passo 3.4.1)", () => {
     const json = doc.toJSON();
     expect(json.content[0]).toEqual({
       type: "citacao_longa",
-      attrs: { refId: "ref-1", pagina: "42" },
+      attrs: { refId: "ref-1", pagina: "42", grifoNosso: false, traducaoNossa: false },
       content: [{ type: "text", text: "Trecho citado com mais de três linhas." }],
     });
 
@@ -37,9 +37,9 @@ describe("nó citacao_longa (passo 3.4.1)", () => {
     expect(reconstruido.toJSON()).toEqual(json);
   });
 
-  it("usa refId nulo e pagina vazia como default quando não informados", () => {
+  it("usa refId nulo, pagina vazia e nenhum acréscimo como default quando não informados", () => {
     const no = schema.nodes.citacao_longa.create();
-    expect(no.attrs).toEqual({ refId: null, pagina: "" });
+    expect(no.attrs).toEqual({ refId: null, pagina: "", grifoNosso: false, traducaoNossa: false });
   });
 
   it("aceita conteúdo vazio, sem exigir texto", () => {

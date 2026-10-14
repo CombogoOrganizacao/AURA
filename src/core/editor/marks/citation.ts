@@ -1,6 +1,11 @@
 import { Mark, mergeAttributes } from "@tiptap/core";
 
-import type { AtributosCitacao, FonteOriginal, ModoCitacao } from "../../document/types";
+import type {
+  AcrescimosCitacao,
+  AtributosCitacao,
+  FonteOriginal,
+  ModoCitacao,
+} from "../../document/types";
 import type { CSLDate } from "../../references/types";
 
 // Marca `citacao` — docs/schema-tiptap.md §5.2, passo 4.8. Arquivo em inglês
@@ -40,6 +45,10 @@ export const Citacao = Mark.create({
       modo: { default: "indireta" },
       pagina: { default: null },
       apud: { default: null },
+      // §7.1.5 e §7.1.6 (ver `AcrescimosCitacao`). `false` no editor, ausente
+      // no formato canônico: `lerAtributosCitacao()` faz a ponte.
+      grifoNosso: { default: false },
+      traducaoNossa: { default: false },
     };
   },
 
@@ -62,6 +71,8 @@ export const Citacao = Mark.create({
             modo: elemento.getAttribute("data-modo"),
             pagina: elemento.getAttribute("data-pagina"),
             apud,
+            grifoNosso: elemento.hasAttribute("data-grifo-nosso"),
+            traducaoNossa: elemento.hasAttribute("data-traducao-nossa"),
           });
           return atributos ?? false;
         },
@@ -70,7 +81,7 @@ export const Citacao = Mark.create({
   },
 
   renderHTML({ HTMLAttributes, mark }) {
-    const { refId, modo, pagina, apud } = mark.attrs as AtributosCitacao;
+    const { refId, modo, pagina, apud, grifoNosso, traducaoNossa } = mark.attrs as AtributosCitacao;
     return [
       "span",
       mergeAttributes(HTMLAttributes, {
@@ -79,6 +90,8 @@ export const Citacao = Mark.create({
         "data-modo": modo,
         ...(pagina !== null ? { "data-pagina": pagina } : {}),
         ...(apud !== null ? { "data-apud": JSON.stringify(apud) } : {}),
+        ...(grifoNosso ? { "data-grifo-nosso": "" } : {}),
+        ...(traducaoNossa ? { "data-traducao-nossa": "" } : {}),
       }),
       0,
     ];
@@ -109,11 +122,30 @@ export function lerAtributosCitacao(valor: unknown): AtributosCitacao | null {
     if (!fonteOriginal) return null;
   }
 
+  const acrescimos = lerAcrescimos(valor);
+  if (!acrescimos) return null;
+
   return {
     refId,
     modo: modo as ModoCitacao,
     pagina: typeof pagina === "string" ? pagina : null,
     apud: fonteOriginal,
+    ...acrescimos,
+  };
+}
+
+// "Grifo nosso" e "tradução nossa" (§7.1.5, §7.1.6). Ausente ou `false` é
+// "não", e não fica no dado; `true` fica. Outro valor invalida a marca, pela
+// mesma política do resto: não se adivinha o que o dado quis dizer.
+//
+// Exportada para o nó `citacao_longa`, que guarda os mesmos dois campos.
+export function lerAcrescimos(valor: Record<string, unknown>): AcrescimosCitacao | null {
+  const { grifoNosso, traducaoNossa } = valor;
+  const valido = (campo: unknown) => campo === undefined || typeof campo === "boolean";
+  if (!valido(grifoNosso) || !valido(traducaoNossa)) return null;
+  return {
+    ...(grifoNosso === true ? { grifoNosso: true as const } : {}),
+    ...(traducaoNossa === true ? { traducaoNossa: true as const } : {}),
   };
 }
 

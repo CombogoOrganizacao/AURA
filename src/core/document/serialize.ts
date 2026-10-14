@@ -1,6 +1,6 @@
 import type { JSONContent } from "@tiptap/core";
 
-import { lerAtributosCitacao } from "../editor/marks/citation";
+import { lerAcrescimos, lerAtributosCitacao } from "../editor/marks/citation";
 import { lerAtributosSugestao } from "../editor/marks/suggestion";
 import type {
   CelulaTabela,
@@ -96,10 +96,15 @@ function paraNoConteudo(no: JSONContent): NoConteudo {
   if (no.type === "citacao_longa") {
     const conteudo = (no.content ?? []).map(paraNoInline);
     const { refId, pagina } = (no.attrs ?? {}) as { refId?: string | null; pagina?: string };
+    // Mesma regra da marca `citacao`: `true` fica no dado, `false` não, e
+    // outro valor lança em vez de virar "não" em silêncio.
+    const acrescimos = lerAcrescimos(no.attrs ?? {});
+    if (!acrescimos) throw new Error("Citação longa com grifo ou tradução inválidos");
     return {
       type: "citacao_longa",
       refId: refId ?? null,
       pagina: pagina ?? "",
+      ...acrescimos,
       ...(conteudo.length > 0 ? { content: conteudo } : {}),
     };
   }
@@ -268,7 +273,9 @@ function deNoTexto(texto: NoTexto): JSONContent {
     ...(texto.marks && texto.marks.length > 0
       ? {
           marks: texto.marks.map((marca) =>
-            "attrs" in marca ? { type: marca.type, attrs: { ...marca.attrs } } : { type: marca.type },
+            "attrs" in marca
+              ? { type: marca.type, attrs: { ...marca.attrs } }
+              : { type: marca.type },
           ),
         }
       : {}),
@@ -308,7 +315,12 @@ export function deNoConteudo(no: NoConteudo): JSONContent {
   if (no.type === "citacao_longa") {
     return {
       type: "citacao_longa",
-      attrs: { refId: no.refId, pagina: no.pagina },
+      attrs: {
+        refId: no.refId,
+        pagina: no.pagina,
+        grifoNosso: no.grifoNosso === true,
+        traducaoNossa: no.traducaoNossa === true,
+      },
       ...(conteudo ? { content: conteudo } : {}),
     };
   }

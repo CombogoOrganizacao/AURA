@@ -96,6 +96,40 @@ describe("montarReimportacao", () => {
     ]);
   });
 
+  // NBR 10520:2023 §7.1.5 e §7.1.6: o acréscimo vai no argumento opcional
+  // (`grifo={nosso}`, `traducao={nossa}`) e volta igual, na marca e na longa.
+  it("grifo nosso e tradução nossa vão ao .tex e voltam sem mudança", () => {
+    const comAcrescimos = documentoCompleto();
+    const paragrafo = comAcrescimos.sections[0].content[0];
+    if (paragrafo.type !== "paragraph") throw new Error("fixture mudou");
+    for (const no of paragrafo.content ?? []) {
+      if (no.type !== "text") continue;
+      for (const marca of no.marks ?? []) {
+        if (marca.type === "citacao" && marca.attrs.modo === "direta_curta") {
+          marca.attrs.grifoNosso = true;
+        }
+      }
+    }
+    const longa = comAcrescimos.sections[1].content[0];
+    if (longa.type !== "citacao_longa") throw new Error("fixture mudou");
+    longa.traducaoNossa = true;
+
+    const exportado = gerarTex(comAcrescimos, IMAGENS);
+    expect(exportado).toContain("modo={direta_curta}, pagina={35}, grifo={nosso}]");
+    expect(exportado).toContain("(Freire, 1987, p. 35, grifo nosso)");
+    expect(exportado).toContain("[pagina={181}, traducao={nossa}]");
+    expect(exportado).toContain("(Freire, 1987, p. 181, tradução nossa)");
+
+    const { documento, relatorio } = reimportar(comAcrescimos, exportado);
+    expect(relatorio.semMudancas).toBe(true);
+    expect(relatorio.avisos).toEqual([]);
+    expect(documento).toEqual(comAcrescimos);
+
+    // Apagar a chave no Overleaf tira o acréscimo.
+    const semGrifo = reimportar(comAcrescimos, exportado.replace(", grifo={nosso}", ""));
+    expect(semGrifo.relatorio.secoes.alteradas.map((secao) => secao.id)).toEqual(["s-intro"]);
+  });
+
   it("seção nova, removida, renomeada e movida vão para o relatório", () => {
     const inicioObj = tex.indexOf("% AURA-SECTION: s-obj");
     const inicioDev = tex.indexOf("% AURA-SECTION: s-dev");

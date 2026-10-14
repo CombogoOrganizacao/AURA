@@ -201,3 +201,45 @@ describe("chamada — exemplos da própria norma", () => {
     ).toBe("(Cagliari, 1986, p. 104 apud Suassuna, 1995, p. 55)");
   });
 });
+
+// "Como último elemento da chamada da citação" — §7.1.5 e §7.1.6, conferidos
+// no PDF da 10520:2023 em 14/10/2026.
+describe("grifo nosso e tradução nossa (§7.1.5, §7.1.6)", () => {
+  const SOUTO = livro([{ family: "Souto", given: "B." }], { issued: { "date-parts": [[1916]] } });
+  const OLIN = livro([{ family: "Olin", given: "Doris" }], { issued: { "date-parts": [[2003]] } });
+
+  it("§7.1.5, exemplo: grifo nosso depois da página", () => {
+    expect(formatarChamada(SOUTO, { pagina: "46", grifoNosso: true })).toBe(
+      "(Souto, 1916, p. 46, grifo nosso)",
+    );
+  });
+
+  it("§7.1.6, exemplo: tradução nossa depois da página", () => {
+    expect(formatarChamada(OLIN, { pagina: "21", traducaoNossa: true })).toBe(
+      "(Olin, 2003, p. 21, tradução nossa)",
+    );
+  });
+
+  it("sem página, o acréscimo vem logo depois da data", () => {
+    expect(formatarChamada(SOUTO, { grifoNosso: true })).toBe("(Souto, 1916, grifo nosso)");
+  });
+
+  it("os dois juntos: a tradução antes do grifo (convenção; a norma não tem exemplo)", () => {
+    expect(formatarChamada(OLIN, { pagina: "21", traducaoNossa: true, grifoNosso: true })).toBe(
+      "(Olin, 2003, p. 21, tradução nossa, grifo nosso)",
+    );
+  });
+
+  it("no apud, depois da fonte consultada: é o último elemento da chamada inteira", () => {
+    expect(
+      formatarChamada(
+        livro([{ family: "Canuto", given: "V." }], { issued: { "date-parts": [[1999]] } }),
+        {
+          pagina: "6",
+          grifoNosso: true,
+          apud: { author: [{ family: "Assis" }], issued: { "date-parts": [[1997]] }, pagina: null },
+        },
+      ),
+    ).toBe("(Assis, 1997 apud Canuto, 1999, p. 6, grifo nosso)");
+  });
+});

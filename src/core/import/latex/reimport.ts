@@ -383,6 +383,8 @@ function atributos(attrs: AtributosCitacao) {
     modo: attrs.modo,
     pagina: attrs.pagina ?? null,
     apud: attrs.apud ?? null,
+    grifoNosso: attrs.grifoNosso === true,
+    traducaoNossa: attrs.traducaoNossa === true,
   };
 }
 
@@ -426,7 +428,15 @@ function normalizar(content: readonly NoConteudo[]): unknown[] {
         return nos.length > 0 ? [{ p: nos }] : [];
       }
       case "citacao_longa":
-        return [{ longa: inline(no.content), refId: no.refId || null, pagina: no.pagina ?? "" }];
+        return [
+          {
+            longa: inline(no.content),
+            refId: no.refId || null,
+            pagina: no.pagina ?? "",
+            grifoNosso: no.grifoNosso === true,
+            traducaoNossa: no.traducaoNossa === true,
+          },
+        ];
       case "formula":
         return [{ formula: no.texto.replace(/\s+/g, " ").trim() }];
       case "figura":

@@ -68,7 +68,12 @@ function decorar(doc: NoPM, referencias: readonly Referencia[]): DecorationSet {
   for (const faixa of faixasDeCitacao(doc)) {
     if (faixa.tipo === "longa") {
       const chamada = chamadaDaCitacao(
-        { refId: faixa.refId, pagina: faixa.pagina || null },
+        {
+          refId: faixa.refId,
+          pagina: faixa.pagina || null,
+          grifoNosso: faixa.grifoNosso,
+          traducaoNossa: faixa.traducaoNossa,
+        },
         referencias,
       );
       decoracoes.push(widget(faixa.fimDoConteudo, ` ${chamada.texto}`, chamada.orfa, 1));

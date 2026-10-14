@@ -47,7 +47,21 @@ export interface FonteOriginal {
   pagina: string | null;
 }
 
-export interface AtributosCitacao {
+// O que o aluno fez com o trecho transcrito, e que a chamada declara como
+// último elemento (NBR 10520:2023): destacou parte dele (§7.1.5, "grifo
+// nosso") ou o traduziu (§7.1.6, "tradução nossa"). Só existe na citação
+// direta, curta ou longa: na indireta não há trecho transcrito.
+//
+// **Opcionais no tipo**, como os campos novos de `Metadados`: citação gravada
+// antes deles não os tem, e ausente significa "não". Sem migração. Quando
+// presentes, valem `true`: `lerAtributosCitacao()` não guarda `false`, para a
+// mesma citação não ter duas formas no dado.
+export interface AcrescimosCitacao {
+  grifoNosso?: true;
+  traducaoNossa?: true;
+}
+
+export interface AtributosCitacao extends AcrescimosCitacao {
   refId: string;
   modo: ModoCitacao;
   // Na citação direta, a página entra "se houver" (10520:2023 §6.1.3 e
@@ -145,7 +159,10 @@ export interface NoParagrafo {
 // não existe lista de referências editável (`Documento.references` fica
 // sempre `[]` na prática), então `refId: null`/`pagina: ""` é o estado real
 // de todo bloco criado hoje — ligar de verdade é trabalho da Fase 4.
-export interface NoCitacaoLonga {
+//
+// `AcrescimosCitacao`: a citação longa também é direta (§7.1.1), e o exemplo
+// da "tradução nossa" no §7.1.6 é justamente uma longa.
+export interface NoCitacaoLonga extends AcrescimosCitacao {
   type: "citacao_longa";
   refId: string | null;
   pagina: string;

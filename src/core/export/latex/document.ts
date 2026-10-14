@@ -33,6 +33,7 @@ import {
 import { tamanhoNaFolha, type FormatoImagem } from "../../document/imagem";
 import { ORDEM_CANONICA, parteDe, type ElementoDocumento } from "../../document/order";
 import type {
+  AcrescimosCitacao,
   AtributosCitacao,
   Documento,
   ElementoPosTextual,
@@ -108,7 +109,18 @@ function atributosLatex(attrs: AtributosCitacao): string {
   const pares = [`modo={${attrs.modo}}`];
   if (attrs.pagina) pares.push(`pagina={${escaparLatex(attrs.pagina)}}`);
   if (attrs.apud) pares.push(`apud={${escaparLatex(JSON.stringify(attrs.apud))}}`);
+  pares.push(...acrescimosLatex(attrs));
   return pares.join(", ");
+}
+
+// "Grifo nosso" e "tradução nossa" (10520:2023 §7.1.5 e §7.1.6), no mesmo
+// argumento opcional, na marca e na citação longa. A chamada impressa já os
+// traz; os atributos são para a reimportação saber de onde vieram.
+function acrescimosLatex(acrescimos: AcrescimosCitacao): string[] {
+  return [
+    ...(acrescimos.grifoNosso ? ["grifo={nosso}"] : []),
+    ...(acrescimos.traducaoNossa ? ["traducao={nossa}"] : []),
+  ];
 }
 
 function parteLatex(parte: ParteInline): string {
@@ -136,7 +148,11 @@ function citacaoLonga(no: NoCitacaoLonga, references: readonly Referencia[]): st
   // Sem `refId`, `trechosDaCitacaoLonga()` não acrescenta chamada.
   const chamada = no.refId ? trechos.at(-1) : undefined;
   const corpo = chamada ? trechos.slice(0, -1) : trechos;
-  const opcional = no.pagina ? `[pagina={${escaparLatex(no.pagina)}}]` : "";
+  const pares = [
+    ...(no.pagina ? [`pagina={${escaparLatex(no.pagina)}}`] : []),
+    ...acrescimosLatex(no),
+  ];
+  const opcional = pares.length > 0 ? `[${pares.join(", ")}]` : "";
   return [
     `\\begin{auracitacaolonga}${opcional}{${escaparLatex(no.refId ?? "")}}`,
     trechosLatex(corpo) + (chamada ? `\\aurachamada{${trechoLatex(chamada)}}` : ""),
@@ -190,7 +206,8 @@ function figura(no: NoFigura, imagens: ImagensParaTex): string {
       `{${caminhoDaImagem(no.imagem, imagem.formato)}}`;
   } else {
     // Mesmo aviso honesto do `.docx` para figura sem imagem.
-    objeto = "\\fbox{\\parbox{.6\\textwidth}{\\centering\\textit{[ espaço reservado para a imagem ]}}}";
+    objeto =
+      "\\fbox{\\parbox{.6\\textwidth}{\\centering\\textit{[ espaço reservado para a imagem ]}}}";
   }
   return [
     "\\begin{figure}[H]",
@@ -253,7 +270,9 @@ function tabela(no: NoTabela, references: readonly Referencia[]): string {
   };
 
   const linhasDoCabecalho = Array.from({ length: cabecalho }, (_, indice) => linhaLatex(indice));
-  const linhasDoCorpo = no.linhas.slice(cabecalho).map((_, indice) => linhaLatex(cabecalho + indice));
+  const linhasDoCorpo = no.linhas
+    .slice(cabecalho)
+    .map((_, indice) => linhaLatex(cabecalho + indice));
   const abaixoDoCabecalho = cabecalho > 0 ? ["\\midrule"] : [];
 
   return [

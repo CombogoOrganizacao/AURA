@@ -110,10 +110,59 @@ describe("fromDocumento / toDocumento", () => {
     const doc = fromDocumento(secoes);
     expect(doc.content?.[0]?.content?.[0]).toEqual({
       type: "citacao_longa",
-      attrs: { refId: "ref-1", pagina: "42" },
+      attrs: { refId: "ref-1", pagina: "42", grifoNosso: false, traducaoNossa: false },
       content: [{ type: "text", text: "Trecho citado com mais de três linhas." }],
     });
     expect(toDocumento(doc)).toEqual(secoes);
+  });
+
+  // NBR 10520:2023 §7.1.5 e §7.1.6. `true` vai e volta; `false` no editor não
+  // vira campo no canônico, para a longa gravada antes deles não mudar de
+  // forma ao ser salva de novo.
+  it("faz o round-trip de citação longa com grifo nosso e tradução nossa", () => {
+    const secoes: Secao[] = [
+      {
+        id: "s1",
+        ordem: 0,
+        nivel: 1,
+        titulo: "Revisão de literatura",
+        content: [
+          {
+            type: "citacao_longa",
+            refId: "ref-1",
+            pagina: "21",
+            grifoNosso: true,
+            traducaoNossa: true,
+            content: [{ type: "text", text: "Paradoxos são desconcertantes." }],
+          },
+        ],
+      },
+    ];
+
+    const doc = fromDocumento(secoes);
+    expect(doc.content?.[0]?.content?.[0]?.attrs).toEqual({
+      refId: "ref-1",
+      pagina: "21",
+      grifoNosso: true,
+      traducaoNossa: true,
+    });
+    expect(toDocumento(doc)).toEqual(secoes);
+  });
+
+  it("recusa citação longa com grifo que não é booleano", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "secao",
+          attrs: { id: "s1", nivel: 1, titulo: "Revisão" },
+          content: [
+            { type: "citacao_longa", attrs: { refId: "ref-1", pagina: "", grifoNosso: "sim" } },
+          ],
+        },
+      ],
+    };
+    expect(() => toDocumento(doc)).toThrow(/grifo ou tradução/);
   });
 
   it("citação longa sem refId/pagina preenchidos (sem UI pra isso ainda) faz round-trip com os defaults", () => {
@@ -130,7 +179,7 @@ describe("fromDocumento / toDocumento", () => {
     const doc = fromDocumento(secoes);
     expect(doc.content?.[0]?.content?.[0]).toEqual({
       type: "citacao_longa",
-      attrs: { refId: null, pagina: "" },
+      attrs: { refId: null, pagina: "", grifoNosso: false, traducaoNossa: false },
     });
     expect(toDocumento(doc)).toEqual([
       { ...secoes[0], content: [{ type: "citacao_longa", refId: null, pagina: "" }] },

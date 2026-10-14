@@ -19,8 +19,10 @@ import {
   MARCADOR_AURA,
   pularEspacos,
   type Fonte,
+  type Grupo,
 } from "./fonte";
 import {
+  acrescimosLidos,
   lerAtributos,
   lerInline,
   lerInlineDeCelula,
@@ -463,8 +465,10 @@ function citacaoLonga(ctx: ContextoInline, pos: number, dentro: Faixa): NoCitaca
   const opcional = lerOpcional(t, dentro.inicio, dentro.fim);
   const ref = lerGrupo(t, opcional?.depois ?? dentro.inicio, dentro.fim);
   const refId = ref ? textoPlano(ctx, ref.inicio, ref.fim, "a chave da citação") : "";
-  const paginaLida = opcional ? lerAtributos(t, opcional).get("pagina") : undefined;
+  const valores = opcional ? lerAtributos(t, opcional) : new Map<string, Grupo>();
+  const paginaLida = valores.get("pagina");
   const pagina = paginaLida ? textoPlano(ctx, paginaLida.inicio, paginaLida.fim, "a página") : "";
+  const acrescimos = acrescimosLidos(valores);
 
   let inicio = ref?.depois ?? dentro.inicio;
   let fim = dentro.fim;
@@ -475,7 +479,7 @@ function citacaoLonga(ctx: ContextoInline, pos: number, dentro: Faixa): NoCitaca
     if (grupo && t.slice(grupo.depois, fim).trim() === "") {
       ctx.chamadas.push({
         ...ctx.fonte.posicao(chamada),
-        citacao: { refId, pagina: pagina || null },
+        citacao: { refId, pagina: pagina || null, ...acrescimos },
         texto: textoPlano(ctx, grupo.inicio, grupo.fim, "a chamada"),
       });
       fim = chamada;
@@ -493,6 +497,7 @@ function citacaoLonga(ctx: ContextoInline, pos: number, dentro: Faixa): NoCitaca
     type: "citacao_longa",
     refId: refId || null,
     pagina,
+    ...acrescimos,
     ...(content.length > 0 ? { content } : {}),
   };
 }

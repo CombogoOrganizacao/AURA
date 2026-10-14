@@ -43,6 +43,8 @@ interface Formulario {
   apudPrenome: string;
   apudAno: string;
   apudPagina: string;
+  grifoNosso: boolean;
+  traducaoNossa: boolean;
 }
 
 interface MenuCitacaoProps {
@@ -91,6 +93,8 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
       apudPrenome: citacaoAtual?.apud?.author[0]?.given ?? "",
       apudAno: String(citacaoAtual?.apud?.issued?.["date-parts"]?.[0]?.[0] ?? ""),
       apudPagina: citacaoAtual?.apud?.pagina ?? "",
+      grifoNosso: Boolean(citacaoAtual?.grifoNosso ?? longa?.grifoNosso),
+      traducaoNossa: Boolean(citacaoAtual?.traducaoNossa ?? longa?.traducaoNossa),
     });
   }
 
@@ -108,8 +112,19 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
   function confirmar() {
     if (!formulario || !podeConfirmar(formulario)) return;
 
+    // Só a direta tem trecho transcrito para grifar ou traduzir (§7.1.5,
+    // §7.1.6): trocar para indireta descarta as duas escolhas.
+    const direta = formulario.modo !== "indireta";
+    const grifoNosso = direta && formulario.grifoNosso;
+    const traducaoNossa = direta && formulario.traducaoNossa;
+
     if (formulario.modo === "longa") {
-      const attrs = { refId: formulario.refId, pagina: formulario.pagina.trim() };
+      const attrs = {
+        refId: formulario.refId,
+        pagina: formulario.pagina.trim(),
+        grifoNosso,
+        traducaoNossa,
+      };
       const cadeia = editor.chain().focus();
       recolherNoFim(
         naLonga
@@ -117,11 +132,20 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
           : cadeia.setNode("citacao_longa", attrs),
       ).run();
     } else {
-      const attrs: AtributosCitacao = {
+      // `false` explícito, e não o campo ausente do formato canônico: ao
+      // editar, o `setMark` mescla com os atributos que a marca já tinha, e
+      // um grifo desmarcado ficaria lá. Quem tira o `false` do dado é
+      // `lerAtributosCitacao()`, na serialização.
+      const attrs: Omit<AtributosCitacao, "grifoNosso" | "traducaoNossa"> & {
+        grifoNosso: boolean;
+        traducaoNossa: boolean;
+      } = {
         refId: formulario.refId,
         modo: formulario.modo,
         pagina: formulario.pagina.trim() || null,
         apud: formulario.apud ? fonteOriginal(formulario) : null,
+        grifoNosso,
+        traducaoNossa,
       };
       const cadeia = editor.chain().focus();
       // Sem seleção, mas com o cursor numa citação: edita a citação inteira.
@@ -137,7 +161,16 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
 
   function remover() {
     if (naLonga) {
-      editor.chain().focus().updateAttributes("citacao_longa", { refId: null, pagina: "" }).run();
+      editor
+        .chain()
+        .focus()
+        .updateAttributes("citacao_longa", {
+          refId: null,
+          pagina: "",
+          grifoNosso: false,
+          traducaoNossa: false,
+        })
+        .run();
     } else {
       editor.chain().focus().extendMarkRange("citacao").unsetMark("citacao").run();
     }
@@ -227,10 +260,13 @@ function CamposCitacao({
 }) {
   const referencia = references.find((item) => item.id === formulario.refId);
   const inline = formulario.modo !== "longa";
+  const direta = formulario.modo !== "indireta";
   const previa = referencia
     ? formatarChamada(referencia, {
         pagina: formulario.pagina.trim() || null,
         apud: inline && formulario.apud ? fonteOriginal(formulario) : null,
+        ...(direta && formulario.grifoNosso ? { grifoNosso: true } : {}),
+        ...(direta && formulario.traducaoNossa ? { traducaoNossa: true } : {}),
       })
     : "";
 
@@ -277,6 +313,24 @@ function CamposCitacao({
         value={formulario.pagina}
         onChange={(evento) => onMudar("pagina", evento.target.value)}
       />
+
+      {direta && (
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-1 text-xs font-semibold text-title">No trecho transcrito</legend>
+          <Checkbox
+            checked={formulario.grifoNosso}
+            onChange={(evento) => onMudar("grifoNosso", evento.target.checked)}
+            label="Grifo nosso"
+            description="Você destacou parte do trecho, e o destaque não está no original (§7.1.5)."
+          />
+          <Checkbox
+            checked={formulario.traducaoNossa}
+            onChange={(evento) => onMudar("traducaoNossa", evento.target.checked)}
+            label="Tradução nossa"
+            description="Você traduziu o trecho de uma obra em outra língua (§7.1.6)."
+          />
+        </fieldset>
+      )}
 
       {inline && (
         <div className="flex flex-col gap-3">

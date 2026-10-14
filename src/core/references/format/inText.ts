@@ -14,7 +14,7 @@
 // LISTA de referências (6023 §8.1.1), feita por `abnt.ts` — e é exatamente a
 // armadilha que a auditoria deixou anotada para este passo.
 
-import type { FonteOriginal } from "../../document/types";
+import type { AcrescimosCitacao, FonteOriginal } from "../../document/types";
 import type { CSLDate, CSLName, Referencia } from "../types";
 import { temAutoria } from "./abnt";
 import { palavrasIniciais } from "./primeiraPalavra";
@@ -32,7 +32,7 @@ export interface OpcoesChamada {
 // listar todos também é conforme. O padrão escolhe o uso comum.
 const PADRAO: OpcoesChamada = { etAl: "quatro-ou-mais" };
 
-export interface DadosDaCitacao {
+export interface DadosDaCitacao extends AcrescimosCitacao {
   // Página ou localização da fonte citada (§6.1.3: "o número da página ou
   // localização, se houver, após a data"). Número puro ganha `p.`; qualquer
   // outra forma sai como digitada — `v. 1, p. 16` (§7.1.3), `cap. V, art. 49`,
@@ -57,7 +57,8 @@ export function formatarChamada(
     opcoes,
   );
 
-  if (!citacao.apud) return `(${consultada})`;
+  const fim = acrescimos(citacao);
+  if (!citacao.apud) return `(${[consultada, ...fim].join(", ")})`;
 
   // §7.3: "autoria, data, página, apud, autoria, data, página" — a obra
   // original primeiro, a consultada depois. Só a consultada está na lista de
@@ -69,7 +70,21 @@ export function formatarChamada(
     citacao.apud.pagina,
     opcoes,
   );
-  return `(${original} apud ${consultada})`;
+  return `(${[`${original} apud ${consultada}`, ...fim].join(", ")})`;
+}
+
+// §7.1.5 e §7.1.6: "grifo nosso" e "tradução nossa", cada um "como último
+// elemento da chamada da citação" — depois da página, e depois do apud
+// inteiro. A norma dá as duas formas de cada ("grifo nosso ou grifo próprio",
+// "tradução nossa ou tradução própria"); o AURA usa a primeira, a dos
+// exemplos. `CONVENÇÃO`: com os dois, a tradução vem antes do grifo, porque o
+// grifo é feito sobre o texto já traduzido. A norma não tem exemplo com os
+// dois juntos.
+function acrescimos(citacao: AcrescimosCitacao): string[] {
+  return [
+    ...(citacao.traducaoNossa ? ["tradução nossa"] : []),
+    ...(citacao.grifoNosso ? ["grifo nosso"] : []),
+  ];
 }
 
 // "Silva, 2019, p. 45" — sem os parênteses, para o apud juntar dois.

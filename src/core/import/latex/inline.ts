@@ -1,11 +1,13 @@
 import { MATEMATICA } from "../../export/latex/escape";
 import type {
+  AcrescimosCitacao,
   AtributosCitacao,
   FonteOriginal,
   Marca,
   NoInline,
   NoTexto,
 } from "../../document/types";
+import type { CitacaoParaChamada } from "../../references/citacoes";
 import { ACENTOS, acentuar, SIMBOLOS as SIMBOLOS_DO_BIB } from "../../references/import/bibtex";
 import {
   fechaChave,
@@ -39,7 +41,7 @@ import {
 export interface ChamadaLida {
   arquivo: string;
   linha: number;
-  citacao: Pick<AtributosCitacao, "refId" | "pagina"> & { apud?: FonteOriginal | null };
+  citacao: CitacaoParaChamada;
   texto: string;
 }
 
@@ -768,18 +770,31 @@ class LeitorInline {
       }
     }
 
-    const attrs: AtributosCitacao = { refId, modo, pagina, apud };
+    const acrescimos = acrescimosLidos(valores);
+    const attrs: AtributosCitacao = { refId, modo, pagina, apud, ...acrescimos };
     const antes = this.tokens.length;
     this.percorrer(trecho.inicio, trecho.fim, { ...estado, citacao: attrs });
     if (modo === "direta_curta") tirarAspas(this.tokens.slice(antes));
 
     this.ctx.chamadas.push({
       ...this.ctx.fonte.posicao(pos),
-      citacao: { refId, pagina, apud },
+      citacao: { refId, pagina, apud, ...acrescimos },
       texto: textoPlano(this.ctx, chamada.inicio, chamada.fim, "a chamada"),
     });
     return chamada.depois;
   }
+}
+
+// `grifo={nosso}` e `traducao={nossa}` (`acrescimosLatex()` em
+// export/latex/document.ts), da marca e da citação longa. Vale a chave, não
+// o valor: quem a apagou no Overleaf tirou o acréscimo; quem trocou "nosso"
+// por "próprio" escolheu a outra forma que a norma admite, e o AURA escreve
+// só a primeira (`acrescimos()` em references/format/inText.ts).
+export function acrescimosLidos(valores: Map<string, Grupo>): AcrescimosCitacao {
+  return {
+    ...(valores.has("grifo") ? { grifoNosso: true as const } : {}),
+    ...(valores.has("traducao") ? { traducaoNossa: true as const } : {}),
+  };
 }
 
 // Espaço e tabulação depois de um comando-palavra: o TeX os come.

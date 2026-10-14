@@ -45,14 +45,59 @@ function idaEVolta(secoes: Secao[]): Secao[] {
 }
 
 describe("marca citacao — guarda a ligação, não o texto formatado (4.8)", () => {
-  it("a marca tem refId, modo, página e apud — e nada de chamada pronta", () => {
+  it("a marca tem refId, modo, página, apud, grifo e tradução — e nada de chamada pronta", () => {
     const marca = schema.marks.citacao.create(INDIRETA);
 
-    expect(marca.attrs).toEqual(INDIRETA);
+    expect(marca.attrs).toEqual({ ...INDIRETA, grifoNosso: false, traducaoNossa: false });
     // Nenhum atributo guarda o que a chamada vai dizer: "(Freire, 1987)" é
-    // sintetizado no 4.9 a partir da referência.
-    expect(Object.keys(marca.attrs).sort()).toEqual(["apud", "modo", "pagina", "refId"]);
+    // sintetizado no 4.9 a partir da referência. Grifo e tradução são sim ou
+    // não; o "grifo nosso" escrito também sai da síntese.
+    expect(Object.keys(marca.attrs).sort()).toEqual([
+      "apud",
+      "grifoNosso",
+      "modo",
+      "pagina",
+      "refId",
+      "traducaoNossa",
+    ]);
     expect(JSON.stringify(marca.toJSON())).not.toMatch(/\(|Freire|1987/);
+  });
+
+  // NBR 10520:2023 §7.1.5 e §7.1.6.
+  it("grifo nosso e tradução nossa vão e voltam; desmarcados não ficam no dado", () => {
+    const comAcrescimos = secaoCom([
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: "para que não tenha lugar a producção de degenerados",
+            marks: [
+              {
+                type: "citacao",
+                attrs: { ...INDIRETA, modo: "direta_curta", grifoNosso: true, traducaoNossa: true },
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+    expect(idaEVolta(comAcrescimos)).toEqual(comAcrescimos);
+
+    const semAcrescimos = secaoCom([
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: "trecho", marks: [{ type: "citacao", attrs: INDIRETA }] }],
+      },
+    ]);
+    const volta = idaEVolta(semAcrescimos);
+    expect(volta).toEqual(semAcrescimos);
+    expect(JSON.stringify(volta)).not.toMatch(/grifoNosso|traducaoNossa/);
+  });
+
+  it("recusa grifo que não é sim ou não", () => {
+    expect(lerAtributosCitacao({ ...INDIRETA, grifoNosso: "sim" })).toBeNull();
+    expect(lerAtributosCitacao({ ...INDIRETA, grifoNosso: false })).toEqual(INDIRETA);
   });
 
   it("o texto marcado é só o texto do aluno", () => {
@@ -82,9 +127,10 @@ describe("marca citacao — guarda a ligação, não o texto formatado (4.8)", (
     const [paragrafo] = volta[0].content;
     // Nem aspas nem chamada entram no texto: quem as acrescenta é o
     // exportador (docs/schema-tiptap.md §5.2).
-    expect(paragrafo.type === "paragraph" && paragrafo.content?.map((t) => (t.type === "text" ? t.text : "")).join("")).toBe(
-      "A educação é um ato político, ninguém educa ninguém.",
-    );
+    expect(
+      paragrafo.type === "paragraph" &&
+        paragrafo.content?.map((t) => (t.type === "text" ? t.text : "")).join(""),
+    ).toBe("A educação é um ato político, ninguém educa ninguém.");
   });
 
   it("sobrevive ao round-trip junto com negrito e itálico", () => {

@@ -175,7 +175,12 @@ export function trechosDaCitacaoLonga(
   if (!no.refId) return trechos;
 
   const chamada = chamadaDaCitacao(
-    { refId: no.refId, pagina: no.pagina || null },
+    {
+      refId: no.refId,
+      pagina: no.pagina || null,
+      grifoNosso: no.grifoNosso,
+      traducaoNossa: no.traducaoNossa,
+    },
     references,
     opcoes,
   );
