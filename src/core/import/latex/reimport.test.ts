@@ -130,6 +130,34 @@ describe("montarReimportacao", () => {
     expect(semGrifo.relatorio.secoes.alteradas.map((secao) => secao.id)).toEqual(["s-intro"]);
   });
 
+  // NBR 10520:2023 §6.1.4: `\auracitenarrativa` leva a ligação e imprime a
+  // chamada; a reimportação reconstrói o nó, e a chamada editada à mão avisa.
+  it("o autor na frase vai ao .tex e volta como o mesmo nó", () => {
+    const comNarrativa = documentoCompleto();
+    const paragrafo = comNarrativa.sections[0].content[0];
+    if (paragrafo.type !== "paragraph") throw new Error("fixture mudou");
+    paragrafo.content = [
+      { type: "citacao_narrativa", refId: "freire", pagina: "68", grifoNosso: true },
+      { type: "text", text: " afirma que ensinar exige risco." },
+    ];
+
+    const exportado = gerarTex(comNarrativa, IMAGENS);
+    expect(exportado).toContain(
+      "\\auracitenarrativa[pagina={68}, grifo={nosso}]{freire}{Freire (1987, p. 68, grifo nosso)}",
+    );
+
+    const { documento, relatorio } = reimportar(comNarrativa, exportado);
+    expect(relatorio.semMudancas).toBe(true);
+    expect(relatorio.avisos).toEqual([]);
+    expect(documento).toEqual(comNarrativa);
+
+    const editado = exportado.replace("{Freire (1987, p. 68, grifo nosso)}", "{Freire (1988)}");
+    const { relatorio: comAviso } = reimportar(comNarrativa, editado);
+    expect(comAviso.avisos.map((aviso) => aviso.mensagem)).toEqual([
+      expect.stringContaining("“Freire (1987, p. 68, grifo nosso)”"),
+    ]);
+  });
+
   it("seção nova, removida, renomeada e movida vão para o relatório", () => {
     const inicioObj = tex.indexOf("% AURA-SECTION: s-obj");
     const inicioDev = tex.indexOf("% AURA-SECTION: s-dev");

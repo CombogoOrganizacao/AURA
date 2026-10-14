@@ -96,6 +96,15 @@ export function documentoCompleto(): Documento {
         },
         { type: "formula", texto: "x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}" },
         { type: "formula", texto: "\\frac{1}{" },
+        // Autor dentro da frase (10520 §6.1.4), com acréscimo: é o que faz o
+        // `\auracitenarrativa` do preâmbulo passar pelo pdfLaTeX.
+        {
+          type: "paragraph",
+          content: [
+            { type: "citacao_narrativa", refId: "freire", pagina: "68", grifoNosso: true },
+            texto(" afirma que a prática importa."),
+          ],
+        },
       ],
     },
     {

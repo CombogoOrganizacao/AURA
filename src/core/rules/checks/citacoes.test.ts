@@ -58,6 +58,20 @@ describe("citacao-orfa (10520 §5.1, 'deve permitir sua correlação')", () => {
     ).toBe("a educação é prática da liberdade");
   });
 
+  it("autor na frase órfão: erro na posição dele, sem trecho de texto para mostrar", () => {
+    const achados = conferirCom(citacaoOrfa, (d) => {
+      const paragrafo = d.sections[0].content[0] as NoParagrafo;
+      paragrafo.content!.unshift({ type: "citacao_narrativa", refId: "sumiu", pagina: null });
+    });
+    expect(achados).toEqual([
+      expect.objectContaining({
+        gravidade: "erro",
+        local: { tipo: "bloco", onde: INTRO, no: 0, trecho: { inicio: 0, fim: 0 } },
+        mensagem: expect.stringContaining("autor na frase"),
+      }),
+    ]);
+  });
+
   it("itálico no meio do trecho não parte a citação em duas", () => {
     const achados = conferirCom(citacaoOrfa, (d) => {
       d.references = [];
@@ -114,6 +128,15 @@ describe("citacao-direta-sem-pagina (10520 §6.1.3, 'se houver')", () => {
         local: { tipo: "bloco", onde: INTRO, no: 0, trecho: DIRETA },
       }),
     ]);
+  });
+
+  it("autor na frase sem página não é achado: o nó não diz se é transcrição", () => {
+    expect(
+      conferirCom(citacaoDiretaSemPagina, (d) => {
+        const paragrafo = d.sections[0].content[0] as NoParagrafo;
+        paragrafo.content!.push({ type: "citacao_narrativa", refId: "freire", pagina: null });
+      }),
+    ).toEqual([]);
   });
 
   it("indireta sem página não é achado: a página é das diretas", () => {
@@ -201,6 +224,16 @@ describe("referencia-nao-citada (convenção, sem item na norma)", () => {
         local: { tipo: "referencia", refId: "bauman" },
       }),
     ]);
+  });
+
+  it("citada só com o autor na frase conta como citada (10520 §6.1.4)", () => {
+    expect(
+      conferirCom(referenciaNaoCitada, (d) => {
+        d.references.push({ id: "bauman", type: "book", title: "Globalização" });
+        const paragrafo = d.sections[0].content[0] as NoParagrafo;
+        paragrafo.content!.push({ type: "citacao_narrativa", refId: "bauman", pagina: null });
+      }),
+    ).toEqual([]);
   });
 
   it("citada só por apud conta como citada: é a fonte consultada (10520 §7.3)", () => {

@@ -156,6 +156,9 @@ const COMANDOS_AURA = String.raw`% Espaço simples sem espaço vertical a mais. 
 % \auracite[atributos]{refId}{trecho}{chamada}: citação ligada à
 % referência. Imprime o trecho e a chamada; os atributos são para o AURA.
 \newcommand{\auracite}[4][]{#3#4}
+% \auracitenarrativa[atributos]{refId}{chamada}: autor dentro da frase
+% (10520:2023 §6.1.4). Imprime a chamada; o resto é para o AURA.
+\newcommand{\auracitenarrativa}[3][]{#3}
 % Chamada de citação derivada: o AURA a recalcula na reimportação.
 \newcommand{\aurachamada}[1]{#1}
 % Citação direta com mais de três linhas (10520:2023 §7.1.1), sobre o

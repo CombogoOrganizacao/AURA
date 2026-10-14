@@ -17,12 +17,13 @@ import type {
   AtributosCitacao,
   Documento,
   ElementoPosTextual,
+  NoCitacaoNarrativa,
   NoConteudo,
   NoInline,
   Secao,
 } from "../document/types";
 import { soTexto } from "../document/inline";
-import { formatarChamada, type OpcoesChamada } from "./format/inText";
+import { formatarChamada, formatarChamadaNarrativa, type OpcoesChamada } from "./format/inText";
 import type { Referencia } from "./types";
 
 export type LocalCitacao =
@@ -46,6 +47,16 @@ export type OcorrenciaCitacao =
       pagina: string;
       local: LocalCitacao;
       texto: string;
+    }
+  | {
+      // Autor dentro da frase (`NoCitacaoNarrativa`, 10520 §6.1.4). Não há
+      // texto do aluno ligado a ela, o que ela liga é o próprio nome: `texto`
+      // é vazio.
+      origem: "narrativa";
+      refId: string;
+      no: NoCitacaoNarrativa;
+      local: LocalCitacao;
+      texto: "";
     };
 
 // Todas as citações ligadas a uma referência, na ordem do documento: seções
@@ -118,7 +129,9 @@ function coletarDoNo(no: NoConteudo, local: LocalCitacao, saida: OcorrenciaCitac
 // chamadas onde a tela mostra uma.
 //
 // A nota de rodapé no meio do excerto não parte a citação (passo 6.1.3c):
-// `soTexto()` a tira, e os dois lados dela seguem como vizinhos.
+// ela conta zero caracteres, e os dois lados dela seguem como vizinhos. O
+// mesmo vale para a fórmula e para a citação com o autor na frase, que entra
+// na lista na posição em que está.
 function coletarDoInline(
   content: readonly NoInline[] | undefined,
   local: LocalCitacao,
@@ -126,7 +139,12 @@ function coletarDoInline(
 ) {
   let aberta: Extract<OcorrenciaCitacao, { origem: "marca" }> | null = null;
 
-  for (const texto of soTexto(content)) {
+  for (const texto of content ?? []) {
+    if (texto.type === "citacao_narrativa") {
+      saida.push({ origem: "narrativa", refId: texto.refId, no: texto, local, texto: "" });
+      continue;
+    }
+    if (texto.type !== "text") continue;
     const marca = texto.marks?.find((item) => item.type === "citacao");
     const attrs = marca?.type === "citacao" ? marca.attrs : undefined;
 
@@ -188,6 +206,24 @@ export function chamadaDaCitacao(
   const { pagina, apud, grifoNosso, traducaoNossa } = citacao;
   return {
     texto: formatarChamada(referencia, { pagina, apud, grifoNosso, traducaoNossa }, opcoes),
+    orfa: false,
+  };
+}
+
+// A citação com o autor na frase (`NoCitacaoNarrativa`, 10520 §6.1.4), para a
+// tela e para os dois exportadores. Órfã, o lugar do autor na frase fica com
+// o mesmo aviso da chamada entre parênteses: a frase do aluno fica sem
+// sujeito, e é isso que ele precisa ver.
+export function chamadaDaCitacaoNarrativa(
+  citacao: Omit<NoCitacaoNarrativa, "type">,
+  references: readonly Referencia[],
+  opcoes?: OpcoesChamada,
+): ChamadaExibida {
+  const referencia = references.find((item) => item.id === citacao.refId);
+  if (!referencia) return { texto: "(referência excluída)", orfa: true };
+  const { pagina, grifoNosso, traducaoNossa } = citacao;
+  return {
+    texto: formatarChamadaNarrativa(referencia, { pagina, grifoNosso, traducaoNossa }, opcoes),
     orfa: false,
   };
 }

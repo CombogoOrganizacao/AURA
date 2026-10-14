@@ -87,6 +87,28 @@ function acrescimos(citacao: AcrescimosCitacao): string[] {
   ];
 }
 
+// A chamada com o autor dentro da frase (§6.1.4): "Oliveira e Leonardos
+// (1943, p. 146)". A data, a página e os acréscimos ficam entre parênteses;
+// a autoria fica fora, como parte da frase do aluno.
+//
+// Sem apud: a forma narrativa da citação de citação não está no modelo
+// (`NoCitacaoNarrativa`, src/core/document/types.ts).
+export function formatarChamadaNarrativa(
+  referencia: Referencia,
+  citacao: Omit<DadosDaCitacao, "apud"> = {},
+  opcoes: OpcoesChamada = PADRAO,
+): string {
+  const autores = referencia.author;
+  const entrada =
+    autores && temAutoria(autores)
+      ? autoriaNaFrase(autores, opcoes)
+      : entradaPeloTitulo(referencia.title ?? "");
+  const dentro = [ano(referencia.issued), paginaDaChamada(citacao.pagina), ...acrescimos(citacao)]
+    .filter(Boolean)
+    .join(", ");
+  return dentro ? `${entrada} (${dentro})` : entrada;
+}
+
 // "Silva, 2019, p. 45" — sem os parênteses, para o apud juntar dois.
 function elementos(
   autores: readonly CSLName[] | undefined,
@@ -108,6 +130,17 @@ function autoria(autores: readonly CSLName[], opcoes: OpcoesChamada): string {
   // Ponto e vírgula entre os coautores dentro dos parênteses: §6.1.3, exemplo
   // 1, "(Clarac; Bonnin, 1985, p. 72)"; §6.1.7, "(Cruz; Correa; Costa, ...)".
   return nomes.join("; ");
+}
+
+// Dentro da frase, os coautores são unidos como em português corrido, não por
+// ponto e vírgula: §6.1.4, exemplos 1 e 2, "Oliveira e Leonardos (1943, p.
+// 146)" e "Grilli, Marciandaro, Tabellini, Malinvauld e Pagano (1991)";
+// §6.1.2, exemplo 1, "Maciel et al. (2019, p. 163)".
+function autoriaNaFrase(autores: readonly CSLName[], opcoes: OpcoesChamada): string {
+  const nomes = autores.map(nomeNaChamada).filter(Boolean);
+  if (opcoes.etAl === "quatro-ou-mais" && nomes.length >= 4) return `${nomes[0]} et al.`;
+  if (nomes.length <= 1) return nomes[0] ?? "";
+  return `${nomes.slice(0, -1).join(", ")} e ${nomes.at(-1)}`;
 }
 
 // §6.1.1.1: o sobrenome, em maiúsculas e minúsculas — como está no dado, sem

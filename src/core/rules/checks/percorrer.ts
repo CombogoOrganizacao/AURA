@@ -79,7 +79,10 @@ export function localDoNo(
 
 export type CitacaoLocalizada =
   | { forma: "marca"; attrs: AtributosCitacao; texto: string; local: LocalAchado }
-  | { forma: "longa"; refId: string | null; pagina: string; texto: string; local: LocalAchado };
+  | { forma: "longa"; refId: string | null; pagina: string; texto: string; local: LocalAchado }
+  // Autor dentro da frase (10520 §6.1.4). `texto` vazio: o nó não tem texto do
+  // aluno, e o trecho do local é a posição dele, de largura zero.
+  | { forma: "narrativa"; refId: string; texto: ""; local: LocalAchado };
 
 // Todas as citações, na ordem de leitura, com o nó e o trecho. É o que
 // permite ao painel (5.2.3) levar o cursor até a citação. Mesma regra de
@@ -147,7 +150,22 @@ function marcasDoInline(
     aberta = null;
   };
 
-  for (const texto of soTexto(content)) {
+  for (const texto of content ?? []) {
+    // A nota e a fórmula contam zero caracteres e não fecham a citação que as
+    // rodeia. O autor na frase fecha, como em `partesDoInline()`
+    // (document/elements/trechos.ts): ele começa a frase do aluno, não é
+    // parte do excerto.
+    if (texto.type === "citacao_narrativa") {
+      fechar();
+      saida.push({
+        forma: "narrativa",
+        refId: texto.refId,
+        texto: "",
+        local: localDoNo(onde, no, comTrecho ? { inicio: posicao, fim: posicao } : undefined),
+      });
+      continue;
+    }
+    if (texto.type !== "text") continue;
     const marca = texto.marks?.find((item) => item.type === "citacao");
     const attrs = marca?.type === "citacao" ? marca.attrs : null;
     const inicio = posicao;

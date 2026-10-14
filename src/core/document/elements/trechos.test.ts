@@ -209,7 +209,10 @@ describe("trechosDaCitacaoLonga (NBR 10520:2023 §7.1.1)", () => {
 // achatada destes grupos, e os dois formatos não podem discordar de onde a
 // citação começa e termina.
 describe("partesDoInline — citação agrupada com os atributos", () => {
-  const direta = { type: "citacao" as const, attrs: citacao({ modo: "direta_curta", pagina: "35" }) };
+  const direta = {
+    type: "citacao" as const,
+    attrs: citacao({ modo: "direta_curta", pagina: "35" }),
+  };
   const conteudo = [
     texto("Antes, "),
     texto("ensinar ", [direta]),
@@ -255,5 +258,45 @@ describe("partesDoInline — citação agrupada com os atributos", () => {
     );
     expect(partes.map((parte) => parte.tipo)).toEqual(["citacao", "trecho", "trecho"]);
     expect(partes[1]).toMatchObject({ tipo: "trecho", trecho: { papel: "nota", texto: "fora" } });
+  });
+});
+
+// NBR 10520:2023 §6.1.4: o autor na frase sai como texto corrido, com a mesma
+// chamada que a tela desenha, e fecha a citação que estiver aberta antes dele.
+describe("trechosDoInline — autor na frase", () => {
+  it("sai como a chamada narrativa, sem destaque", () => {
+    const trechos = trechosDoInline(
+      [
+        { type: "citacao_narrativa", refId: "freire", pagina: "68" },
+        texto(" afirma que ensinar exige risco."),
+      ],
+      REFS,
+    );
+    expect(trechos[0]).toEqual({
+      papel: "chamada",
+      texto: "Freire (1987, p. 68)",
+      negrito: false,
+      italico: false,
+      orfa: false,
+    });
+    expect(corrido(trechos)).toBe("Freire (1987, p. 68) afirma que ensinar exige risco.");
+  });
+
+  it("órfão: o aviso no lugar do nome, marcado como órfão", () => {
+    const [trecho] = trechosDoInline(
+      [{ type: "citacao_narrativa", refId: "sumiu", pagina: null }],
+      REFS,
+    );
+    expect(trecho).toMatchObject({ papel: "chamada", texto: "(referência excluída)", orfa: true });
+  });
+
+  it("é uma parte própria, com o nó, para o .tex escrever a ligação", () => {
+    const no = { type: "citacao_narrativa" as const, refId: "freire", pagina: null };
+    const partes = partesDoInline(
+      [texto("Antes ", [{ type: "citacao", attrs: citacao() }]), no],
+      REFS,
+    );
+    expect(partes.map((parte) => parte.tipo)).toEqual(["citacao", "narrativa"]);
+    expect(partes[1]).toMatchObject({ tipo: "narrativa", no });
   });
 });

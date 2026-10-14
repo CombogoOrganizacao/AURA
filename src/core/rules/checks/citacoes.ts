@@ -26,7 +26,12 @@ export const citacaoOrfa: Verificacao = {
       .map((citacao) => ({
         gravidade: "erro" as const,
         item: "NBR 10520:2023 §5.1",
-        mensagem: `A citação "${resumirTrecho(citacao.texto)}" aponta para uma referência que foi excluída. Ligue-a a uma referência da lista.`,
+        // O autor na frase não tem trecho do aluno para mostrar: o que ele
+        // perdeu foi o próprio nome, e a tela mostra o aviso no lugar dele.
+        mensagem:
+          citacao.forma === "narrativa"
+            ? "Uma citação com o autor na frase aponta para uma referência que foi excluída. Ligue-a a uma referência da lista."
+            : `A citação "${resumirTrecho(citacao.texto)}" aponta para uma referência que foi excluída. Ligue-a a uma referência da lista.`,
         local: citacao.local,
       }));
   },
@@ -52,10 +57,14 @@ export const citacaoLongaSemReferencia: Verificacao = {
 // localização, SE HOUVER, após a data." O Exemplo 2 do §6.1.3 cita sem página
 // uma fonte não paginada. Por isso AVISO: a fonte pode não ter página. A
 // longa também é direta (§7.1.1).
+//
+// O autor na frase fica de fora: o nó não diz se o que vem depois dele é
+// transcrição ou paráfrase, e na indireta a página é opcional (§7.2).
 export const citacaoDiretaSemPagina: Verificacao = {
   regra: "citacao-direta-sem-pagina",
   verificar: ({ documento }) =>
     citacoesLocalizadas(documento).flatMap((citacao): Omit<Achado, "regra">[] => {
+      if (citacao.forma === "narrativa") return [];
       const semPagina =
         citacao.forma === "marca"
           ? citacao.attrs.modo === "direta_curta" && !citacao.attrs.pagina?.trim()

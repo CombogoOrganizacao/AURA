@@ -404,6 +404,30 @@
   font-size: 0.85em;
 }
 
+/* Autor dentro da frase (NBR 10520:2023 §6.1.4). É nó, não decoração, mas
+   também é texto que o AURA sintetiza da referência: o mesmo fundo creme do
+   trecho citado mostra que está ligado a uma obra, e o contorno bordô, como
+   o da fórmula no texto, que está selecionado (o menu Citar então o edita).
+   Órfão, o mesmo aviso da chamada. */
+.ProseMirror .doc-citacao-narrativa {
+  background-color: color-mix(in srgb, var(--color-creme-300) 28%, transparent);
+  border-radius: 2px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ProseMirror .doc-citacao-narrativa.ProseMirror-selectednode {
+  outline: 2px solid var(--color-bordo-700);
+  outline-offset: 1px;
+}
+
+.ProseMirror .doc-citacao-narrativa-orfa {
+  background-color: transparent;
+  color: var(--color-danger);
+  font-family: var(--font-sans);
+  font-size: 0.85em;
+}
+
 /* Figura e tabela (passo 3.6.3) — docs/schema-tiptap.md §4.6/§4.7. Legenda e
    fonte em 10pt (`--doc-caption`) e espaço simples (`--leading-doc-simples`),
    os mesmos dois valores da citação longa acima e os mesmos que

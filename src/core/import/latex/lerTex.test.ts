@@ -108,7 +108,13 @@ describe("lerTex: volta do que o AURA exporta", () => {
       { citacao: { refId: "freire", pagina: "35", apud: null }, texto: "(Freire, 1987, p. 35)" },
       { citacao: { refId: "freire", pagina: null, apud: null }, texto: "(Freire, 1987)" },
       { citacao: { refId: "freire", pagina: "181" }, texto: "(Freire, 1987, p. 181)" },
+      // Autor na frase (10520 §6.1.4): a chamada lida é a forma narrativa.
+      {
+        citacao: { refId: "freire", pagina: "68", grifoNosso: true },
+        texto: "Freire (1987, p. 68, grifo nosso)",
+      },
     ]);
+    expect(lido.chamadas.at(-1)?.narrativa).toBe(true);
   });
 
   it("não gera aviso num arquivo que ninguém editou", () => {

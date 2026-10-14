@@ -33,6 +33,7 @@ import { Citacao } from "@/core/editor/marks/citation";
 import { Italico } from "@/core/editor/marks/italico";
 import { Negrito } from "@/core/editor/marks/negrito";
 import { Sugestao } from "@/core/editor/marks/suggestion";
+import { CitacaoNarrativa as CitacaoNarrativaNode } from "@/core/editor/nodes/citacaoNarrativa";
 import { Documento as DocumentoNode } from "@/core/editor/nodes/documento";
 import { NotaRodape as NotaRodapeNode } from "@/core/editor/nodes/footnote";
 import { FormulaInline as FormulaInlineNode } from "@/core/editor/nodes/formulaInline";
@@ -49,12 +50,14 @@ import { AvisoPaginacao } from "./AvisoPaginacao";
 import { BarraEstatisticas } from "./BarraEstatisticas";
 import { BuscaSubstituicao, type CampoDaBusca } from "./BuscaSubstituicao";
 import { atualizarReferenciasDasChamadas, ChamadasDeCitacao } from "./chamadas";
+import { CitacaoNarrativaView } from "./nodes/CitacaoNarrativaView";
 import { FiguraView } from "./nodes/FiguraView";
 import { FormulaInlineView } from "./nodes/FormulaInlineView";
 import { FormulaView } from "./nodes/FormulaView";
 import { NotaRodapeView } from "./nodes/NotaRodapeView";
 import { SectionView } from "./nodes/SectionView";
 import { TabelaView } from "./nodes/TabelaView";
+import { ProvedorReferencias } from "./ReferenciasDoEditor";
 import { criarSecaoNoEditor } from "./novaSecao";
 import { Toolbar } from "./Toolbar";
 
@@ -104,6 +107,14 @@ const NotaRodapeComVisualizacao = NotaRodapeNode.extend({
 const FormulaInlineComVisualizacao = FormulaInlineNode.extend({
   addNodeView() {
     return ReactNodeViewRenderer(FormulaInlineView, { as: "span" });
+  },
+});
+
+// E para a citação com o autor na frase (10520 §6.1.4): o node view desenha
+// a chamada a partir das referências, que chegam por `ProvedorReferencias`.
+const CitacaoNarrativaComVisualizacao = CitacaoNarrativaNode.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(CitacaoNarrativaView, { as: "span" });
   },
 });
 
@@ -262,6 +273,7 @@ export function Editor({
       // citação longa; inserida pela toolbar.
       NotaRodapeComVisualizacao,
       FormulaInlineComVisualizacao,
+      CitacaoNarrativaComVisualizacao,
       Negrito,
       Italico,
       // Citação ligada a uma referência (passo 4.8). Registrada antes de ter
@@ -565,7 +577,9 @@ export function Editor({
               editor.view.focus();
             }}
           >
-            <EditorContent editor={editor} />
+            <ProvedorReferencias value={references}>
+              <EditorContent editor={editor} />
+            </ProvedorReferencias>
           </div>
         </PaperSheet>
       </div>

@@ -4,6 +4,7 @@ import type {
   AtributosCitacao,
   FonteOriginal,
   Marca,
+  NoCitacaoNarrativa,
   NoInline,
   NoTexto,
 } from "../../document/types";
@@ -42,6 +43,9 @@ export interface ChamadaLida {
   arquivo: string;
   linha: number;
   citacao: CitacaoParaChamada;
+  // Autor dentro da frase (`\auracitenarrativa`): a chamada se recalcula pela
+  // forma narrativa, não pela entre parênteses.
+  narrativa?: true;
   texto: string;
 }
 
@@ -73,6 +77,7 @@ type Token =
   | TokenTexto
   | { tipo: "nota"; texto: string }
   | { tipo: "formula"; texto: string }
+  | { tipo: "narrativa"; no: NoCitacaoNarrativa; bruto: string }
   | {
       tipo: "cite";
       comando: string;
@@ -527,6 +532,7 @@ class LeitorInline {
     }
 
     if (nome === "auracite") return this.auracite(pos, depois, fim, estado);
+    if (nome === "auracitenarrativa") return this.citacaoNarrativa(pos, depois, fim, estado);
 
     if (CITACOES.has(nome)) return this.citacao(pos, nome, depois, fim, estado);
     if (nome === "citeauthor" || nome === "citeyear") {
@@ -783,6 +789,46 @@ class LeitorInline {
     });
     return chamada.depois;
   }
+
+  // `\auracitenarrativa[pagina={…}, grifo={nosso}]{refId}{chamada}`: o autor
+  // dentro da frase (10520:2023 §6.1.4, `parteLatex()` em
+  // export/latex/document.ts). A chamada impressa é derivada: o AURA a
+  // recalcula, e a lista de chamadas avisa se ela foi editada à mão.
+  private citacaoNarrativa(pos: number, depois: number, fim: number, estado: Estado): number {
+    const t = this.texto;
+    const opcional = lerOpcional(t, depois, fim);
+    const ref = lerGrupo(t, opcional?.depois ?? depois, fim);
+    const chamada = ref && lerGrupo(t, ref.depois, fim);
+    const refId = ref ? textoPlano(this.ctx, ref.inicio, ref.fim, "a chave da citação") : "";
+    if (!ref || !chamada || !refId) {
+      return this.literal(
+        pos,
+        depois,
+        estado,
+        "\\auracitenarrativa incompleto (faltam argumentos): entrou como texto.",
+      );
+    }
+
+    const valores = opcional ? lerAtributos(t, opcional) : new Map<string, Grupo>();
+    const paginaLida = valores.get("pagina");
+    const pagina = paginaLida
+      ? textoPlano(this.ctx, paginaLida.inicio, paginaLida.fim, "a página") || null
+      : null;
+    const acrescimos = acrescimosLidos(valores);
+
+    this.tokens.push({
+      tipo: "narrativa",
+      no: { type: "citacao_narrativa", refId, pagina, ...acrescimos },
+      bruto: t.slice(pos, chamada.depois),
+    });
+    this.ctx.chamadas.push({
+      ...this.ctx.fonte.posicao(pos),
+      citacao: { refId, pagina, ...acrescimos },
+      narrativa: true,
+      texto: textoPlano(this.ctx, chamada.inicio, chamada.fim, "a chamada"),
+    });
+    return chamada.depois;
+  }
 }
 
 // `grifo={nosso}` e `traducao={nossa}` (`acrescimosLatex()` em
@@ -990,6 +1036,10 @@ function paraNos(tokens: readonly Token[]): NoInline[] {
       nos.push({ type: "formula_inline", texto: token.texto });
       continue;
     }
+    if (token.tipo === "narrativa") {
+      nos.push(token.no);
+      continue;
+    }
     if (token.tipo !== "texto" || !token.texto) continue;
     const marcas = marcasDe(token.estado);
     const anterior = nos.at(-1);
@@ -1075,21 +1125,32 @@ export function textoPlano(
 // Só os nós de texto, para a célula de tabela, que não tem nota de rodapé
 // (`CelulaTabela`). Uma nota escrita ali vira texto entre parênteses.
 export function lerInlineDeCelula(ctx: ContextoInline, inicio: number, fim: number): NoTexto[] {
-  return lerInline(ctx, inicio, fim).map((no) => {
-    if (no.type === "text") return no;
+  return lerInline(ctx, inicio, fim).flatMap((no): NoTexto[] => {
+    if (no.type === "text") return [no];
     if (no.type === "formula_inline") {
       ctx.avisos.push({
         ...ctx.fonte.posicao(inicio),
         mensagem:
           "Fórmula dentro de célula de tabela não existe no AURA: entrou como o LaTeX, em texto.",
       });
-      return { type: "text", text: `$${no.texto}$` };
+      return [{ type: "text", text: `$${no.texto}$` }];
+    }
+    // O AURA não escreve autor na frase dentro de célula (o schema não o
+    // aceita lá): só um `.tex` editado à mão o traz. A chamada é derivada e
+    // não há referência aqui para recalculá-la, então sai, com aviso.
+    if (no.type === "citacao_narrativa") {
+      ctx.avisos.push({
+        ...ctx.fonte.posicao(inicio),
+        mensagem:
+          "Citação com o autor na frase dentro de célula de tabela não existe no AURA: saiu da célula.",
+      });
+      return [];
     }
     ctx.avisos.push({
       ...ctx.fonte.posicao(inicio),
       mensagem:
         "Nota de rodapé dentro de célula de tabela não existe no AURA: virou texto entre parênteses.",
     });
-    return { type: "text", text: ` (${no.texto})` };
+    return [{ type: "text", text: ` (${no.texto})` }];
   });
 }

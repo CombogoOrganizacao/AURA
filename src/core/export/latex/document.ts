@@ -125,6 +125,19 @@ function acrescimosLatex(acrescimos: AcrescimosCitacao): string[] {
 
 function parteLatex(parte: ParteInline): string {
   if (parte.tipo === "trecho") return trechoLatex(parte.trecho);
+  if (parte.tipo === "narrativa") {
+    // `\auracitenarrativa[atributos]{refId}{chamada}`: imprime a chamada, e a
+    // reimportação lê a ligação. A chamada é derivada, como a do `\auracite`.
+    const pares = [
+      ...(parte.no.pagina ? [`pagina={${escaparLatex(parte.no.pagina)}}`] : []),
+      ...acrescimosLatex(parte.no),
+    ];
+    const opcional = pares.length > 0 ? `[${pares.join(", ")}]` : "";
+    return (
+      `\\auracitenarrativa${opcional}{${escaparLatex(parte.no.refId)}}` +
+      `{${trechoLatex(parte.trecho)}}`
+    );
+  }
   const trecho = parte.trechos.filter((item) => item.papel !== "chamada");
   const chamada = parte.trechos.filter((item) => item.papel === "chamada");
   return (

@@ -10,7 +10,7 @@ import type {
   NoInline,
   Secao,
 } from "../../document/types";
-import { chamadaDaCitacao } from "../../references/citacoes";
+import { chamadaDaCitacao, chamadaDaCitacaoNarrativa } from "../../references/citacoes";
 import type { Referencia } from "../../references/types";
 import type { Aviso } from "./fonte";
 import type { BlocoLido, MetadadosLidos, PosTextualLido, TexLido } from "./lerTex";
@@ -397,7 +397,12 @@ function marcas(lista: readonly Marca[] | undefined) {
 }
 
 function inline(content: readonly NoInline[] | undefined) {
-  const nos: ({ texto: string; marcas: string } | { nota: string } | { formula: string })[] = [];
+  const nos: (
+    | { texto: string; marcas: string }
+    | { nota: string }
+    | { formula: string }
+    | { narrativa: unknown }
+  )[] = [];
   for (const no of content ?? []) {
     if (no.type === "nota_rodape") {
       nos.push({ nota: no.texto.replace(/\s+/g, " ").trim() });
@@ -405,6 +410,17 @@ function inline(content: readonly NoInline[] | undefined) {
     }
     if (no.type === "formula_inline") {
       nos.push({ formula: no.texto.trim() });
+      continue;
+    }
+    if (no.type === "citacao_narrativa") {
+      nos.push({
+        narrativa: {
+          refId: no.refId,
+          pagina: no.pagina ?? null,
+          grifoNosso: no.grifoNosso === true,
+          traducaoNossa: no.traducaoNossa === true,
+        },
+      });
       continue;
     }
     const chave = JSON.stringify(marcas(no.marks));
@@ -472,7 +488,11 @@ function chamadasEditadas(lido: TexLido, documento: Documento): Aviso[] {
     // conferência, e o relatório não repete o aviso a cada chamada.
     if (!documento.references.some((referencia) => referencia.id === chamada.citacao.refId))
       continue;
-    const calculada = chamadaDaCitacao(chamada.citacao, documento.references).texto;
+    const calculada = (
+      chamada.narrativa
+        ? chamadaDaCitacaoNarrativa(chamada.citacao, documento.references)
+        : chamadaDaCitacao(chamada.citacao, documento.references)
+    ).texto;
     if (mesmoTexto(calculada, chamada.texto)) continue;
     avisos.push({
       arquivo: chamada.arquivo,

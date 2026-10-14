@@ -16,10 +16,20 @@
 // (`components/editor/chamadas.ts`) usa. O arquivo não pode dizer uma coisa e
 // a tela outra.
 
-import { chamadaDaCitacao, mesmaCitacao } from "../../references/citacoes";
+import {
+  chamadaDaCitacao,
+  chamadaDaCitacaoNarrativa,
+  mesmaCitacao,
+} from "../../references/citacoes";
 import type { OpcoesChamada } from "../../references/format/inText";
 import type { Referencia } from "../../references/types";
-import type { AtributosCitacao, NoCitacaoLonga, NoInline, NoTexto } from "../types";
+import type {
+  AtributosCitacao,
+  NoCitacaoLonga,
+  NoCitacaoNarrativa,
+  NoInline,
+  NoTexto,
+} from "../types";
 
 export type PapelTrecho =
   // Texto do aluno, com as marcas dele.
@@ -107,9 +117,14 @@ export function trechosDoInline(
 // `\auracite`, com os atributos que a reimportação lê de volta (passo 6.2.1,
 // docs/latex-abntex.md §1.5). Uma função só para os dois, para a citação não
 // poder começar ou terminar em lugares diferentes conforme o formato.
+//
+// A citação com o autor na frase (`NoCitacaoNarrativa`, 10520 §6.1.4) é uma
+// parte própria pelo mesmo motivo: o `.tex` a escreve como
+// `\auracitenarrativa`, com a ligação, para a reimportação a reconhecer.
 export type ParteInline =
   | { tipo: "trecho"; trecho: Trecho }
-  | { tipo: "citacao"; attrs: AtributosCitacao; trechos: Trecho[] };
+  | { tipo: "citacao"; attrs: AtributosCitacao; trechos: Trecho[] }
+  | { tipo: "narrativa"; no: NoCitacaoNarrativa; trecho: Trecho };
 
 export function partesDoInline(
   content: readonly NoInline[] | undefined,
@@ -132,6 +147,14 @@ export function partesDoInline(
 
   const nos = content ?? [];
   for (const [indice, no] of nos.entries()) {
+    // O autor na frase fecha a citação que estiver aberta: ele não é parte
+    // de um excerto transcrito, é o começo da frase do aluno.
+    if (no.type === "citacao_narrativa") {
+      fechar();
+      const chamada = chamadaDaCitacaoNarrativa(no, references, opcoes);
+      partes.push({ tipo: "narrativa", no, trecho: sinal("chamada", chamada.texto, chamada.orfa) });
+      continue;
+    }
     if (no.type !== "text") {
       if (aberta) {
         const seguinte = nos.slice(indice + 1).find((item) => item.type === "text");

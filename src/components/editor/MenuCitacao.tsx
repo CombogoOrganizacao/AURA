@@ -13,7 +13,12 @@ import { Input } from "@/components/ui/Input";
 import { Radio } from "@/components/ui/Radio";
 import { Select } from "@/components/ui/Select";
 import type { AtributosCitacao, FonteOriginal } from "@/core/document/types";
-import { formatarChamada } from "@/core/references/format/inText";
+import {
+  inserirCitacaoNarrativa,
+  podeInserirCitacaoNarrativa,
+  type AtributosCitacaoNarrativa,
+} from "@/core/editor/nodes/citacaoNarrativa";
+import { formatarChamada, formatarChamadaNarrativa } from "@/core/references/format/inText";
 import type { Referencia } from "@/core/references/types";
 
 // Inserir e editar citação pela interface (passo 4.10): direta, indireta,
@@ -27,12 +32,18 @@ import type { Referencia } from "@/core/references/types";
 // exportação, a partir do mesmo dado. O AURA não redige o trabalho
 // (CLAUDE.md), e este menu não é exceção.
 //
-// **Apud** é uma opção de direta e indireta, não um quarto modo: citação de
+// **Apud** é uma opção de direta e indireta, não um modo: citação de
 // citação pode ser transcrição ou paráfrase (§7.3, exemplos 1 e 3). A longa
 // não oferece apud porque o nó `citacao_longa` guarda só `refId` e `pagina`
 // (docs/schema-tiptap.md §4.3).
+//
+// **Autor na frase** (§6.1.4) é o único modo que põe algo no texto: o nó
+// `citacao_narrativa`, que a tela desenha como "Freire (1987, p. 68)" a
+// partir da referência. Não é redação: é a mesma chamada que os outros modos
+// põem entre parênteses, na outra forma que a norma admite. O resto da frase
+// é do aluno.
 
-type Modo = AtributosCitacao["modo"] | "longa";
+type Modo = AtributosCitacao["modo"] | "longa" | "narrativa";
 
 interface Formulario {
   refId: string;
@@ -68,6 +79,11 @@ const ROTULO_MODO: Record<Modo, { label: string; description: string }> = {
     label: "Longa",
     description: "Transcrição de mais de três linhas: o parágrafo vira bloco recuado, sem aspas.",
   },
+  narrativa: {
+    label: "Autor na frase",
+    description:
+      "O nome entra na sua frase, com a data e a página entre parênteses: Freire (1987, p. 68). O resto da frase, e as aspas de uma transcrição, você escreve.",
+  },
 };
 
 export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
@@ -77,6 +93,10 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
   // citação existente, ligar a citação longa em que o cursor está, ou citar o
   // trecho selecionado.
   const naLonga = editor.isActive("citacao_longa");
+  // O autor na frase selecionado (clique ou setas): o menu o edita.
+  const narrativaAtual = editor.isActive("citacao_narrativa")
+    ? (editor.getAttributes("citacao_narrativa") as AtributosCitacaoNarrativa)
+    : null;
   const citacaoAtual = editor.isActive("citacao")
     ? (editor.getAttributes("citacao") as AtributosCitacao)
     : null;
@@ -84,17 +104,22 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
 
   function abrir() {
     const longa = naLonga ? editor.getAttributes("citacao_longa") : null;
+    const ligada = narrativaAtual ?? citacaoAtual;
     setFormulario({
-      refId: (citacaoAtual?.refId ?? (longa?.refId as string | null)) || references[0]?.id || "",
-      modo: naLonga ? "longa" : (citacaoAtual?.modo ?? "direta_curta"),
-      pagina: citacaoAtual?.pagina ?? (longa?.pagina as string | undefined) ?? "",
+      refId: (ligada?.refId ?? (longa?.refId as string | null)) || references[0]?.id || "",
+      modo: narrativaAtual
+        ? "narrativa"
+        : naLonga
+          ? "longa"
+          : (citacaoAtual?.modo ?? "direta_curta"),
+      pagina: ligada?.pagina ?? (longa?.pagina as string | undefined) ?? "",
       apud: Boolean(citacaoAtual?.apud),
       apudSobrenome: citacaoAtual?.apud?.author[0]?.family ?? "",
       apudPrenome: citacaoAtual?.apud?.author[0]?.given ?? "",
       apudAno: String(citacaoAtual?.apud?.issued?.["date-parts"]?.[0]?.[0] ?? ""),
       apudPagina: citacaoAtual?.apud?.pagina ?? "",
-      grifoNosso: Boolean(citacaoAtual?.grifoNosso ?? longa?.grifoNosso),
-      traducaoNossa: Boolean(citacaoAtual?.traducaoNossa ?? longa?.traducaoNossa),
+      grifoNosso: Boolean(ligada?.grifoNosso ?? longa?.grifoNosso),
+      traducaoNossa: Boolean(ligada?.traducaoNossa ?? longa?.traducaoNossa),
     });
   }
 
@@ -118,7 +143,23 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
     const grifoNosso = direta && formulario.grifoNosso;
     const traducaoNossa = direta && formulario.traducaoNossa;
 
-    if (formulario.modo === "longa") {
+    if (formulario.modo === "narrativa") {
+      const attrs: AtributosCitacaoNarrativa = {
+        refId: formulario.refId,
+        pagina: formulario.pagina.trim() || null,
+        grifoNosso,
+        traducaoNossa,
+      };
+      if (narrativaAtual) {
+        editor.chain().focus().updateAttributes("citacao_narrativa", attrs).run();
+      } else {
+        editor
+          .chain()
+          .focus()
+          .command(({ tr }) => inserirCitacaoNarrativa(tr, attrs))
+          .run();
+      }
+    } else if (formulario.modo === "longa") {
       const attrs = {
         refId: formulario.refId,
         pagina: formulario.pagina.trim(),
@@ -160,7 +201,11 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
   }
 
   function remover() {
-    if (naLonga) {
+    if (narrativaAtual) {
+      // O nó é a citação inteira: removê-la tira o nome da frase, que o
+      // aluno reescreve como quiser (ou desfaz com Ctrl+Z).
+      editor.chain().focus().deleteSelection().run();
+    } else if (naLonga) {
       editor
         .chain()
         .focus()
@@ -179,8 +224,14 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
 
   // Direta e indireta precisam de um trecho: a citação é o texto do aluno, e
   // sem seleção não há texto para ligar.
+  //
+  // O autor na frase não precisa de trecho: entra no cursor. Precisa só de um
+  // lugar que o aceite — parágrafo, não célula de tabela nem citação longa.
   function podeConfirmar(atual: Formulario): boolean {
     if (!atual.refId) return false;
+    if (atual.modo === "narrativa") {
+      return Boolean(narrativaAtual) || (!naLonga && podeInserirCitacaoNarrativa(editor.state));
+    }
     if (atual.modo === "longa") return true;
     if (naLonga) return false;
     if (!temSelecao && !citacaoAtual) return false;
@@ -189,11 +240,13 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
   }
 
   const editando =
-    Boolean(citacaoAtual) || (naLonga && Boolean(editor.getAttributes("citacao_longa").refId));
+    Boolean(citacaoAtual) ||
+    Boolean(narrativaAtual) ||
+    (naLonga && Boolean(editor.getAttributes("citacao_longa").refId));
 
   return (
     <>
-      {gatilho({ abrir, ativo: Boolean(citacaoAtual) })}
+      {gatilho({ abrir, ativo: Boolean(citacaoAtual) || Boolean(narrativaAtual) })}
 
       {formulario && (
         <Dialog
@@ -234,7 +287,8 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
             <CamposCitacao
               formulario={formulario}
               references={references}
-              naLonga={naLonga}
+              modoFixo={naLonga ? "longa" : narrativaAtual ? "narrativa" : null}
+              semNarrativa={Boolean(citacaoAtual)}
               semTrecho={!temSelecao && !citacaoAtual}
               onMudar={mudar}
             />
@@ -248,27 +302,46 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
 function CamposCitacao({
   formulario,
   references,
-  naLonga,
+  modoFixo,
+  semNarrativa,
   semTrecho,
   onMudar,
 }: {
   formulario: Formulario;
   references: readonly Referencia[];
-  naLonga: boolean;
+  // Dentro de uma citação longa, ou com um autor na frase selecionado, o
+  // menu só edita aquela citação: trocar de modo seria trocar de nó.
+  modoFixo: Modo | null;
+  // Com o cursor num trecho já marcado, o autor na frase não é oferecido: ele
+  // entraria no meio do trecho, em vez de ligá-lo.
+  semNarrativa: boolean;
   semTrecho: boolean;
   onMudar: <K extends keyof Formulario>(campo: K, valor: Formulario[K]) => void;
 }) {
   const referencia = references.find((item) => item.id === formulario.refId);
-  const inline = formulario.modo !== "longa";
+  // Direta e indireta são a marca sobre o trecho: só elas pedem trecho e
+  // oferecem apud.
+  const marca = formulario.modo === "direta_curta" || formulario.modo === "indireta";
+  // Grifo e tradução: onde pode haver trecho transcrito.
   const direta = formulario.modo !== "indireta";
-  const previa = referencia
-    ? formatarChamada(referencia, {
-        pagina: formulario.pagina.trim() || null,
-        apud: inline && formulario.apud ? fonteOriginal(formulario) : null,
-        ...(direta && formulario.grifoNosso ? { grifoNosso: true } : {}),
-        ...(direta && formulario.traducaoNossa ? { traducaoNossa: true } : {}),
-      })
-    : "";
+  const dados = {
+    pagina: formulario.pagina.trim() || null,
+    ...(direta && formulario.grifoNosso ? { grifoNosso: true as const } : {}),
+    ...(direta && formulario.traducaoNossa ? { traducaoNossa: true as const } : {}),
+  };
+  const previa = !referencia
+    ? ""
+    : formulario.modo === "narrativa"
+      ? formatarChamadaNarrativa(referencia, dados)
+      : formatarChamada(referencia, {
+          ...dados,
+          apud: marca && formulario.apud ? fonteOriginal(formulario) : null,
+        });
+
+  function desabilitado(modo: Modo): boolean {
+    if (modoFixo) return modo !== modoFixo;
+    return modo === "narrativa" && semNarrativa;
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -282,7 +355,7 @@ function CamposCitacao({
             checked={formulario.modo === modo}
             // Dentro de uma citação longa, o bloco já é a citação: marcar um
             // trecho dele seria uma segunda ligação (docs/schema-tiptap.md §4.3).
-            disabled={naLonga && modo !== "longa"}
+            disabled={desabilitado(modo)}
             onChange={() => onMudar("modo", modo)}
             label={ROTULO_MODO[modo].label}
             description={ROTULO_MODO[modo].description}
@@ -290,7 +363,7 @@ function CamposCitacao({
         ))}
       </fieldset>
 
-      {inline && semTrecho && (
+      {marca && semTrecho && (
         <p role="status" className="text-xs text-warning">
           Selecione no texto o trecho citado antes de inserir a citação.
         </p>
@@ -308,7 +381,9 @@ function CamposCitacao({
         hint={
           formulario.modo === "indireta"
             ? "Opcional na indireta (§7.2). Ex.: 45, 45-47, cap. V, local. 264"
-            : "Na direta, indique onde está o trecho (§7.1). Ex.: 45, 45-47, cap. V"
+            : formulario.modo === "narrativa"
+              ? "Se a frase transcreve o autor, indique onde está o trecho; se resume, é opcional (§6.1.4)."
+              : "Na direta, indique onde está o trecho (§7.1). Ex.: 45, 45-47, cap. V"
         }
         value={formulario.pagina}
         onChange={(evento) => onMudar("pagina", evento.target.value)}
@@ -332,7 +407,7 @@ function CamposCitacao({
         </fieldset>
       )}
 
-      {inline && (
+      {marca && (
         <div className="flex flex-col gap-3">
           <Checkbox
             checked={formulario.apud}

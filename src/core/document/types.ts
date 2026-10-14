@@ -131,7 +131,32 @@ export interface NoNotaRodape {
 // tabela fica só com `NoTexto`: a tabela tem rodapé próprio (fonte, nota
 // geral e nota específica, IBGE §3.2.3), e nota de rodapé da página dentro
 // da grade não é o que as normas de apresentação tabular preveem.
-export type NoInline = NoTexto | NoNotaRodape | NoFormulaInline;
+export type NoInline = NoTexto | NoNotaRodape | NoFormulaInline | NoCitacaoNarrativa;
+
+// Citação com o autor dentro da frase (NBR 10520:2023 §6.1.4): "Oliveira e
+// Leonardos (1943, p. 146) dizem que...". A "indicação de responsabilidade,
+// quando incluída na sentença, deve ter a data indicada entre parênteses" e,
+// na citação direta, a página depois da data.
+//
+// **Um elemento, não texto.** O que o leitor vê ("Oliveira e Leonardos (1943,
+// p. 146)") é sintetizado da referência, como a chamada entre parênteses
+// (`AtributosCitacao`): corrigir o ano da referência corrige a frase, e a
+// forma do nome é sempre a da norma — "e" antes do último autor, `et al.` a
+// partir de quatro (§6.1.2). O aluno escreve o resto da frase, e as aspas da
+// transcrição, se houver.
+//
+// Inline e atômico, como a nota de rodapé, e pela mesma regra **conta zero
+// caracteres no texto do parágrafo** (`soTexto()`): a chamada entre
+// parênteses também não entra no texto, porque não é escrita pelo aluno.
+//
+// Sem apud: a citação de citação continua sendo a chamada entre parênteses
+// (§7.3). Os acréscimos valem: "Souto (1916, p. 46, grifo nosso)".
+export interface NoCitacaoNarrativa extends AcrescimosCitacao {
+  type: "citacao_narrativa";
+  refId: string;
+  // "Se houver" (§6.1.4), como na chamada entre parênteses.
+  pagina: string | null;
+}
 
 // Fórmula no meio da frase (passo 6.2.11), ao lado da fórmula em bloco
 // (`NoFormula`): o mesmo LaTeX em `texto`, desenhado na linha. Inline e

@@ -67,7 +67,10 @@ function dialogo(page: Page) {
 
 // Rádio e caixa do design system têm o `<input>` `sr-only`: quem recebe o
 // clique é o rótulo, como para quem usa o mouse.
-async function escolherModo(page: Page, modo: "Direta" | "Indireta" | "Longa") {
+async function escolherModo(
+  page: Page,
+  modo: "Direta" | "Indireta" | "Longa" | "Autor na frase",
+) {
   await dialogo(page).getByText(modo, { exact: true }).click();
 }
 
@@ -183,6 +186,44 @@ test.describe("inserir citação pela interface (passo 4.10)", () => {
     await expect(page.locator(".ProseMirror blockquote .doc-chamada")).toHaveText(
       " (Bauman, 1999, p. 21, tradução nossa)",
     );
+  });
+
+  // NBR 10520:2023 §6.1.4: "Bauman (1999, p. 45)" entra na frase do aluno,
+  // sintetizado da referência; o resto da frase é digitado.
+  test("autor na frase: entra no cursor, volta ao recarregar e se edita pelo menu", async ({
+    page,
+  }) => {
+    await documentoComReferencias(page);
+    const paragrafo = page.locator(".ProseMirror p").first();
+    await paragrafo.click();
+    await page.keyboard.type("Segundo ");
+    await abrirMenu(page);
+
+    await escolherModo(page, "Autor na frase");
+    // Não precisa de trecho selecionado: o aviso das outras não aparece.
+    await expect(dialogo(page).getByText("Selecione no texto o trecho citado")).toHaveCount(0);
+    await dialogo(page).getByLabel("Página ou localização").fill("45");
+    await expect(dialogo(page).getByLabel("Prévia da chamada")).toHaveText("Bauman (1999, p. 45)");
+    await dialogo(page).getByRole("button", { name: "Inserir citação" }).click();
+
+    // O cursor fica logo depois: a frase continua dali.
+    await page.keyboard.type(", o mundo se globaliza.");
+    const narrativa = page.locator(".ProseMirror .doc-citacao-narrativa");
+    await expect(narrativa).toHaveText("Bauman (1999, p. 45)");
+    await expect(paragrafo).toHaveText("Segundo Bauman (1999, p. 45), o mundo se globaliza.");
+
+    await expect(page.locator('span[role="status"]')).toHaveText("Salvo", { timeout: 15_000 });
+    await page.reload();
+    await expect(narrativa).toHaveText("Bauman (1999, p. 45)");
+
+    // Selecionado, o menu o edita: outra página, sem trocar de modo.
+    await narrativa.click();
+    await abrirMenu(page);
+    await expect(dialogo(page)).toHaveAccessibleName(/Editar citação/);
+    await expect(dialogo(page).getByRole("radio", { name: /^Direta/ })).toBeDisabled();
+    await dialogo(page).getByLabel("Página ou localização").fill("50");
+    await dialogo(page).getByRole("button", { name: "Salvar citação" }).click();
+    await expect(narrativa).toHaveText("Bauman (1999, p. 50)");
   });
 
   test("direta e indireta pedem um trecho selecionado", async ({ page }) => {

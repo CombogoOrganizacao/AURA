@@ -1,6 +1,7 @@
 import type { JSONContent } from "@tiptap/core";
 
 import { lerAcrescimos, lerAtributosCitacao } from "../editor/marks/citation";
+import { atributosNoEditor } from "../editor/nodes/citacaoNarrativa";
 import { lerAtributosSugestao } from "../editor/marks/suggestion";
 import type {
   CelulaTabela,
@@ -189,6 +190,23 @@ function paraNoInline(no: JSONContent): NoInline {
     const { texto } = (no.attrs ?? {}) as { texto?: unknown };
     return { type: no.type, texto: typeof texto === "string" ? texto : "" };
   }
+  if (no.type === "citacao_narrativa") {
+    // Mesma política da marca `citacao`: sem `refId`, ou com atributo fora
+    // de forma, lança, em vez de ligar a frase a uma referência adivinhada.
+    const attrs = no.attrs ?? {};
+    const { refId, pagina } = attrs as { refId?: unknown; pagina?: unknown };
+    const acrescimos = lerAcrescimos(attrs);
+    const paginaValida = pagina === null || pagina === undefined || typeof pagina === "string";
+    if (typeof refId !== "string" || refId === "" || !paginaValida || !acrescimos) {
+      throw new Error("Citação com o autor na frase com atributos inválidos");
+    }
+    return {
+      type: "citacao_narrativa",
+      refId,
+      pagina: typeof pagina === "string" ? pagina : null,
+      ...acrescimos,
+    };
+  }
   return paraNoTexto(no);
 }
 
@@ -261,9 +279,13 @@ export function fromDocumento(sections: Secao[]): JSONContent {
 // `deNoConteudo` não repetir o mesmo mapeamento de marca por tipo de bloco.
 function deConteudoInline(content: NoInline[] | undefined): JSONContent[] | undefined {
   if (!content || content.length === 0) return undefined;
-  return content.map((texto) =>
-    texto.type === "text" ? deNoTexto(texto) : { type: texto.type, attrs: { texto: texto.texto } },
-  );
+  return content.map((texto) => {
+    if (texto.type === "text") return deNoTexto(texto);
+    if (texto.type === "citacao_narrativa") {
+      return { type: texto.type, attrs: { ...atributosNoEditor(texto) } };
+    }
+    return { type: texto.type, attrs: { texto: texto.texto } };
+  });
 }
 
 function deNoTexto(texto: NoTexto): JSONContent {

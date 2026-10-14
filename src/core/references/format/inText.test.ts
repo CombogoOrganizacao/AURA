@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { CSLName, ReferenciaLivro } from "../types";
-import { formatarChamada } from "./inText";
+import { formatarChamada, formatarChamadaNarrativa } from "./inText";
 
 function livro(
   author: CSLName[] | undefined,
@@ -241,5 +241,73 @@ describe("grifo nosso e tradução nossa (§7.1.5, §7.1.6)", () => {
         },
       ),
     ).toBe("(Assis, 1997 apud Canuto, 1999, p. 6, grifo nosso)");
+  });
+});
+
+// §6.1.4: "A indicação de responsabilidade, quando incluída na sentença, deve
+// ter a data indicada entre parênteses." Exemplos conferidos no PDF da
+// 10520:2023 em 14/10/2026.
+describe("autor dentro da frase (§6.1.4)", () => {
+  const ano = (valor: number) => ({ issued: { "date-parts": [[valor]] as [[number]] } });
+
+  it("§6.1.4, exemplo 1: dois autores unidos por 'e', com a página", () => {
+    expect(
+      formatarChamadaNarrativa(
+        livro([{ family: "Oliveira" }, { family: "Leonardos" }], ano(1943)),
+        { pagina: "146" },
+      ),
+    ).toBe("Oliveira e Leonardos (1943, p. 146)");
+  });
+
+  it("§6.1.4, exemplo 2: todos os autores, quando o trabalho não abrevia", () => {
+    const autores = ["Grilli", "Marciandaro", "Tabellini", "Malinvauld", "Pagano"].map(
+      (family) => ({ family }),
+    );
+    expect(formatarChamadaNarrativa(livro(autores, ano(1991)), {}, { etAl: "nunca" })).toBe(
+      "Grilli, Marciandaro, Tabellini, Malinvauld e Pagano (1991)",
+    );
+  });
+
+  it("§6.1.2, exemplo 1: quatro ou mais, abreviando, viram 'et al.'", () => {
+    const autores = ["Maciel", "Brum", "Del Bianco", "Costa"].map((family) => ({ family }));
+    expect(formatarChamadaNarrativa(livro(autores, ano(2019)), { pagina: "163" })).toBe(
+      "Maciel et al. (2019, p. 163)",
+    );
+  });
+
+  it("§6.1.4, exemplo 3: pessoa jurídica pelo nome completo", () => {
+    expect(
+      formatarChamadaNarrativa(
+        livro([{ literal: "Organização para Cooperação e Desenvolvimento Econômico" }], ano(2015)),
+        { pagina: "18" },
+      ),
+    ).toBe("Organização para Cooperação e Desenvolvimento Econômico (2015, p. 18)");
+  });
+
+  it("§7.1, exemplo 1: um autor, transcrição com página", () => {
+    expect(
+      formatarChamadaNarrativa(livro([{ family: "Barbour" }], ano(1971)), { pagina: "35" }),
+    ).toBe("Barbour (1971, p. 35)");
+  });
+
+  it("três autores: vírgula entre os primeiros e 'e' antes do último", () => {
+    expect(formatarChamadaNarrativa(livro([SILVA, SOUZA, LIMA]))).toBe(
+      "Silva, Souza e Lima (2023)",
+    );
+  });
+
+  it("os acréscimos vão dentro dos parênteses, por último (§7.1.5)", () => {
+    expect(
+      formatarChamadaNarrativa(livro([{ family: "Souto" }], ano(1916)), {
+        pagina: "46",
+        grifoNosso: true,
+      }),
+    ).toBe("Souto (1916, p. 46, grifo nosso)");
+  });
+
+  it("sem autoria: entrada pelo título, como na chamada entre parênteses", () => {
+    expect(
+      formatarChamadaNarrativa(livro(undefined, { title: "Anteprojeto de lei", ...ano(1987) })),
+    ).toBe("Anteprojeto [...] (1987)");
   });
 });
