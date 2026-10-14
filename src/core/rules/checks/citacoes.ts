@@ -72,6 +72,49 @@ export const citacaoDiretaSemPagina: Verificacao = {
     }),
 };
 
+// §7.1: "As citações diretas no texto, de até três linhas, DEVEM estar
+// contidas entre aspas duplas. As aspas simples são utilizadas para indicar
+// citação no interior da citação." As aspas de fora o AURA põe (a marca
+// `citacao`, `document/elements/trechos.ts`); o que o aluno digita dentro do
+// trecho pode atrapalhar de dois jeitos:
+// - aspas duplas nas DUAS pontas do trecho: são as de fora, digitadas à mão,
+//   e saem dobradas (““…””). Erro: a citação deixa de estar "entre aspas
+//   duplas";
+// - aspas duplas no meio: citação dentro da citação, que vai entre aspas
+//   simples (exemplo 2 do §7.1, "‘arte de conversação’"). Aviso, e não erro:
+//   uma aspa dupla no meio do trecho pode ser outra coisa, e só o aluno sabe.
+// A citação longa fica de fora: ela é "sem aspas" (§7.1.1), e a norma não diz
+// nada das aspas dentro dela.
+const ASPAS_DUPLAS = /["“”„]/u;
+
+export const aspasNaCitacaoDireta: Verificacao = {
+  regra: "aspas-na-citacao-direta",
+  verificar: ({ documento }) =>
+    citacoesLocalizadas(documento).flatMap((citacao): Omit<Achado, "regra">[] => {
+      if (citacao.forma !== "marca" || citacao.attrs.modo !== "direta_curta") return [];
+      const texto = citacao.texto.trim();
+      if (!ASPAS_DUPLAS.test(texto)) return [];
+
+      const nasPontas =
+        ASPAS_DUPLAS.test(texto.at(0) ?? "") && ASPAS_DUPLAS.test(texto.at(-1) ?? "");
+      return [
+        nasPontas
+          ? {
+              gravidade: "erro",
+              item: "NBR 10520:2023 §7.1",
+              mensagem: `A citação direta "${resumirTrecho(citacao.texto)}" tem aspas digitadas no começo e no fim. O AURA já põe as aspas, e elas sairiam dobradas: apague as que você digitou.`,
+              local: citacao.local,
+            }
+          : {
+              gravidade: "aviso",
+              item: "NBR 10520:2023 §7.1",
+              mensagem: `A citação direta "${resumirTrecho(citacao.texto)}" tem aspas duplas no meio. Se for uma citação dentro da citação, ela vai entre aspas simples (‘ ’).`,
+              local: citacao.local,
+            },
+      ];
+    }),
+};
+
 // Referência cadastrada e nunca citada. **Convenção, não norma**: a 10520
 // §5.1 exige o caminho citação → lista, e nenhum item da 10520:2023 nem da
 // 6023:2025 (seção 6, lida no PDF em 23/09/2026) exige o inverso. Por isso

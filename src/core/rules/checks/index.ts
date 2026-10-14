@@ -1,5 +1,6 @@
 import type { Verificacao } from "../compliance";
 import {
+  aspasNaCitacaoDireta,
   citacaoDiretaSemPagina,
   citacaoLongaSemReferencia,
   citacaoOrfa,
@@ -40,6 +41,7 @@ export const VERIFICACOES: readonly Verificacao[] = [
   citacaoOrfa,
   citacaoLongaSemReferencia,
   citacaoDiretaSemPagina,
+  aspasNaCitacaoDireta,
   referenciasPresentes,
   referenciaNaoCitada,
   posTextualComTitulo,

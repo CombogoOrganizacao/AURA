@@ -4,6 +4,7 @@ import type { NoParagrafo, NoTexto } from "../../document/types";
 import { conferirCom } from "../__tests__/conferirCom";
 import { documentoConforme } from "../__tests__/documentoConforme";
 import {
+  aspasNaCitacaoDireta,
   citacaoDiretaSemPagina,
   citacaoLongaSemReferencia,
   citacaoOrfa,
@@ -127,6 +128,59 @@ describe("citacao-direta-sem-pagina (10520 §6.1.3, 'se houver')", () => {
         if (longa.type === "citacao_longa") longa.pagina = "";
       }),
     ).toEqual([expect.objectContaining({ local: { tipo: "bloco", onde: INTRO, no: 3 } })]);
+  });
+});
+
+describe("aspas-na-citacao-direta (10520 §7.1)", () => {
+  // Troca o texto da direta curta do documento de referência ("ensinar exige
+  // risco", nó de texto 3 do parágrafo 0).
+  function comTextoDaDireta(texto: string) {
+    return conferirCom(aspasNaCitacaoDireta, (d) => {
+      const paragrafo = d.sections[0].content[0] as NoParagrafo;
+      (paragrafo.content as NoTexto[])[3].text = texto;
+    });
+  }
+
+  it("conforme: nenhum achado", () => {
+    expect(conferirCom(aspasNaCitacaoDireta)).toEqual([]);
+  });
+
+  it("aspas digitadas nas duas pontas: erro, porque sairiam dobradas", () => {
+    for (const texto of ["“ensinar exige risco”", '"ensinar exige risco"']) {
+      expect(comTextoDaDireta(texto)).toEqual([
+        expect.objectContaining({
+          regra: "aspas-na-citacao-direta",
+          gravidade: "erro",
+          item: "NBR 10520:2023 §7.1",
+        }),
+      ]);
+    }
+  });
+
+  it("§7.1, exemplo 2: aspas duplas no meio pedem as simples, como aviso", () => {
+    const [achado] = comTextoDaDireta(
+      "por meio da mesma “arte de conversação” que abrange tão extensa parte",
+    );
+    expect(achado).toMatchObject({ gravidade: "aviso", item: "NBR 10520:2023 §7.1" });
+    expect(achado.mensagem).toContain("aspas simples");
+  });
+
+  it("aspas simples no meio, como a norma pede: nenhum achado", () => {
+    expect(comTextoDaDireta("por meio da mesma ‘arte de conversação’ que abrange")).toEqual([]);
+  });
+
+  it("indireta e longa ficam de fora: só a direta curta vai entre aspas", () => {
+    expect(
+      conferirCom(aspasNaCitacaoDireta, (d) => {
+        const paragrafo = d.sections[0].content[0] as NoParagrafo;
+        const indireta = (paragrafo.content as NoTexto[])[1];
+        indireta.text = "“a educação é prática da liberdade”";
+        const longa = d.sections[0].content[3];
+        if (longa.type === "citacao_longa") {
+          longa.content = [{ type: "text", text: "Um “termo” na longa." }];
+        }
+      }),
+    ).toEqual([]);
   });
 });
 
