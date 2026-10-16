@@ -323,89 +323,103 @@ function Carregado({
           sidebar={
             <div className="flex min-h-0 flex-1 flex-col">
               {/*
+              Duas regiões (8.1.2): os dados do trabalho rolam por conta
+              própria, e as seções ficam embaixo com altura mínima. Com os
+              `<details>` soltos na coluna, abertos eles empurravam a lista
+              de seções para altura zero, e nada rolava. A região dos dados
+              encolhe até a das seções chegar ao mínimo (`30dvh`).
+            */}
+              <div
+                data-regiao="dados"
+                className="flex min-h-0 flex-[0_1_auto] flex-col overflow-y-auto overscroll-contain"
+              >
+                {/*
               `<details>` nativo — recolhível sem estado React nem
               primitivo de acordeão novo (não pedido neste passo). Começa
               fechado: a seção é o que a coluna prioriza; metadados são
               consulta ocasional, não o que se olha a cada abertura.
             */}
-              <details
-                data-painel="dados"
-                className="shrink-0 border-b border-[var(--border-subtle)]"
-              >
-                <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
-                  Dados do trabalho
-                </summary>
-                <div className="px-4 pb-4">
-                  <FormMetadados metadados={documento.metadados} onChange={atualizarMetadados} />
-                </div>
-              </details>
-              <details
-                data-painel="aprovacao"
-                className="shrink-0 border-b border-[var(--border-subtle)]"
-              >
-                <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
-                  Folha de aprovação
-                </summary>
-                <div className="px-4 pb-4">
-                  <PainelBanca metadados={documento.metadados} onChange={atualizarMetadados} />
-                </div>
-              </details>
-              <details
-                data-painel="resumo"
-                className="shrink-0 border-b border-[var(--border-subtle)]"
-              >
-                <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
-                  Resumo e palavras-chave
-                </summary>
-                <div className="px-4 pb-4">
-                  <Resumo metadados={documento.metadados} onChange={atualizarMetadados} />
-                </div>
-              </details>
-              <details
-                data-painel="abstract"
-                className="shrink-0 border-b border-[var(--border-subtle)]"
-              >
-                <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
-                  Abstract e keywords
-                </summary>
-                <div className="px-4 pb-4">
-                  <Abstract metadados={documento.metadados} onChange={atualizarMetadados} />
-                </div>
-              </details>
-              <details
-                data-painel="elementos"
-                className="shrink-0 border-b border-[var(--border-subtle)]"
-              >
-                <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
-                  Elementos opcionais
-                </summary>
-                <div className="px-4 pb-4">
-                  <PainelElementos metadados={documento.metadados} onChange={atualizarMetadados} />
-                </div>
-              </details>
-              <details
-                data-painel="abreviaturas"
-                className="shrink-0 border-b border-[var(--border-subtle)]"
-              >
-                <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
-                  Abreviaturas e siglas
-                </summary>
-                <div className="px-4 pb-4">
-                  {/*
+                <details
+                  data-painel="dados"
+                  className="shrink-0 border-b border-[var(--border-subtle)]"
+                >
+                  <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                    Dados do trabalho
+                  </summary>
+                  <div className="px-4 pb-4">
+                    <FormMetadados metadados={documento.metadados} onChange={atualizarMetadados} />
+                  </div>
+                </details>
+                <details
+                  data-painel="aprovacao"
+                  className="shrink-0 border-b border-[var(--border-subtle)]"
+                >
+                  <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                    Folha de aprovação
+                  </summary>
+                  <div className="px-4 pb-4">
+                    <PainelBanca metadados={documento.metadados} onChange={atualizarMetadados} />
+                  </div>
+                </details>
+                <details
+                  data-painel="resumo"
+                  className="shrink-0 border-b border-[var(--border-subtle)]"
+                >
+                  <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                    Resumo e palavras-chave
+                  </summary>
+                  <div className="px-4 pb-4">
+                    <Resumo metadados={documento.metadados} onChange={atualizarMetadados} />
+                  </div>
+                </details>
+                <details
+                  data-painel="abstract"
+                  className="shrink-0 border-b border-[var(--border-subtle)]"
+                >
+                  <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                    Abstract e keywords
+                  </summary>
+                  <div className="px-4 pb-4">
+                    <Abstract metadados={documento.metadados} onChange={atualizarMetadados} />
+                  </div>
+                </details>
+                <details
+                  data-painel="elementos"
+                  className="shrink-0 border-b border-[var(--border-subtle)]"
+                >
+                  <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                    Elementos opcionais
+                  </summary>
+                  <div className="px-4 pb-4">
+                    <PainelElementos
+                      metadados={documento.metadados}
+                      onChange={atualizarMetadados}
+                    />
+                  </div>
+                </details>
+                <details
+                  data-painel="abreviaturas"
+                  className="shrink-0 border-b border-[var(--border-subtle)]"
+                >
+                  <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                    Abreviaturas e siglas
+                  </summary>
+                  <div className="px-4 pb-4">
+                    {/*
                   Recebe `sections` além de `metadados` (passo 3.6.4): o
                   painel avisa quando uma sigla cadastrada ainda não aparece
                   no texto, e para isso precisa olhar o corpo. É leitura, não
                   edição — quem escreve em `sections` continua sendo só o
                   editor.
                 */}
-                  <PainelAbreviaturas
-                    metadados={documento.metadados}
-                    sections={documento.sections}
-                    onChange={atualizarMetadados}
-                  />
-                </div>
-              </details>
-              {/*
+                    <PainelAbreviaturas
+                      metadados={documento.metadados}
+                      sections={documento.sections}
+                      onChange={atualizarMetadados}
+                    />
+                  </div>
+                </details>
+                {/*
               Cadastro de referências **só no desktop** (critério do passo
               4.5). Cadastrar uma referência é preencher de seis a doze campos
               separados — autoria, título, imprenta, paginação —, e num teclado
@@ -414,26 +428,29 @@ function Carregado({
               (6.4.5; antes ele sumia sem aviso): as referências já cadastradas
               continuam à vista e saindo no `.docx` exportado.
             */}
-              <details
-                data-painel="referencias"
-                className="shrink-0 border-b border-[var(--border-subtle)]"
-              >
-                <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
-                  Referências
-                </summary>
-                <div className="px-4 pb-4">
-                  <PainelReferencias
-                    references={documento.references}
-                    onChange={atualizarReferencias}
-                  />
-                </div>
-              </details>
-              <PainelSecoes
-                sections={documento.sections}
-                onReorder={reordenarSecoes}
-                onNovaSecao={() => criarSecao(false)}
-                onApagarSecao={apagarSecao}
-              />
+                <details
+                  data-painel="referencias"
+                  className="shrink-0 border-b border-[var(--border-subtle)]"
+                >
+                  <summary className="cursor-pointer px-4 py-3 font-sans text-xs font-semibold tracking-wide text-body select-none">
+                    Referências
+                  </summary>
+                  <div className="px-4 pb-4">
+                    <PainelReferencias
+                      references={documento.references}
+                      onChange={atualizarReferencias}
+                    />
+                  </div>
+                </details>
+              </div>
+              <div data-regiao="secoes" className="flex min-h-[30dvh] flex-[1_1_0px] flex-col">
+                <PainelSecoes
+                  sections={documento.sections}
+                  onReorder={reordenarSecoes}
+                  onNovaSecao={() => criarSecao(false)}
+                  onApagarSecao={apagarSecao}
+                />
+              </div>
             </div>
           }
           inspetor={
