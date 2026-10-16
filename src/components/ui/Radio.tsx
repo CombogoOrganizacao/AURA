@@ -30,7 +30,7 @@ export function Radio({
     <label
       htmlFor={uid}
       className={[
-        "flex items-start gap-2.5",
+        "relative flex items-start gap-2.5",
         disabled ? "cursor-not-allowed opacity-55" : "cursor-pointer",
         className,
       ].join(" ")}

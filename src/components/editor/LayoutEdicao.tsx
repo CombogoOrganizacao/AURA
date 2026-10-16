@@ -327,8 +327,11 @@ export function LayoutEdicao({ sidebar, children, inspetor }: LayoutEdicaoProps)
 
   const gavetaAberta = desktop ? null : gaveta;
 
+  // `overflow-hidden` prende o editor à janela (8.1.1): o que é absoluto e
+  // tem esta caixa como referência não estica mais a página por baixo. As
+  // gavetas do celular são `fixed` e não são cortadas.
   return (
-    <div className="relative flex min-h-0 min-w-0 flex-1">
+    <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
       <Coluna
         lado="esquerda"
         desktop={desktop}

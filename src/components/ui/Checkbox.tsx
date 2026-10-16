@@ -23,6 +23,9 @@ interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "typ
 // without onChange" e trava sem alternar — a referência da skill resolve o
 // mesmo jeito. `peer` no `<input>` real leva o anel de foco até a réplica
 // visual (`peer-focus-visible:`) sem duplicar estado de foco em React.
+// O `relative` no rótulo segura o `sr-only` (absoluto) junto da caixa; sem
+// ele, o input invisível escapava da coluna e esticava a página (8.1.1). O
+// `Radio` e o `Switch` fazem o mesmo.
 export function Checkbox({
   label,
   description,
@@ -46,7 +49,7 @@ export function Checkbox({
     <label
       htmlFor={uid}
       className={[
-        "flex items-start gap-2.5",
+        "relative flex items-start gap-2.5",
         disabled ? "cursor-not-allowed opacity-55" : "cursor-pointer",
         className,
       ].join(" ")}

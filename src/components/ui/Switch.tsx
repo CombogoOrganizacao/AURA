@@ -32,7 +32,7 @@ export function Switch({
     <label
       htmlFor={uid}
       className={[
-        "flex items-center justify-between gap-3",
+        "relative flex items-center justify-between gap-3",
         disabled ? "cursor-not-allowed opacity-55" : "cursor-pointer",
         className,
       ].join(" ")}
