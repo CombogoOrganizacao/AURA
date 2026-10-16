@@ -95,6 +95,21 @@ export function cursorDepoisDoBloco(tr: Transaction, fim: number): number {
   return fim + 1;
 }
 
+// Depois do bloco que termina em `fim`, falta uma linha para digitar? É o
+// "beco sem saída" de uma tabela, figura ou fórmula que fecha a seção
+// (8.1.3): o fim da seção, ou uma subseção logo depois. A seção seguinte
+// começa no título, que é um campo e não recebe o cursor do texto; então o
+// cursor não tem onde pousar entre o bloco e o título.
+//
+// Com um parágrafo depois, o cursor já tem para onde ir. Com outro bloco
+// fechado (outra tabela, uma figura), quem cuida é o cursor de intervalo.
+export function faltaLinhaDepois(doc: NoProseMirror, fim: number): boolean {
+  const $fim = doc.resolve(fim);
+  if ($fim.parent.type.name !== "secao") return false;
+  const depois = $fim.nodeAfter;
+  return !depois || depois.type.name === "secao";
+}
+
 // Onde termina o bloco em que a seleção está — o filho direto da seção que a
 // contém. Serve para achar o "depois deste bloco" sem depender de onde
 // exatamente o TipTap largou o cursor: inserir uma figura deixa o nó inteiro

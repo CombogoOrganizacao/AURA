@@ -27,6 +27,7 @@ import {
 } from "@/core/editor/apagarSecao";
 import { cursorNaUltimaLinha } from "@/core/editor/caret";
 import { CursorDeIntervalo } from "@/core/editor/gapcursor";
+import { LinhaAposBloco } from "@/core/editor/linhaAposBloco";
 import { alvoNoEditor, selecaoDoAlvo } from "@/core/editor/localizar";
 import { RealceBusca } from "@/core/editor/busca";
 import { Citacao } from "@/core/editor/marks/citation";
@@ -299,6 +300,10 @@ export function Editor({
       // seção, entre duas figuras, antes do primeiro bloco. Sem ele, seta
       // para baixo e clique não tinham para onde ir nesses pontos.
       CursorDeIntervalo,
+      // Linha para digitar depois de tabela, figura ou fórmula que fecha a
+      // seção (8.1.3): o que o cursor de intervalo não alcança quando outra
+      // seção vem depois.
+      LinhaAposBloco,
     ],
     content: conteudoInicial,
     // Evita o nó ser renderizado no primeiro render do lado do servidor e
@@ -547,36 +552,37 @@ export function Editor({
         deixaria o texto ilegível. A forma da página é do .docx, não daqui.
       */}
       <div className="flex min-h-0 flex-1 flex-col items-center gap-6 overflow-auto bg-ink-100 p-2 md:p-8">
+        {/*
+          Clicar no vazio da folha, abaixo do texto, põe o cursor na última
+          linha — criando-a se o documento terminar em tabela, figura ou
+          fórmula (`cursorNaUltimaLinha()`, src/core/editor/caret.ts). É o
+          gesto que se faz em qualquer editor, e aqui ele não chegava ao
+          ProseMirror: abaixo do último bloco não há nó nenhum sob o
+          ponteiro.
+
+          O ouvinte fica na FOLHA, e não só na área do texto (8.1.3): as
+          margens são padding, fora da área do texto, e num documento com
+          mais de uma página a margem de baixo é o único vazio que sobra. Só
+          conta o clique abaixo do fim do texto; o que cai dentro do
+          `.ProseMirror` é do ProseMirror, e roubá-lo moveria o cursor para o
+          fim a cada clique no meio do texto.
+        */}
         <PaperSheet
           continua
           font={fonte ?? "times"}
           width={desktop ? undefined : "calc(100vw - 16px)"}
+          onMouseDown={(evento) => {
+            if (evento.button !== 0) return;
+            if ((evento.target as HTMLElement).closest(".ProseMirror")) return;
+            if (evento.clientY < editor.view.dom.getBoundingClientRect().bottom) return;
+            evento.preventDefault();
+            const tr = editor.state.tr;
+            cursorNaUltimaLinha(tr);
+            editor.view.dispatch(tr);
+            editor.view.focus();
+          }}
         >
-          {/*
-            Clicar no vazio da folha, abaixo do texto, põe o cursor na última
-            linha — criando-a se o documento terminar em tabela, figura ou
-            fórmula (`cursorNaUltimaLinha()`, src/core/editor/caret.ts). É o
-            gesto que se faz em qualquer editor, e aqui ele não chegava ao
-            ProseMirror: abaixo do último bloco não há nó nenhum sob o
-            ponteiro.
-
-            `flex-1` para que a área clicável seja a folha inteira, e não só a
-            altura do texto já escrito. `target !== currentTarget` deixa
-            passar o clique que caiu no conteúdo de verdade — esse o
-            ProseMirror trata sozinho, e roubá-lo moveria o cursor para o fim
-            a cada clique no meio do texto.
-          */}
-          <div
-            className="flex-1 cursor-text"
-            onMouseDown={(evento) => {
-              if (evento.target !== evento.currentTarget) return;
-              evento.preventDefault();
-              const tr = editor.state.tr;
-              cursorNaUltimaLinha(tr);
-              editor.view.dispatch(tr);
-              editor.view.focus();
-            }}
-          >
+          <div className="flex-1 cursor-text">
             <ProvedorReferencias value={references}>
               <EditorContent editor={editor} />
             </ProvedorReferencias>

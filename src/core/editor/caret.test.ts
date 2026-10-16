@@ -5,7 +5,7 @@ import Text from "@tiptap/extension-text";
 import { EditorState } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
 
-import { cursorDepoisDoBloco, cursorNaUltimaLinha } from "./caret";
+import { cursorDepoisDoBloco, cursorNaUltimaLinha, faltaLinhaDepois } from "./caret";
 import { Figura } from "./nodes/figure";
 import { Secao } from "./nodes/section";
 import { CelulaTabela, LinhaTabela, Tabela } from "./nodes/table";
@@ -147,5 +147,52 @@ describe("cursorDepoisDoBloco (inserir figura/tabela/fórmula pela barra)", () =
 
     expect(tiposDoFim(depois.doc)).toEqual(["tabela", "paragraph"]);
     expect(depois.doc.resolve(depois.selection.from).parent.textContent).toBe("Depois");
+  });
+});
+
+describe("faltaLinhaDepois (seta para baixo no fim da tabela)", () => {
+  // O fim do bloco, para a tabela que é o último filho de `s1`: a posição
+  // logo depois dela, ainda dentro da seção.
+  function fimDaTabela(doc: ReturnType<typeof schema.nodeFromJSON>, indiceDoFilho: number) {
+    let fim = 1; // entra na primeira seção
+    const s1 = doc.child(0);
+    for (let i = 0; i <= indiceDoFilho; i++) fim += s1.child(i).nodeSize;
+    return fim;
+  }
+
+  it("falta quando a tabela fecha a seção e outra seção vem depois", () => {
+    const estado = estadoCom(secao([paragrafo("a"), tabela()]), secao([paragrafo("b")], "s2"));
+    expect(faltaLinhaDepois(estado.doc, fimDaTabela(estado.doc, 1))).toBe(true);
+  });
+
+  it("falta quando a tabela fecha o documento", () => {
+    const estado = estadoCom(secao([paragrafo("a"), tabela()]));
+    expect(faltaLinhaDepois(estado.doc, fimDaTabela(estado.doc, 1))).toBe(true);
+  });
+
+  it("não falta quando um parágrafo vem depois: o cursor já tem para onde ir", () => {
+    const estado = estadoCom(secao([tabela(), paragrafo("depois")]));
+    expect(faltaLinhaDepois(estado.doc, fimDaTabela(estado.doc, 0))).toBe(false);
+  });
+
+  it("não falta entre dois blocos fechados: é o cursor de intervalo que cuida", () => {
+    const estado = estadoCom(secao([tabela(), figura()]));
+    expect(faltaLinhaDepois(estado.doc, fimDaTabela(estado.doc, 0))).toBe(false);
+  });
+
+  it("não vale dentro de uma célula: a posição não é entre blocos", () => {
+    const estado = estadoCom(secao([tabela()]));
+    // Posição dentro do parágrafo da primeira célula.
+    expect(faltaLinhaDepois(estado.doc, 6)).toBe(false);
+  });
+
+  it("com a linha criada por cursorDepoisDoBloco, deixa de faltar", () => {
+    const estado = estadoCom(secao([tabela()]), secao([paragrafo("b")], "s2"));
+    const fim = fimDaTabela(estado.doc, 0);
+    expect(faltaLinhaDepois(estado.doc, fim)).toBe(true);
+
+    const tr = estado.tr;
+    cursorDepoisDoBloco(tr, fim);
+    expect(faltaLinhaDepois(tr.doc, fim)).toBe(false);
   });
 });
