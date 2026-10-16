@@ -2,7 +2,7 @@ import { Paragraph, SimpleField, TextRun } from "docx";
 
 import { SEPARADOR_LEGENDA, rotuloDe, textoFonte } from "../../document/elements/legenda";
 import type { NoNumeravel } from "../../document/types";
-import { ABNT } from "./constants";
+import { ABNT, entrelinha } from "./constants";
 
 // Legenda e fonte de ilustração/tabela no `.docx` — passo 3.6.3, com a
 // correção da lista de tabelas descrita abaixo. **Porte de
@@ -86,7 +86,7 @@ export function paragrafoFonte(no: NoNumeravel): Paragraph[] {
     new Paragraph({
       children: [new TextRun(texto)],
       style: "Legenda",
-      spacing: { line: ABNT.espacamento1, after: 240 },
+      spacing: { ...entrelinha(ABNT.espacamento1), after: 240 },
     }),
   ];
 }

@@ -24,7 +24,7 @@ import {
   gerarEpigrafe,
 } from "../../document/elements/opcionaisPreTextuais";
 import type { Metadados } from "../../document/types";
-import { ABNT } from "./constants";
+import { ABNT, entrelinha } from "./constants";
 
 // Resumo e abstract (NBR 6028) — passo 3.5.2. **Porte de `poc/docx/gerar.js`**
 // (bloco "SEÇÃO 2 — Pré-textuais", `RESUMO`/`ABSTRACT`), congelada e
@@ -68,7 +68,7 @@ function paragrafoJustificado(texto: string): Paragraph {
   return new Paragraph({
     children: [new TextRun(texto)],
     alignment: AlignmentType.JUSTIFIED,
-    spacing: { line: espacoResumo },
+    spacing: { ...entrelinha(espacoResumo) },
   });
 }
 
@@ -83,7 +83,7 @@ function paragrafoTermos(rotulo: string, termos: string[]): Paragraph {
       new TextRun(`${termos.join("; ")}.`),
     ],
     alignment: AlignmentType.JUSTIFIED,
-    spacing: { line: espacoResumo },
+    spacing: { ...entrelinha(espacoResumo) },
   });
 }
 
@@ -165,7 +165,7 @@ function paragrafoDeLinha(linha: LinhaPreTextual): Paragraph {
         new TextRun({ text: linha.texto }),
       ],
       alignment: AlignmentType.JUSTIFIED,
-      spacing: { line: linha.papel === "natureza" ? ABNT.espacamento1 : ABNT.espacamento15 },
+      spacing: { ...entrelinha(linha.papel === "natureza" ? ABNT.espacamento1 : ABNT.espacamento15) },
       indent: { left: RECUO_METADE },
     });
   }
@@ -180,7 +180,7 @@ function paragrafoDeLinha(linha: LinhaPreTextual): Paragraph {
       }),
     ],
     alignment: linha.alinhamento === "centro" ? AlignmentType.CENTER : AlignmentType.JUSTIFIED,
-    spacing: { line: ABNT.espacamento15 },
+    spacing: { ...entrelinha(ABNT.espacamento15) },
   });
 }
 
@@ -220,7 +220,7 @@ function paragrafoNoPeDaPagina(linha: LinhaPreTextual): Paragraph {
   return new Paragraph({
     children: [new TextRun(linha.texto)],
     alignment: AlignmentType.JUSTIFIED,
-    spacing: { line: ABNT.espacamento15 },
+    spacing: { ...entrelinha(ABNT.espacamento15) },
     frame: NO_PE_DA_PAGINA,
   });
 }

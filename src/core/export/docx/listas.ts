@@ -13,7 +13,7 @@ import {
   TITULO_LISTA_FIGURAS,
   TITULO_LISTA_TABELAS,
 } from "../../document/elements/listas";
-import { ABNT } from "./constants";
+import { ABNT, entrelinha } from "./constants";
 import { paragrafoTituloPreTextual } from "./preTextuais";
 
 // Listas de ilustrações, tabelas e abreviaturas no `.docx` — passo 3.6.4.
@@ -80,7 +80,7 @@ export function blocoListaDeAbreviaturas(
             new TextRun(item.significado),
           ],
           alignment: AlignmentType.LEFT,
-          spacing: { line: ABNT.espacamento15 },
+          spacing: { ...entrelinha(ABNT.espacamento15) },
           tabStops: [{ type: TabStopType.LEFT, position: PARADA_SIGNIFICADO }],
         }),
     ),

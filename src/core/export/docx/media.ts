@@ -3,7 +3,7 @@ import { AlignmentType, ImageRun, Paragraph } from "docx";
 import { tamanhoNaFolha } from "../../document/imagem";
 import type { Documento, NoFigura } from "../../document/types";
 import type { AdaptadorPersistencia, ImagemArmazenada } from "../../persistence/types";
-import { ABNT } from "./constants";
+import { ABNT, entrelinha } from "./constants";
 
 // Imagem da figura no `.docx` — passo 6.1.2. A biblioteca `docx` grava o
 // arquivo em `word/media/` e o relacionamento que o liga ao parágrafo; nada
@@ -68,7 +68,7 @@ export function paragrafoImagem(imagem: ImagemArmazenada, figura: NoFigura): Par
       }),
     ],
     alignment: AlignmentType.CENTER,
-    spacing: { line: ABNT.espacamento1, before: 120, after: 120 },
+    spacing: { ...entrelinha(ABNT.espacamento1), before: 120, after: 120 },
     keepNext: true,
   });
 }

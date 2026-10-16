@@ -1,4 +1,4 @@
-import { convertMillimetersToTwip } from "docx";
+import { LineRuleType, convertMillimetersToTwip } from "docx";
 
 import type { FonteTrabalho } from "../../document/types";
 
@@ -12,6 +12,23 @@ import type { FonteTrabalho } from "../../document/types";
 // a conversão de cm pra twips abaixo, e por isso `tamanhoCorpo`/`tamanhoMenor`
 // já saem em meio-pontos, não em pontos.
 const cm = (centimetros: number) => convertMillimetersToTwip(centimetros * 10);
+
+// Entrelinha em múltiplos de linha, com a regra **explícita** (passo 8.2.1):
+// `line` em 240ºs de linha (240 = simples, 360 = 1,5) e `lineRule="auto"`.
+//
+// O `lineRule` é opcional no OOXML, e o Word lê a falta dele como "auto". O
+// LibreOffice 24.2 lê como entrelinha FIXA: uma imagem inline num parágrafo
+// com `line="240"` era cortada à altura de uma linha de texto, sobrando uma
+// faixa por cima da legenda (conferido no LibreOffice 24.2.3 em 16/10/2026,
+// reproduzindo a captura de uma usuária; a 26.8 já lia como "auto"). Escrever
+// a regra tira a dúvida dos dois. Texto não muda: em "auto" e em "fixa" ele
+// ocupa a mesma altura; quem aparece é a imagem e a fórmula de bloco.
+//
+// **Todo `spacing.line` do exportador passa por aqui.** Um teste varre o
+// `.docx` gerado atrás de `w:line` sem `w:lineRule` (`entrelinha.test.ts`).
+export function entrelinha(multiplo: number) {
+  return { line: multiplo, lineRule: LineRuleType.AUTO };
+}
 
 export const ABNT = {
   margem: { top: cm(3), left: cm(3), bottom: cm(2), right: cm(2) },

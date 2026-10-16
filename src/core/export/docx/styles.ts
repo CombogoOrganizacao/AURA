@@ -1,6 +1,6 @@
 import { AlignmentType, type IStylesOptions } from "docx";
 
-import { ABNT } from "./constants";
+import { ABNT, entrelinha } from "./constants";
 
 // Estilos nomeados do `.docx` — porte 1:1 de `poc/docx/gerar.js` (ver
 // docs/porte-poc.md para o que ficou de fora deste porte). Fatorado de
@@ -41,7 +41,7 @@ function estiloTitulo(fonte: string, extra: Record<string, boolean>) {
     run: { font: fonte, size: ABNT.tamanhoCorpo, color: "000000", ...extra },
     paragraph: {
       keepNext: true,
-      spacing: { before: ABNT.espacoTitulo, after: ABNT.espacoTitulo, line: ABNT.espacamento15 },
+      spacing: { before: ABNT.espacoTitulo, after: ABNT.espacoTitulo, ...entrelinha(ABNT.espacamento15) },
     },
   };
 }
@@ -77,7 +77,7 @@ function estiloSumario(fonte: string, nivel: 1 | 2 | 3, extra: Record<string, bo
     next: "Normal",
     run: { font: fonte, size: ABNT.tamanhoCorpo, color: "000000", ...extra },
     paragraph: {
-      spacing: { before: 0, after: 0, line: ABNT.espacamento15 },
+      spacing: { before: 0, after: 0, ...entrelinha(ABNT.espacamento15) },
       indent: { left: 0, firstLine: 0 },
       rightTabStop: ABNT.larguraUtil,
     },
@@ -92,7 +92,7 @@ export function estilosDocumento(fonte: string = ABNT.fonte): IStylesOptions {
     default: {
       document: {
         run: { font: fonte, size: ABNT.tamanhoCorpo },
-        paragraph: { spacing: { line: ABNT.espacamento15 } },
+        paragraph: { spacing: { ...entrelinha(ABNT.espacamento15) } },
       },
       // heading4/heading5 não são produzidos por `fromDocumento()` — `NivelSecao`
       // (src/core/document/types.ts) para em 3. Ficam declarados só pra manter
@@ -113,7 +113,7 @@ export function estilosDocumento(fonte: string = ABNT.fonte): IStylesOptions {
         // seção já abre a seção OOXML numa página nova.
         paragraph: {
           keepNext: true,
-          spacing: { before: 0, after: ABNT.espacoTitulo, line: ABNT.espacamento15 },
+          spacing: { before: 0, after: ABNT.espacoTitulo, ...entrelinha(ABNT.espacamento15) },
         },
       },
       heading2: estiloTitulo(fonte, { bold: true }),
@@ -136,7 +136,7 @@ export function estilosDocumento(fonte: string = ABNT.fonte): IStylesOptions {
       footnoteText: {
         run: { font: fonte, size: ABNT.tamanhoMenor },
         paragraph: {
-          spacing: { before: 0, after: 0, line: ABNT.espacamento1 },
+          spacing: { before: 0, after: 0, ...entrelinha(ABNT.espacamento1) },
           indent: { left: ABNT.recuoNota, hanging: ABNT.recuoNota },
         },
       },
@@ -155,7 +155,7 @@ export function estilosDocumento(fonte: string = ABNT.fonte): IStylesOptions {
         run: { font: fonte, size: ABNT.tamanhoCorpo },
         paragraph: {
           alignment: AlignmentType.JUSTIFIED,
-          spacing: { line: ABNT.espacamento15 },
+          spacing: { ...entrelinha(ABNT.espacamento15) },
           indent: { firstLine: ABNT.recuoParagrafo },
         },
       },
@@ -173,7 +173,7 @@ export function estilosDocumento(fonte: string = ABNT.fonte): IStylesOptions {
         run: { font: fonte, size: ABNT.tamanhoCorpo },
         paragraph: {
           alignment: AlignmentType.LEFT,
-          spacing: { before: 0, after: 0, line: ABNT.espacamento1 },
+          spacing: { before: 0, after: 0, ...entrelinha(ABNT.espacamento1) },
           indent: { left: 0, firstLine: 0 },
         },
       },
@@ -194,7 +194,7 @@ export function estilosDocumento(fonte: string = ABNT.fonte): IStylesOptions {
         run: { font: fonte, size: ABNT.tamanhoCorpo },
         paragraph: {
           alignment: AlignmentType.CENTER,
-          spacing: { before: 0, after: 0, line: ABNT.espacamento15 },
+          spacing: { before: 0, after: 0, ...entrelinha(ABNT.espacamento15) },
           indent: { left: 0, firstLine: 0 },
         },
       },
@@ -216,7 +216,7 @@ export function estilosDocumento(fonte: string = ABNT.fonte): IStylesOptions {
         run: { font: fonte, size: ABNT.tamanhoCorpo, bold: true, color: "000000" },
         paragraph: {
           alignment: AlignmentType.CENTER,
-          spacing: { after: 360, line: ABNT.espacamento15 },
+          spacing: { after: 360, ...entrelinha(ABNT.espacamento15) },
         },
       },
       // **Mesma formatação do `TituloPreTextual`, estilo separado.** A NBR
@@ -266,7 +266,7 @@ export function estilosDocumento(fonte: string = ABNT.fonte): IStylesOptions {
         run: { font: fonte, size: ABNT.tamanhoMenor, color: "000000" },
         paragraph: {
           alignment: AlignmentType.CENTER,
-          spacing: { line: ABNT.espacamento1 },
+          spacing: { ...entrelinha(ABNT.espacamento1) },
         },
       },
       {
@@ -278,7 +278,7 @@ export function estilosDocumento(fonte: string = ABNT.fonte): IStylesOptions {
         run: { font: fonte, size: ABNT.tamanhoMenor, color: "000000" },
         paragraph: {
           alignment: AlignmentType.JUSTIFIED,
-          spacing: { before: 240, after: 240, line: ABNT.espacamento1 },
+          spacing: { before: 240, after: 240, ...entrelinha(ABNT.espacamento1) },
           indent: { left: ABNT.recuoCitacao },
         },
       },

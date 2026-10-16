@@ -30,7 +30,7 @@ import {
 } from "docx";
 
 import type { NoFormula } from "../../document/types";
-import { ABNT } from "./constants";
+import { ABNT, entrelinha } from "./constants";
 import { mathmlDoLatex, type NoMathml } from "./mathml";
 
 // Fórmula no `.docx` como equação nativa do Word (OMML) — passo 6.1.4.
@@ -157,7 +157,7 @@ export function paragrafoFormula(no: NoFormula): Paragraph {
       ? [new MathDocx({ children: componentes })]
       : [new TextRun(no.texto)],
     alignment: AlignmentType.CENTER,
-    spacing: { line: ABNT.espacamento15, before: 120, after: 120 },
+    spacing: { ...entrelinha(ABNT.espacamento15), before: 120, after: 120 },
   });
 }
 

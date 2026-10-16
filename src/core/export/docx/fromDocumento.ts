@@ -28,7 +28,7 @@ import type {
   Secao,
 } from "../../document/types";
 import type { Referencia } from "../../references/types";
-import { ABNT, fonteDocx } from "./constants";
+import { ABNT, entrelinha, fonteDocx } from "./constants";
 import { paragrafoImagem, type ImagensDoDocumento } from "./media";
 import { paragrafoFonte, paragrafoLegenda } from "./legenda";
 import { criarNotasDeRodape, type NotasDeRodape } from "./notas";
@@ -151,7 +151,7 @@ function molduraFigura(): Paragraph {
   return new Paragraph({
     children: [new TextRun({ text: "[ espaço reservado para a imagem ]", italics: true })],
     alignment: AlignmentType.CENTER,
-    spacing: { line: ABNT.espacamento1, before: 120, after: 120 },
+    spacing: { ...entrelinha(ABNT.espacamento1), before: 120, after: 120 },
     keepNext: true,
   });
 }

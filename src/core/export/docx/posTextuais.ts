@@ -11,7 +11,7 @@ import { trechosDaCitacaoLonga, trechosDoInline } from "../../document/elements/
 import type { Documento, ElementoPosTextual, NoConteudo } from "../../document/types";
 import { semVaziosNasPontas } from "../../document/vaziosNasPontas";
 import type { Referencia } from "../../references/types";
-import { ABNT } from "./constants";
+import { ABNT, entrelinha } from "./constants";
 import { paragrafoFormula } from "./formula";
 import { paragrafoTituloPosTextual } from "./preTextuais";
 import type { NotasDeRodape } from "./notas";
@@ -85,7 +85,7 @@ function paragrafoDeConteudo(
       }),
     ],
     alignment: AlignmentType.CENTER,
-    spacing: { line: ABNT.espacamento1 },
+    spacing: { ...entrelinha(ABNT.espacamento1) },
   });
 }
 
