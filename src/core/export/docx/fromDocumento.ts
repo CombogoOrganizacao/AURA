@@ -9,8 +9,15 @@ import {
 } from "docx";
 
 import { gerarListaDeAbreviaturas } from "../../document/elements/abreviaturas";
+import { gerarAnexos } from "../../document/elements/anexos";
+import { gerarApendices } from "../../document/elements/apendices";
 import { gerarListaDeFiguras, gerarListaDeTabelas } from "../../document/elements/listas";
-import { textoItemSumario } from "../../document/elements/sumario";
+import { gerarListaReferencias } from "../../document/elements/referencias";
+import {
+  gerarSumarioCompleto,
+  textoItemSumario,
+  type ItemSumario,
+} from "../../document/elements/sumario";
 import { trechosDaCitacaoLonga, trechosDoInline } from "../../document/elements/trechos";
 import { numerarFiguras, numerarSecoes, numerarTabelas } from "../../document/numbering";
 import { semVaziosNasPontas } from "../../document/vaziosNasPontas";
@@ -287,6 +294,17 @@ function blocoUnico(paragrafos: FileChild[]): FileChild[][] {
   return paragrafos.length > 0 ? [paragrafos] : [];
 }
 
+// As entradas do sumário (6027 §5.2): as seções e, depois delas, os
+// pós-textuais que o `.docx` de fato escreve. `temReferencias` segue a regra
+// de `blocosDeReferencias()`: sem referência nenhuma, não há "REFERÊNCIAS".
+function entradasDoSumario(documento: Documento): ItemSumario[] {
+  return gerarSumarioCompleto(documento.sections, {
+    temReferencias: gerarListaReferencias(documento.references) !== null,
+    apendices: gerarApendices(documento.apendices),
+    anexos: gerarAnexos(documento.anexos),
+  });
+}
+
 const GERADORES: Record<ElementoDocumento, GeradorDeBlocos> = {
   capa: (documento) => blocoUnico(montarCapa(documento.metadados)),
   folhaDeRosto: (documento) => blocoUnico(montarFolhaDeRosto(documento.metadados)),
@@ -297,14 +315,14 @@ const GERADORES: Record<ElementoDocumento, GeradorDeBlocos> = {
   resumo: (documento) => blocoUnico(paragrafosResumo(documento.metadados)),
   abstract: (documento) => blocoUnico(paragrafosAbstract(documento.metadados)),
   listaDeFiguras: (documento) =>
-    blocoUnico(blocoListaDeFiguras(gerarListaDeFiguras(documento.sections).length > 0)),
+    blocoUnico(blocoListaDeFiguras(gerarListaDeFiguras(documento.sections))),
   listaDeTabelas: (documento) =>
-    blocoUnico(blocoListaDeTabelas(gerarListaDeTabelas(documento.sections).length > 0)),
+    blocoUnico(blocoListaDeTabelas(gerarListaDeTabelas(documento.sections))),
   listaDeAbreviaturas: (documento) =>
     blocoUnico(
       blocoListaDeAbreviaturas(gerarListaDeAbreviaturas(documento.metadados, documento.sections)),
     ),
-  sumario: () => blocoUnico(blocoSumario()),
+  sumario: (documento) => blocoUnico(blocoSumario(entradasDoSumario(documento))),
   corpo: (documento, imagens, notas) =>
     blocoUnico(paragrafosDoCorpo(documento, imagens, notas)),
   referencias: blocosDeReferencias,

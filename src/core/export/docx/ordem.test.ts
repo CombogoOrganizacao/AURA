@@ -6,6 +6,7 @@ import { novoDocumento } from "../../document/factory";
 import { ORDEM_CANONICA } from "../../document/order";
 import type { Documento } from "../../document/types";
 import { fromDocumento } from "./fromDocumento";
+import { semCamposDeIndice } from "./xmlDeTeste";
 
 // O critério de aceite do passo 3.7.2, literal: "Vitest confere a ordem
 // completa — capa, folha de rosto, dedicatória, agradecimentos, epígrafe,
@@ -68,7 +69,7 @@ function documentoCompleto(): Documento {
 
 async function documentXml(documento: Documento): Promise<string> {
   const zip = await JSZip.loadAsync(await Packer.toBuffer(fromDocumento(documento)));
-  return zip.file("word/document.xml")!.async("string");
+  return semCamposDeIndice(await zip.file("word/document.xml")!.async("string"));
 }
 
 // Um marcador por elemento da ordem canônica — `Record` completo de

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { novoDocumento } from "../../document/factory";
 import type { Documento } from "../../document/types";
 import { fromDocumento } from "./fromDocumento";
+import { semCamposDeIndice } from "./xmlDeTeste";
 
 // O que dá para provar aqui é a ESTRUTURA do campo: que existe um `TOC` no
 // lugar certo, pedindo os níveis certos, e que o documento manda o Word
@@ -76,7 +77,8 @@ describe("sumário no .docx como campo TOC (passo 3.6.2)", () => {
     documento.apendices = [{ id: "ap1", titulo: "Questionário aplicado", content: [] }];
     documento.anexos = [{ id: "an1", titulo: "Parecer do comitê", content: [] }];
 
-    const xml = await xmlDe(documento);
+    // Sem o sumário: a entrada "APÊNDICE A" do campo vem antes do título.
+    const xml = semCamposDeIndice(await xmlDe(documento));
 
     for (const titulo of ["APÊNDICE A", "ANEXO A"]) {
       const posicao = xml.indexOf(titulo);
@@ -149,5 +151,87 @@ describe("sumário no .docx como campo TOC (passo 3.6.2)", () => {
       "Metodologia",
       "Instrumentos",
     ]);
+  });
+});
+
+// Passo 8.2.2. O Word refaz o sumário ao abrir e não lê o que está guardado no
+// campo; o LibreOffice não atualiza campo ao abrir, e mostrava o SUMÁRIO sem
+// uma linha. As entradas são só o resultado guardado: a instrução do campo e o
+// `updateFields` não mudam. **Não provam o que o LibreOffice mostra**: isso é a
+// conferência humana (e foi conferido abrindo a amostra no LibreOffice, ver
+// docs/to-do-correcoes.md).
+describe("entradas guardadas no campo do sumário (passo 8.2.2)", () => {
+  async function campoDoSumario(documento: Documento): Promise<string> {
+    const xml = await xmlDe(documento);
+    return xml.match(/<w:sdt><w:sdtPr><w:alias w:val="SUMÁRIO"\/>[\s\S]*?<\/w:sdt>/)![0];
+  }
+
+  // Texto de cada parágrafo do campo, com o estilo dele.
+  function entradas(campo: string): { estilo: string | null; texto: string }[] {
+    return [...campo.matchAll(/<w:p>([\s\S]*?)<\/w:p>/g)]
+      .map((m) => ({
+        estilo: m[1].match(/<w:pStyle w:val="([^"]+)"\/>/)?.[1] ?? null,
+        texto: [...m[1].matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map((t) => t[1]).join(""),
+      }))
+      .filter((entrada) => entrada.texto !== "");
+  }
+
+  it("cada seção vira uma entrada, com o indicativo e o estilo TOC do nível", async () => {
+    const campo = await campoDoSumario(documentoComTresNiveis());
+
+    expect(entradas(campo)).toEqual([
+      { estilo: "TOC1", texto: "1 Introdução" },
+      { estilo: "TOC1", texto: "2 Referencial teórico" },
+      { estilo: "TOC2", texto: "2.1 Metodologia" },
+      { estilo: "TOC3", texto: "2.1.1 Instrumentos" },
+    ]);
+  });
+
+  it("a instrução do campo e o updateFields continuam como eram", async () => {
+    const campo = await campoDoSumario(documentoComTresNiveis());
+
+    expect(campo).toContain('<w:fldChar w:fldCharType="begin" w:dirty="true"/>');
+    expect(campo).toContain("TOC \\h \\o &quot;1-3&quot;");
+    expect(campo).toContain('<w:fldChar w:fldCharType="separate"/>');
+    expect(campo).toContain('<w:fldChar w:fldCharType="end"/>');
+  });
+
+  // Quem sabe a página é o editor de texto: escrever um número aqui seria
+  // inventar dado (`toc.ts`).
+  it("as entradas não levam número de página nem tabulação", async () => {
+    const campo = await campoDoSumario(documentoComTresNiveis());
+
+    // Os textos, conferidos no primeiro teste, não têm número no fim; aqui
+    // fica a garantia de que nenhuma tabulação (onde o número iria) é escrita.
+    expect(campo).not.toContain("<w:tab/>");
+  });
+
+  it("referências, apêndices e anexos entram sem indicativo e em caixa alta, como no corpo", async () => {
+    const documento = documentoComTresNiveis();
+    documento.references = [{ id: "r1", type: "book", title: "Um livro qualquer" }];
+    documento.apendices = [{ id: "ap1", titulo: "Questionário aplicado", content: [] }];
+    documento.anexos = [{ id: "an1", titulo: "Parecer do comitê", content: [] }];
+
+    const textos = entradas(await campoDoSumario(documento)).map((entrada) => entrada.texto);
+
+    expect(textos.slice(-3)).toEqual([
+      "REFERÊNCIAS",
+      "APÊNDICE A — QUESTIONÁRIO APLICADO",
+      "ANEXO A — PARECER DO COMITÊ",
+    ]);
+  });
+
+  it("sem referência cadastrada, o sumário não tem a linha REFERÊNCIAS", async () => {
+    const textos = entradas(await campoDoSumario(documentoComTresNiveis())).map((e) => e.texto);
+
+    expect(textos).not.toContain("REFERÊNCIAS");
+  });
+
+  it("a entrada tem a mesma grafia do título no corpo", async () => {
+    const documento = documentoComTresNiveis();
+    const corpo = semCamposDeIndice(await xmlDe(documento));
+    const textos = entradas(await campoDoSumario(documento)).map((entrada) => entrada.texto);
+
+    for (const texto of textos) expect(corpo).toContain(texto);
   });
 });

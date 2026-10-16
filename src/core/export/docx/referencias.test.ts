@@ -6,6 +6,7 @@ import { novoDocumento } from "../../document/factory";
 import type { Documento } from "../../document/types";
 import type { Referencia } from "../../references/types";
 import { fromDocumento } from "./fromDocumento";
+import { semCamposDeIndice } from "./xmlDeTeste";
 
 // Critério do passo 4.11: "no .docx, alinhada à esquerda, espaçamento simples,
 // linha em branco entre entradas" — NBR 6023:2025 §6.3 e NBR 14724:2024 §5.2.
@@ -48,7 +49,7 @@ const REFERENCIAS: Referencia[] = [
 async function xmlCom(references: Referencia[]): Promise<string> {
   const documento: Documento = { ...novoDocumento(), references };
   const zip = await JSZip.loadAsync(await Packer.toBuffer(fromDocumento(documento)));
-  return zip.file("word/document.xml")!.async("string");
+  return semCamposDeIndice(await zip.file("word/document.xml")!.async("string"));
 }
 
 async function estiloReferencia(): Promise<string> {

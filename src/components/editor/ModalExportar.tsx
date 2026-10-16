@@ -193,7 +193,8 @@ export function ModalExportar({
           <p>
             Abre no Word, no LibreOffice e no Google Docs, com os estilos, o sumário e a numeração
             de páginas da norma. Ao abrir, o Word pergunta se atualiza os campos: confirme, para o
-            sumário e as listas saírem com as páginas.
+            sumário e as listas saírem com as páginas. No LibreOffice, use Ferramentas → Atualizar →
+            Todos os índices e tabelas.
           </p>
           <p className="text-xs text-muted">
             Para entregar em PDF, abra o .docx no Word e use Arquivo → Salvar como → PDF. O AURA não

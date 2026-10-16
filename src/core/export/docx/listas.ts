@@ -12,6 +12,7 @@ import { ROTULO_FIGURA, ROTULO_TABELA } from "../../document/elements/legenda";
 import {
   TITULO_LISTA_FIGURAS,
   TITULO_LISTA_TABELAS,
+  type ItemLista,
 } from "../../document/elements/listas";
 import { ABNT, entrelinha } from "./constants";
 import { paragrafoTituloPreTextual } from "./preTextuais";
@@ -40,14 +41,27 @@ import { paragrafoTituloPreTextual } from "./preTextuais";
 // alinhadas em vez de depender do comprimento de cada sigla.
 const PARADA_SIGNIFICADO = Math.round(ABNT.larguraUtil / 6);
 
-function blocoListaDeLegendas(titulo: string, rotulo: string, temItens: boolean): FileChild[] {
-  if (!temItens) return [];
+// A entrada já escrita dentro do campo (passo 8.2.2), pelo mesmo motivo do
+// sumário (`toc.ts`): o Word refaz a lista ao abrir, mas o LibreOffice mostra
+// o que está guardado no campo. O texto é o da legenda no corpo
+// (`textoLegenda()`), sem número de página, que só o editor de texto sabe.
+function paragrafoEntrada(item: ItemLista): Paragraph {
+  return new Paragraph({ children: [new TextRun(item.texto)] });
+}
+
+function blocoListaDeLegendas(
+  titulo: string,
+  rotulo: string,
+  itens: readonly ItemLista[],
+): FileChild[] {
+  if (itens.length === 0) return [];
 
   return [
     paragrafoTituloPreTextual(titulo),
     new TableOfContents(titulo, {
       hyperlink: true,
       captionLabelIncludingNumbers: rotulo,
+      contentChildren: itens.map(paragrafoEntrada),
     }),
   ];
 }
@@ -56,12 +70,12 @@ function blocoListaDeLegendas(titulo: string, rotulo: string, temItens: boolean)
 // `src/core/document/order.ts` (3.7.2), e quem decide a quebra de página é
 // quem compõe a parte (`fromDocumento.ts`). Aqui cada lista só sabe virar
 // OOXML — e devolver `[]` quando não há o que listar.
-export function blocoListaDeFiguras(temFiguras: boolean): FileChild[] {
-  return blocoListaDeLegendas(TITULO_LISTA_FIGURAS, ROTULO_FIGURA, temFiguras);
+export function blocoListaDeFiguras(figuras: readonly ItemLista[]): FileChild[] {
+  return blocoListaDeLegendas(TITULO_LISTA_FIGURAS, ROTULO_FIGURA, figuras);
 }
 
-export function blocoListaDeTabelas(temTabelas: boolean): FileChild[] {
-  return blocoListaDeLegendas(TITULO_LISTA_TABELAS, ROTULO_TABELA, temTabelas);
+export function blocoListaDeTabelas(tabelas: readonly ItemLista[]): FileChild[] {
+  return blocoListaDeLegendas(TITULO_LISTA_TABELAS, ROTULO_TABELA, tabelas);
 }
 
 export function blocoListaDeAbreviaturas(

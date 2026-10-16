@@ -141,5 +141,52 @@ describe("listas de figuras, tabelas e abreviaturas no .docx (passo 3.6.4)", () 
     expect(entreAsListas).toMatch(/<w:br w:type="page"\s*\/>/);
     expect(antesDoSumario).toMatch(/<w:br w:type="page"\s*\/>/);
   });
+});
 
+// Passo 8.2.2. O Word refaz as listas ao abrir; o LibreOffice mostra o que
+// está guardado no campo, e mostrava a LISTA DE FIGURAS sem uma linha.
+describe("entradas guardadas no campo das listas (passo 8.2.2)", () => {
+  // Texto de cada parágrafo do campo cujo título é `alias`.
+  async function textosDoCampo(documento: Documento, alias: string): Promise<string[]> {
+    const xml = await xmlDe(documento);
+    const campo = xml.match(
+      new RegExp(`<w:sdt><w:sdtPr><w:alias w:val="${alias}"/>.*?</w:sdt>`, "s"),
+    )![0];
+    return [...campo.matchAll(/<w:p>([\s\S]*?)<\/w:p>/g)]
+      .map((m) => [...m[1].matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map((t) => t[1]).join(""))
+      .filter((texto) => texto !== "");
+  }
+
+  it("a lista de figuras traz cada legenda, na ordem, como no corpo", async () => {
+    const documento = documentoCom([figura("f1", "Fluxo do processo"), figura("f2", "Mapa")]);
+
+    expect(await textosDoCampo(documento, "LISTA DE FIGURAS")).toEqual([
+      "Figura 1 — Fluxo do processo",
+      "Figura 2 — Mapa",
+    ]);
+  });
+
+  it('figura sem legenda entra como "Figura 1": ela existe no corpo', async () => {
+    expect(await textosDoCampo(documentoCom([figura("f1")]), "LISTA DE FIGURAS")).toEqual([
+      "Figura 1",
+    ]);
+  });
+
+  it("a lista de tabelas tem a sua própria sequência", async () => {
+    const documento = documentoCom([
+      figura("f1", "Fluxo"),
+      { type: "tabela", id: "t1", legenda: "Faixas etárias", fonte: "", linhas: [] },
+    ]);
+
+    expect(await textosDoCampo(documento, "LISTA DE TABELAS")).toEqual([
+      "Tabela 1 — Faixas etárias",
+    ]);
+  });
+
+  it("a instrução do campo não mudou, e a entrada não leva número de página", async () => {
+    const xml = await xmlDe(documentoCom([figura("f1", "Fluxo")]));
+
+    expect(xml).toMatch(/<w:instrText[^>]*>TOC[^<]*\\c &quot;Figura&quot;/);
+    expect(xml).not.toContain("<w:tab/>");
+  });
 });

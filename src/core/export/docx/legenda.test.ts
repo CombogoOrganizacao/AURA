@@ -5,13 +5,14 @@ import { describe, expect, it } from "vitest";
 import { novoDocumento } from "../../document/factory";
 import type { Documento, NoConteudo } from "../../document/types";
 import { fromDocumento } from "./fromDocumento";
+import { semCamposDeIndice } from "./xmlDeTeste";
 
 async function documentXmlDe(content: NoConteudo[]): Promise<string> {
   const documento: Documento = novoDocumento();
   documento.sections = [{ id: "s1", ordem: 0, nivel: 1, titulo: "Resultados", content }];
 
   const zip = await JSZip.loadAsync(await Packer.toBuffer(fromDocumento(documento)));
-  return zip.file("word/document.xml")!.async("string");
+  return semCamposDeIndice(await zip.file("word/document.xml")!.async("string"));
 }
 
 function figura(id: string, legenda = "", fonte = ""): NoConteudo {

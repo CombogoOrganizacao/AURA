@@ -36,11 +36,17 @@ import { ABNT, entrelinha } from "./constants";
 // Espaço antes e depois do título de subseção: `ABNT.espacoTitulo`, pela NBR
 // 14724:2024 §5.2.2 (passo 6.1.5; ver constants.ts). Até ali eram 18 pt antes
 // e 12 pt depois, herdados da PoC sem base na norma.
-function estiloTitulo(fonte: string, extra: Record<string, boolean>) {
+//
+// `nivelEstrutura` (passo 8.2.2): o `<w:outlineLvl>` explícito (0 é o nível 1).
+// O Word o infere do nome "heading N"; o LibreOffice não: sem ele, o
+// sumário atualizado saía sem nenhuma entrada (conferido no LibreOffice
+// 26.8, 16/10/2026).
+function estiloTitulo(fonte: string, extra: Record<string, boolean>, nivelEstrutura: number) {
   return {
     run: { font: fonte, size: ABNT.tamanhoCorpo, color: "000000", ...extra },
     paragraph: {
       keepNext: true,
+      outlineLevel: nivelEstrutura,
       spacing: { before: ABNT.espacoTitulo, after: ABNT.espacoTitulo, ...entrelinha(ABNT.espacamento15) },
     },
   };
@@ -113,13 +119,14 @@ export function estilosDocumento(fonte: string = ABNT.fonte): IStylesOptions {
         // seção já abre a seção OOXML numa página nova.
         paragraph: {
           keepNext: true,
+          outlineLevel: 0,
           spacing: { before: 0, after: ABNT.espacoTitulo, ...entrelinha(ABNT.espacamento15) },
         },
       },
-      heading2: estiloTitulo(fonte, { bold: true }),
-      heading3: estiloTitulo(fonte, { italics: true }),
-      heading4: estiloTitulo(fonte, {}),
-      heading5: estiloTitulo(fonte, { italics: true, smallCaps: true }),
+      heading2: estiloTitulo(fonte, { bold: true }, 1),
+      heading3: estiloTitulo(fonte, { italics: true }, 2),
+      heading4: estiloTitulo(fonte, {}, 3),
+      heading5: estiloTitulo(fonte, { italics: true, smallCaps: true }, 4),
       // Nota de rodapé — NBR 14724:2024 §5.2.1 (lida no PDF no passo 6.1.3c) e
       // NBR 10520:2023 §8: espaço simples (também §5.2), fonte menor e uniforme
       // (§5.1: 10 pt, a mesma da citação longa), "sem espaço entre elas" e a

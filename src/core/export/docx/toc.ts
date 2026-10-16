@@ -1,6 +1,10 @@
-import { TableOfContents, type FileChild } from "docx";
+import { Paragraph, TableOfContents, TextRun, type FileChild } from "docx";
 
-import { TITULO_SUMARIO } from "../../document/elements/sumario";
+import {
+  TITULO_SUMARIO,
+  textoItemSumario,
+  type ItemSumario,
+} from "../../document/elements/sumario";
 import { paragrafoTituloPreTextual } from "./preTextuais";
 
 // Sumário do `.docx` (NBR 6027) — passo 3.6.2. **Porte de `poc/docx/gerar.js`**
@@ -49,15 +53,40 @@ const NIVEIS_DE_TITULO = "1-3";
 // elementos pré-textuais não podem constar no sumário". Os dois estilos são
 // visualmente idênticos (§5.2.3 da 14724) e existem separados só por isso.
 
+// Uma entrada já escrita dentro do campo (passo 8.2.2). O Word ignora este
+// resultado e refaz o sumário inteiro ao abrir (`updateFields`, `index.ts`);
+// quem lê o resultado guardado é o LibreOffice, que não atualiza campo ao
+// abrir e mostrava o SUMÁRIO sem uma linha. A entrada usa o estilo `TOC1-3`
+// do AURA e a mesma grafia do título no corpo (`textoItemSumario()`).
+//
+// **Sem número de página, de propósito.** Só o editor de texto sabe em que
+// página cada título cai, e `src/core/` não pagina (ver o topo do arquivo):
+// escrever um número aqui seria inventar dado. O Word preenche ao abrir; no
+// LibreOffice vale Ferramentas → Atualizar → Todos os índices.
+//
+// Entrada sem indicativo é pós-textual (REFERÊNCIAS, APÊNDICE, ANEXO), que o
+// corpo escreve em caixa alta no texto (`posTextuais.ts`); o sumário repete.
+function paragrafoEntrada(item: ItemSumario): Paragraph {
+  const texto = textoItemSumario(item);
+  return new Paragraph({
+    style: `TOC${item.nivel}`,
+    children: [new TextRun(item.numero === null ? texto.toLocaleUpperCase("pt-BR") : texto)],
+  });
+}
+
 // Título + campo, juntos: o par é o elemento pré-textual "sumário" inteiro, e
 // separá-los só daria a `sections.ts` a chance de montar um sem o outro.
+//
+// `entradas`: o que já se sabe do sumário (`gerarSumarioCompleto()`), escrito
+// como resultado do campo. Sem elas o campo sai vazio, como saía antes do
+// 8.2.2.
 //
 // O título usa `TituloPreTextual`, que **não** é estilo de título nem tem
 // nível de estrutura — é o que o mantém fora do próprio sumário, sem regra especial
 // (NBR 6027 §6.3, "os elementos pré-textuais não podem constar no sumário", e
 // o sumário é o último deles). Mesma razão pela qual resumo, abstract e as
 // listas também não aparecem lá.
-export function blocoSumario(): FileChild[] {
+export function blocoSumario(entradas: readonly ItemSumario[] = []): FileChild[] {
   return [
     paragrafoTituloPreTextual(TITULO_SUMARIO),
     // `hyperlink: true` (`\h`): cada entrada vira link para o título no
@@ -68,6 +97,7 @@ export function blocoSumario(): FileChild[] {
     new TableOfContents(TITULO_SUMARIO, {
       hyperlink: true,
       headingStyleRange: NIVEIS_DE_TITULO,
+      contentChildren: entradas.map(paragrafoEntrada),
     }),
   ];
 }

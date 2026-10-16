@@ -159,3 +159,16 @@ describe("ESTILOS_DOCUMENTO — estilos nomeados completos (passo 6.1.1)", () =>
     });
   });
 });
+
+// Passo 8.2.2. O Word infere o nível de estrutura do nome "heading N"; o
+// LibreOffice não: sem `<w:outlineLvl>`, o sumário atualizado saía sem
+// nenhuma entrada (conferido no LibreOffice 26.8 em 16/10/2026).
+describe("ESTILOS_DOCUMENTO — nível de estrutura dos títulos (passo 8.2.2)", () => {
+  it.each([
+    ["Heading1", "0"],
+    ["Heading2", "1"],
+    ["Heading3", "2"],
+  ])("%s declara <w:outlineLvl w:val=%s>", async (id, nivel) => {
+    expect(blocoDeEstilo(await estilosGerados(), id)).toContain(`<w:outlineLvl w:val="${nivel}"/>`);
+  });
+});

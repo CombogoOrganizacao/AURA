@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { novoDocumento } from "../../document/factory";
 import type { Documento } from "../../document/types";
 import { fromDocumento } from "./fromDocumento";
+import { semCamposDeIndice } from "./xmlDeTeste";
 
 // `fromDocumento()` devolve o `Document` sem empacotar (passo 1.4.4) —
 // `Packer.toBuffer()` é a escolha certa em Node; o navegador usa
@@ -47,7 +48,7 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
   it("o corpo traz o título e o texto das duas seções, na ordem", async () => {
     const buffer = await empacotar(documentoComDuasSecoes());
     const zip = await JSZip.loadAsync(buffer);
-    const xml = await zip.file("word/document.xml")!.async("string");
+    const xml = semCamposDeIndice(await zip.file("word/document.xml")!.async("string"));
 
     const posIntroducao = xml.indexOf("Introdução");
     const posTextoIntroducao = xml.indexOf("Texto da introdução.");
@@ -73,7 +74,7 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
 
     const buffer = await empacotar(documento);
     const zip = await JSZip.loadAsync(buffer);
-    const xml = await zip.file("word/document.xml")!.async("string");
+    const xml = semCamposDeIndice(await zip.file("word/document.xml")!.async("string"));
 
     expect(xml.indexOf("Introdução")).toBeLessThan(xml.indexOf("Metodologia"));
   });
@@ -93,7 +94,7 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
 
     const buffer = await empacotar(documento);
     const zip = await JSZip.loadAsync(buffer);
-    const xml = await zip.file("word/document.xml")!.async("string");
+    const xml = semCamposDeIndice(await zip.file("word/document.xml")!.async("string"));
     const paragrafoCom = (texto: string) => {
       const fim = xml.indexOf(texto);
       return xml.slice(xml.lastIndexOf("<w:p>", fim), fim);
@@ -113,7 +114,7 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
 
     const buffer = await empacotar(documento);
     const zip = await JSZip.loadAsync(buffer);
-    const xml = await zip.file("word/document.xml")!.async("string");
+    const xml = semCamposDeIndice(await zip.file("word/document.xml")!.async("string"));
     const fim = xml.indexOf("2.1 Coleta");
     const paragrafo = xml.slice(xml.lastIndexOf("<w:p>", fim), fim);
 
@@ -144,7 +145,7 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
 
     const buffer = await empacotar(documento);
     const zip = await JSZip.loadAsync(buffer);
-    const xml = await zip.file("word/document.xml")!.async("string");
+    const xml = semCamposDeIndice(await zip.file("word/document.xml")!.async("string"));
 
     const posTexto = xml.indexOf("Trecho citado com mais de três linhas.");
     expect(posTexto).toBeGreaterThan(-1);
@@ -179,7 +180,7 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
     ];
 
     const zip = await JSZip.loadAsync(await empacotar(documento));
-    const xml = await zip.file("word/document.xml")!.async("string");
+    const xml = semCamposDeIndice(await zip.file("word/document.xml")!.async("string"));
 
     for (const texto of ["Texto do corpo.", "Texto do apêndice."]) {
       const posTexto = xml.indexOf(texto);
@@ -214,7 +215,7 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
 
     const buffer = await empacotar(documento);
     const zip = await JSZip.loadAsync(buffer);
-    const xml = await zip.file("word/document.xml")!.async("string");
+    const xml = semCamposDeIndice(await zip.file("word/document.xml")!.async("string"));
 
     expect(xml).not.toContain(latex);
     const posEquacao = xml.indexOf("<m:oMath>");
@@ -238,7 +239,7 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
 
     const buffer = await empacotar(documento);
     const zip = await JSZip.loadAsync(buffer);
-    const xml = await zip.file("word/document.xml")!.async("string");
+    const xml = semCamposDeIndice(await zip.file("word/document.xml")!.async("string"));
 
     // Rótulo e termos vão em runs separados (negrito só no rótulo, porte da
     // PoC), então o XML não traz "Palavras-chave: Educação; Tecnologia."
@@ -262,7 +263,7 @@ describe("fromDocumento — exportador ligado ao formato canônico (passo 1.4.2)
 
     const buffer = await empacotar(documento);
     const zip = await JSZip.loadAsync(buffer);
-    const xml = await zip.file("word/document.xml")!.async("string");
+    const xml = semCamposDeIndice(await zip.file("word/document.xml")!.async("string"));
 
     expect(xml.indexOf("RESUMO")).toBeGreaterThan(-1);
     expect(xml.indexOf("ABSTRACT")).toBe(-1);
