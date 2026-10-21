@@ -161,12 +161,16 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
     function aoTeclar(evento: KeyboardEvent) {
       if (!(evento.ctrlKey || evento.metaKey) || evento.altKey || evento.shiftKey) return;
       if (evento.key.toLowerCase() !== "k") return;
+      // Na janela, e na fase de captura, como o Ctrl+F do editor: o
+      // `preventDefault` precisa chegar antes de o navegador levar a tecla
+      // para a barra de endereço.
       evento.preventDefault();
-      abrir();
+      const foco = document.activeElement;
+      const noTexto = foco === document.body || editor.view.dom.contains(foco);
+      if (!formulario && noTexto) abrir();
     }
-    const alvo = editor.view.dom;
-    alvo.addEventListener("keydown", aoTeclar);
-    return () => alvo.removeEventListener("keydown", aoTeclar);
+    window.addEventListener("keydown", aoTeclar, true);
+    return () => window.removeEventListener("keydown", aoTeclar, true);
   });
 
   function confirmar() {
