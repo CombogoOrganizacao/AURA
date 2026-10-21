@@ -1,6 +1,8 @@
 import { Fragment, type Node as NoProseMirror } from "@tiptap/pm/model";
 import { TextSelection, type Selection, type Transaction } from "@tiptap/pm/state";
 
+import { cursorDepoisDoBloco } from "./caret";
+
 // Editar a grade da tabela (passo 6.1.3b): acrescentar e remover linha e
 // coluna, marcar o cabeçalho, excluir a tabela.
 //
@@ -290,4 +292,84 @@ export function moverColuna(tr: Transaction, lado: LadoColuna): boolean {
   });
   trocarTabela(tr, alvo.posTabela, alvo.tabela, linhas, { linha: alvo.linha, coluna: destino });
   return true;
+}
+
+// --- Teclado dentro da tabela (passo 8.5.2) ---------------------------------
+//
+// A célula é `text*`: sem parágrafo por dentro, então o Enter e o Backspace
+// padrão do ProseMirror partiriam ou fundiriam CÉLULAS e deixariam a grade
+// torta. Estes comandos os substituem dentro da tabela.
+
+// Cursor no começo da célula (linha, coluna), sem trocar a tabela.
+function irParaCelula(tr: Transaction, alvo: CelulaNaTabela, linha: number, coluna: number) {
+  let pos = alvo.posTabela + 1;
+  for (let i = 0; i < linha; i++) pos += alvo.tabela.child(i).nodeSize;
+  pos += 1;
+  const celulas = alvo.tabela.child(linha);
+  const ate = Math.min(coluna, celulas.childCount - 1);
+  for (let i = 0; i < ate; i++) pos += celulas.child(i).nodeSize;
+  tr.setSelection(TextSelection.create(tr.doc, pos + 1));
+}
+
+// Tab: a célula seguinte, de linha em linha. Na última, acrescenta uma linha
+// de corpo e vai para a primeira célula dela, como no Word.
+export function celulaSeguinte(tr: Transaction): boolean {
+  const alvo = celulaDaSelecao(tr.selection);
+  if (!alvo) return false;
+
+  const colunas = alvo.tabela.child(alvo.linha).childCount;
+  if (alvo.coluna + 1 < colunas) {
+    irParaCelula(tr, alvo, alvo.linha, alvo.coluna + 1);
+  } else if (alvo.linha + 1 < alvo.tabela.childCount) {
+    irParaCelula(tr, alvo, alvo.linha + 1, 0);
+  } else {
+    const linhas = linhasDe(alvo.tabela);
+    linhas.push(linhaVazia(alvo.tabela, linhas[linhas.length - 1].childCount, false));
+    trocarTabela(tr, alvo.posTabela, alvo.tabela, linhas, { linha: linhas.length - 1, coluna: 0 });
+  }
+  return true;
+}
+
+// Shift+Tab: a célula anterior. Na primeira, não faz nada (devolve `false`),
+// e quem chama decide se segura a tecla.
+export function celulaAnterior(tr: Transaction): boolean {
+  const alvo = celulaDaSelecao(tr.selection);
+  if (!alvo) return false;
+
+  if (alvo.coluna > 0) {
+    irParaCelula(tr, alvo, alvo.linha, alvo.coluna - 1);
+  } else if (alvo.linha > 0) {
+    irParaCelula(tr, alvo, alvo.linha - 1, alvo.tabela.child(alvo.linha - 1).childCount - 1);
+  } else {
+    return false;
+  }
+  return true;
+}
+
+// Enter: desce para a célula de baixo, na mesma coluna. Na última linha, sai
+// da tabela para a linha seguinte (que `cursorDepoisDoBloco()` garante que
+// exista, o que também resolve o fim de seção do 8.1.3).
+export function descerOuSair(tr: Transaction): boolean {
+  const alvo = celulaDaSelecao(tr.selection);
+  if (!alvo) return false;
+
+  if (alvo.linha + 1 < alvo.tabela.childCount) {
+    irParaCelula(tr, alvo, alvo.linha + 1, alvo.coluna);
+  } else {
+    cursorDepoisDoBloco(tr, alvo.posTabela + alvo.tabela.nodeSize);
+  }
+  return true;
+}
+
+// Backspace no começo da célula, ou Delete no fim, ou qualquer apagar com a
+// seleção cruzando células: o ProseMirror juntaria as células. Devolve `true`
+// quando o apagar deve ser engolido. Apagar texto dentro da célula passa.
+export function apagarFundiriaCelulas(selecao: Selection, tecla: "Backspace" | "Delete"): boolean {
+  if (!celulaDaSelecao(selecao)) return false;
+
+  const { $from, $to, empty } = selecao;
+  if (!empty) return $from.parent !== $to.parent;
+  return tecla === "Backspace"
+    ? $from.parentOffset === 0
+    : $from.parentOffset === $from.parent.content.size;
 }

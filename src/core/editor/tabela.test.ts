@@ -12,7 +12,11 @@ import {
   acrescentarColunaNoFim,
   acrescentarLinhaNoFim,
   alternarCabecalho,
+  apagarFundiriaCelulas,
+  celulaAnterior,
   celulaDaSelecao,
+  celulaSeguinte,
+  descerOuSair,
   excluirTabela,
   inserirColuna,
   inserirLinha,
@@ -439,5 +443,93 @@ describe("mover e acrescentar no fim (passo 8.5.3)", () => {
     ]) {
       expect(aplicar(fora, operacao).mudou).toBe(false);
     }
+  });
+});
+
+describe("teclado dentro da tabela (passo 8.5.2)", () => {
+  const base = () =>
+    estadoCom([
+      ["A", "B"],
+      ["1", "2"],
+    ]);
+  const posicao = (estado: EditorState) => {
+    const alvo = celulaDaSelecao(estado.selection)!;
+    return [alvo.linha, alvo.coluna];
+  };
+  const mover = (estado: EditorState, delta: number) =>
+    estado.apply(
+      estado.tr.setSelection(TextSelection.create(estado.doc, estado.selection.from + delta)),
+    );
+
+  it("Tab anda pela linha e quebra para o começo da próxima", () => {
+    const a = aplicar(naCelula(base(), 0, 0), celulaSeguinte).estado;
+    expect(posicao(a)).toEqual([0, 1]);
+    expect(posicao(aplicar(a, celulaSeguinte).estado)).toEqual([1, 0]);
+  });
+
+  it("Tab na última célula acrescenta uma linha de corpo e cai na primeira célula dela", () => {
+    const { mudou, estado } = aplicar(naCelula(base(), 1, 1), celulaSeguinte);
+    expect(mudou).toBe(true);
+    expect(grade(estado.doc)).toEqual([
+      ["A", "B"],
+      ["1", "2"],
+      ["", ""],
+    ]);
+    expect(cabecalhos(estado.doc)[2]).toEqual([false, false]);
+    expect(posicao(estado)).toEqual([2, 0]);
+  });
+
+  it("Shift+Tab volta, e na primeira célula não faz nada", () => {
+    expect(posicao(aplicar(naCelula(base(), 1, 0), celulaAnterior).estado)).toEqual([0, 1]);
+    expect(aplicar(naCelula(base(), 0, 0), celulaAnterior).mudou).toBe(false);
+  });
+
+  it("Enter desce na mesma coluna", () => {
+    const { estado } = aplicar(naCelula(base(), 0, 1), descerOuSair);
+    expect(posicao(estado)).toEqual([1, 1]);
+    expect(grade(estado.doc)).toEqual([
+      ["A", "B"],
+      ["1", "2"],
+    ]);
+  });
+
+  it("Enter na última linha sai da tabela, para uma linha de texto depois dela", () => {
+    const { estado } = aplicar(naCelula(base(), 1, 0), descerOuSair);
+    expect(celulaDaSelecao(estado.selection)).toBeNull();
+    expect(estado.selection.$from.parent.type.name).toBe("paragraph");
+    expect(grade(estado.doc)).toEqual([
+      ["A", "B"],
+      ["1", "2"],
+    ]);
+  });
+
+  it("Backspace no começo da célula e Delete no fim são segurados; no meio do texto, não", () => {
+    const noInicio = naCelula(estadoCom([["Ab", "Cd"]]), 0, 1);
+    expect(apagarFundiriaCelulas(noInicio.selection, "Backspace")).toBe(true);
+    expect(apagarFundiriaCelulas(noInicio.selection, "Delete")).toBe(false);
+
+    const meio = mover(noInicio, 1);
+    expect(apagarFundiriaCelulas(meio.selection, "Backspace")).toBe(false);
+    expect(apagarFundiriaCelulas(meio.selection, "Delete")).toBe(false);
+
+    expect(apagarFundiriaCelulas(mover(noInicio, 2).selection, "Delete")).toBe(true);
+  });
+
+  it("apagar uma seleção que cruza células é segurado", () => {
+    const estado = naCelula(estadoCom([["Ab", "Cd"]]), 0, 0);
+    const cruzando = estado.apply(
+      estado.tr.setSelection(
+        TextSelection.create(estado.doc, estado.selection.from, estado.selection.from + 5),
+      ),
+    );
+    expect(apagarFundiriaCelulas(cruzando.selection, "Backspace")).toBe(true);
+  });
+
+  it("fora da tabela, nenhum dos comandos age", () => {
+    const fora = estadoCom([["A"]]);
+    for (const operacao of [celulaSeguinte, celulaAnterior, descerOuSair]) {
+      expect(aplicar(fora, operacao).mudou).toBe(false);
+    }
+    expect(apagarFundiriaCelulas(fora.selection, "Backspace")).toBe(false);
   });
 });

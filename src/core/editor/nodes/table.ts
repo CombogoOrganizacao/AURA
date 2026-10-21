@@ -1,4 +1,13 @@
 import { mergeAttributes, Node } from "@tiptap/core";
+import type { Transaction } from "@tiptap/pm/state";
+
+import {
+  apagarFundiriaCelulas,
+  celulaAnterior,
+  celulaDaSelecao,
+  celulaSeguinte,
+  descerOuSair,
+} from "../tabela";
 
 export interface TabelaOptions {
   HTMLAttributes: Record<string, unknown>;
@@ -116,6 +125,30 @@ export const CelulaTabela = Node.create({
   // nota de rodapé, não entra na grade. A tabela tem rodapé próprio (fonte,
   // nota geral e nota específica, IBGE §3.2.3 e §4.10–4.12).
   content: "text*",
+
+  // Teclado dentro da tabela (passo 8.5.2). A célula não tem parágrafo, então
+  // o Enter e o Backspace padrão partiriam e fundiriam células; aqui andam,
+  // e a grade continua retangular. Os comandos moram em `core/editor/tabela.ts`.
+  addKeyboardShortcuts() {
+    const rodar = (comando: (tr: Transaction) => boolean) => () => {
+      const { state, view } = this.editor;
+      const tr = state.tr;
+      if (!comando(tr)) return false;
+      view.dispatch(tr.scrollIntoView());
+      return true;
+    };
+    // Dentro da tabela o Tab e o Enter são desta tabela: a tecla é segurada
+    // mesmo quando não há para onde ir, e não cai no comando padrão.
+    const naTabela = () => celulaDaSelecao(this.editor.state.selection) !== null;
+    return {
+      Tab: () => rodar(celulaSeguinte)() || naTabela(),
+      "Shift-Tab": () => rodar(celulaAnterior)() || naTabela(),
+      Enter: () => rodar(descerOuSair)(),
+      "Shift-Enter": () => naTabela(),
+      Backspace: () => apagarFundiriaCelulas(this.editor.state.selection, "Backspace"),
+      Delete: () => apagarFundiriaCelulas(this.editor.state.selection, "Delete"),
+    };
+  },
 
   addAttributes() {
     return {

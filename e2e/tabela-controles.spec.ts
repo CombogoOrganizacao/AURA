@@ -100,3 +100,69 @@ test("o espaço depois do travessão da legenda aparece", async ({ page }) => {
   await expect(rotulo).toHaveCSS("white-space", "pre");
   await expect(rotulo).toHaveText("Tabela 1 — ");
 });
+
+// Passo 8.5.2 — teclado dentro da tabela.
+test.describe("teclado dentro da tabela (passo 8.5.2)", () => {
+  async function vazia(page: Page, colunas = 2, linhas = 2) {
+    await page.goto("/documentos");
+    await page.getByRole("button", { name: "Novo documento" }).click();
+    await page.waitForURL(/\/documento\//);
+    await page.locator(".ProseMirror p").first().click();
+    await page.getByRole("button", { name: BOTAO_TABELA }).click();
+    await confirmarTabela(page, colunas, linhas);
+  }
+
+  test("Tab preenche a grade, e na última célula cria uma linha", async ({ page }) => {
+    await vazia(page);
+    for (const texto of ["A", "B", "1", "2", "3"]) {
+      await page.keyboard.type(texto);
+      await page.keyboard.press("Tab");
+    }
+    await page.keyboard.type("4");
+    expect(await textos(page)).toEqual(["A", "B", "1", "2", "3", "4"]);
+    await expect(page.locator(".doc-tabela tr")).toHaveCount(3);
+    // O foco continua no texto: o Tab não saiu para o botão seguinte.
+    await expect(page.locator(".ProseMirror")).toBeFocused();
+  });
+
+  test("Shift+Tab volta; na primeira célula fica onde está", async ({ page }) => {
+    await vazia(page);
+    await page.keyboard.type("A");
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.type("X");
+    expect(await textos(page)).toEqual(["XA", "", "", ""]);
+    await expect(page.locator(".ProseMirror")).toBeFocused();
+  });
+
+  test("Enter desce e, na última linha, sai da tabela sem partir célula", async ({ page }) => {
+    await vazia(page);
+    await page.keyboard.type("A");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("1");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("Depois da tabela");
+
+    expect(await textos(page)).toEqual(["A", "", "1", ""]);
+    await expect(page.locator(".doc-tabela tr")).toHaveCount(2);
+    await expect(page.locator(".ProseMirror p", { hasText: "Depois da tabela" })).toHaveCount(1);
+  });
+
+  test("Backspace no começo e Delete no fim da célula não fundem células", async ({ page }) => {
+    await vazia(page);
+    await page.keyboard.type("A");
+    await page.keyboard.press("Tab");
+    await page.keyboard.type("B");
+    await page.keyboard.press("Home");
+    await page.keyboard.press("Backspace");
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("End");
+    await page.keyboard.press("Delete");
+
+    expect(await textos(page)).toEqual(["A", "B", "", ""]);
+    // Dentro do texto, o Backspace continua apagando.
+    await page.keyboard.press("Backspace");
+    expect(await textos(page)).toEqual(["", "B", "", ""]);
+  });
+});
