@@ -1,10 +1,17 @@
 import type { NoInline } from "../../document/types";
-import { lerItens, type Item, type ItensLidos, type QualPosTextual } from "./blocos";
+import {
+  AMBIENTES_DE_RESUMO,
+  lerItens,
+  type Item,
+  type ItensLidos,
+  type QualPosTextual,
+} from "./blocos";
 import {
   dividirEmComandos,
   fimDoAmbiente,
   lerGrupo,
   lerOpcional,
+  pularEspacos,
   type Aviso,
   type Fonte,
   type LinhaFonte,
@@ -109,14 +116,106 @@ function lerComandosDeDados(ctx: ContextoInline, lidos: MetadadosLidos) {
 }
 
 const AMBIENTES_PRE_TEXTUAIS = new Set([
-  "resumo",
-  "abstract",
+  ...AMBIENTES_DE_RESUMO,
   "dedicatoria",
   "agradecimentos",
   "epigrafe",
 ]);
 
-const PALAVRAS_CHAVE = /^(palavras?[- ]?chaves?|key-?words?)\s*[:.]?\s*/i;
+// --- Resumo, abstract e palavras-chave ---------------------------------------
+
+// O idioma do trabalho, para saber se um `abstract` sem outra pista é o
+// Resumo ou o Abstract (passo 8.3.1). Num `.tex` de classe padrão escrito em
+// português, o resumo em português vai no `abstract`, que é o único ambiente
+// de resumo que a classe tem.
+export interface IdiomaDoTex {
+  // O babel, a classe ou o polyglossia declaram português.
+  portugues: boolean;
+  // Há um `resumo` no arquivo: o `abstract` é então o em inglês, como no
+  // modelo da SBC, que traz os dois.
+  temResumo: boolean;
+}
+
+const PORTUGUES = /\b(brazil|brazilian|portuges|portuguese)\b/i;
+
+export function idiomaDoTex(preambulo: Fonte, corpo: readonly Fonte[]): IdiomaDoTex {
+  const t = preambulo.texto;
+  const opcoes = [
+    ...t.matchAll(/\\documentclass\s*\[([^\]]*)\]/g),
+    ...t.matchAll(/\\usepackage\s*\[([^\]]*)\]\s*\{[^{}]*\bbabel\b[^{}]*\}/g),
+  ].map((achado) => achado[1]);
+  const polyglossia = /\\set(default|main)language\s*(\[[^\]]*\])?\s*\{\s*portuguese\s*\}/.test(t);
+  return {
+    portugues: polyglossia || opcoes.some((lista) => PORTUGUES.test(lista)),
+    temResumo: corpo.some((fonte) => /\\begin\s*\{resumo\}/.test(fonte.texto)),
+  };
+}
+
+// O rótulo das palavras-chave, onde estiver no ambiente. Pode vir embrulhado
+// em comandos que o AURA não conhece (`\textbf{\keyword{Palavras-chave:}}`,
+// `{\bf Keywords:}`), que saem junto com ele. No começo de um parágrafo ou
+// depois de uma quebra de linha (`\\`, `\par`, `\newline`), os dois-pontos
+// são opcionais; no meio da frase, são eles que separam o rótulo de uma
+// menção às palavras-chave no próprio resumo.
+interface Rotulo {
+  // Do primeiro comando que o embrulha até depois dos dois-pontos.
+  inicio: number;
+  fim: number;
+  emIngles: boolean;
+}
+
+const PALAVRA_DO_ROTULO = /(?<!\p{L})(palavras?[- ]?chaves?|key-?words?)(?!\p{L})/giu;
+const EMBRULHO_A_ESQUERDA = /(\\[a-zA-Z]+\s*\{|\{\s*\\[a-zA-Z]+\s*|\{)\s*$/;
+const QUEBRA_A_ESQUERDA =
+  /(^|\n[ \t]*\n|\\(\\|par|newline|linebreak)(?![a-zA-Z])(\s*\[[^\]]*\])?)\s*$/;
+
+// Vale o último rótulo: as palavras-chave fecham o resumo.
+function acharRotulo(t: string, inicio: number, fim: number): Rotulo | null {
+  let achado: Rotulo | null = null;
+  for (const palavra of t.slice(inicio, fim).matchAll(PALAVRA_DO_ROTULO)) {
+    let comeco = inicio + palavra.index;
+    let abertos = 0;
+    for (
+      let embrulho = EMBRULHO_A_ESQUERDA.exec(t.slice(inicio, comeco));
+      embrulho;
+      embrulho = EMBRULHO_A_ESQUERDA.exec(t.slice(inicio, comeco))
+    ) {
+      comeco = inicio + embrulho.index;
+      abertos++;
+    }
+    let i = inicio + palavra.index + palavra[0].length;
+    let fechados = 0;
+    let pontuado = false;
+    let doisPontos = false;
+    for (let j = pularEspacos(t, i, fim); j < fim; j = pularEspacos(t, i, fim)) {
+      if (t[j] === "}" && fechados < abertos) fechados++;
+      else if ((t[j] === ":" || t[j] === ".") && !pontuado) {
+        pontuado = true;
+        doisPontos = t[j] === ":";
+      } else break;
+      i = j + 1;
+    }
+    // O comando embrulha também os termos (`\textbf{Palavras-chave: a; b}`):
+    // não é o rótulo sozinho.
+    if (fechados < abertos) continue;
+    if (!doisPontos && !QUEBRA_A_ESQUERDA.test(t.slice(inicio, comeco))) continue;
+    achado = { inicio: comeco, fim: i, emIngles: /^key/i.test(palavra[1]) };
+  }
+  return achado;
+}
+
+// `\and` (classes de revista) e `\sep` (elsarticle) separam termos, como o
+// ponto e vírgula.
+const SEPARADORES_DE_TERMOS = new Set(["and", "sep", "par", "newline"]);
+
+function lerTermos(ctx: ContextoInline, inicio: number, fim: number): string[] {
+  return dividirEmComandos(ctx.fonte.texto, inicio, fim, SEPARADORES_DE_TERMOS)
+    .flatMap((parte) =>
+      textoPlano(ctx, parte.inicio, parte.fim, "as palavras-chave").split(/\s*[;.,]\s*/),
+    )
+    .map((termo) => termo.trim())
+    .filter(Boolean);
+}
 
 function textoDe(content: readonly NoInline[] | undefined): string {
   return (content ?? [])
@@ -125,56 +224,168 @@ function textoDe(content: readonly NoInline[] | undefined): string {
     .trim();
 }
 
-// Os parágrafos de dentro de um ambiente, só com o texto.
-function paragrafos(ctx: ContextoInline, inicio: number, fim: number): string[] {
-  return lerItens(ctx, "externo", inicio, fim)
-    .itens.flatMap((item) =>
-      item.tipo === "bloco" && item.bloco.type === "paragraph" ? [textoDe(item.bloco.content)] : [],
-    )
-    .filter(Boolean);
+interface Paragrafo {
+  texto: string;
+  // Onde o parágrafo está no texto bruto.
+  inicio: number;
+  fim: number;
 }
 
-// `resumo` (e o `abstract` da classe padrão): o texto e a linha de
-// palavras-chave. É abstract o `resumo[Abstract]` ou o escrito em inglês.
+// Os parágrafos de dentro de um ambiente, só com o texto.
+function paragrafosComFaixa(ctx: ContextoInline, inicio: number, fim: number): Paragrafo[] {
+  return lerItens(ctx, "externo", inicio, fim).itens.flatMap((item) =>
+    item.tipo === "bloco" && item.bloco.type === "paragraph" && textoDe(item.bloco.content)
+      ? [{ texto: textoDe(item.bloco.content), inicio: item.pos, fim: item.fim ?? fim }]
+      : [],
+  );
+}
+
+function paragrafos(ctx: ContextoInline, inicio: number, fim: number): string[] {
+  return paragrafosComFaixa(ctx, inicio, fim).map((paragrafo) => paragrafo.texto);
+}
+
+// Resumo ou Abstract. Primeiro o que o arquivo diz do próprio trecho (o
+// `[Abstract]` do abnTeX2, o `otherlanguage` em inglês), depois o rótulo das
+// palavras-chave, e só então o ambiente e o idioma do trabalho.
+function resumoEmIngles(
+  nome: string,
+  opcional: string,
+  bruto: string,
+  rotulo: Rotulo | null,
+  idioma: IdiomaDoTex,
+  lidos: MetadadosLidos,
+): boolean {
+  if (nome === "IEEEkeywords") return true;
+  if (
+    /abstract|english|ingl[êe]s/i.test(opcional) ||
+    /\\(begin\{otherlanguage\*?\}|selectlanguage)\s*\{english\}/.test(bruto)
+  )
+    return true;
+  if (rotulo) return rotulo.emIngles;
+  if (nome === "abstract") return idioma.temResumo || !idioma.portugues;
+  // O segundo `resumo` sem pista nenhuma é o em inglês.
+  if (nome === "resumo") return lidos.resumo !== undefined;
+  return !idioma.portugues;
+}
+
+type CampoDeResumo = "Resumo" | "Palavras-chave" | "Abstract" | "Keywords";
+
+// `resumo` e `abstract`: o texto e as palavras-chave. `keywords`,
+// `IEEEkeywords` e `\keywords{}`: só as palavras-chave, com ou sem rótulo.
+// Devolve os campos que preencheu, para o aviso.
+//
+// O rótulo é procurado dentro de cada parágrafo, no texto bruto: ele pode
+// vir no começo ou no meio, embrulhado em comandos que o leitor de parágrafo
+// não entende. O que vem antes dele no parágrafo é resumo; o que vem depois
+// são os termos.
 function lerResumo(
   ctx: ContextoInline,
   nome: string,
   opcional: string,
-  bruto: string,
   inicio: number,
   fim: number,
   lidos: MetadadosLidos,
-) {
-  const emIngles =
-    nome === "abstract" ||
-    /abstract|english|ingl[êe]s/i.test(opcional) ||
-    /\\(begin\{otherlanguage\*?\}|selectlanguage)\s*\{english\}/.test(bruto) ||
-    lidos.resumo !== undefined;
+  idioma: IdiomaDoTex,
+): CampoDeResumo[] {
+  const t = ctx.fonte.texto;
+  const soTermos = nome === "keywords" || nome === "IEEEkeywords";
+  const avisosAntes = ctx.avisos.length;
+  const lista = paragrafosComFaixa(ctx, inicio, fim);
+  const rotulos = lista.map((paragrafo) => acharRotulo(t, paragrafo.inicio, paragrafo.fim));
+  const rotulo = rotulos.findLast(Boolean) ?? (soTermos ? acharRotulo(t, inicio, fim) : null);
+
+  // O rótulo e os termos são lidos de novo logo abaixo, pelo texto bruto:
+  // os avisos da primeira leitura, nessas linhas, ficariam repetidos ou
+  // falariam do comando que embrulha o rótulo (`\keyword`).
+  const lidasDeNovo = lista.flatMap((paragrafo, i) => {
+    const achado = rotulos[i];
+    return achado
+      ? [
+          [
+            ctx.fonte.posicao(achado.inicio).linha,
+            ctx.fonte.posicao(Math.max(achado.inicio, paragrafo.fim - 1)).linha,
+          ],
+        ]
+      : [];
+  });
+  const mantidos = ctx.avisos
+    .splice(avisosAntes)
+    .filter((aviso) => !lidasDeNovo.some(([de, ate]) => aviso.linha >= de && aviso.linha <= ate));
+  ctx.avisos.push(...mantidos);
+
   const texto: string[] = [];
-  let termos: string[] | undefined;
-  for (const paragrafo of paragrafos(ctx, inicio, fim)) {
-    const rotulo = PALAVRAS_CHAVE.exec(paragrafo);
-    if (rotulo) {
-      termos = paragrafo
-        .slice(rotulo[0].length)
-        .split(/\s*[;.,]\s*/)
-        .map((termo) => termo.trim())
-        .filter(Boolean);
-    } else texto.push(paragrafo);
+  let termos: string[] = [];
+  lista.forEach((paragrafo, i) => {
+    const achado = rotulos[i];
+    if (!achado) {
+      if (!soTermos) texto.push(paragrafo.texto);
+      return;
+    }
+    const antes = textoPlano(ctx, paragrafo.inicio, achado.inicio, "o resumo").trim();
+    if (antes && !soTermos) texto.push(antes);
+    termos = lerTermos(ctx, achado.fim, paragrafo.fim);
+  });
+  if (soTermos && !rotulo) termos = lerTermos(ctx, inicio, fim);
+
+  const emIngles = resumoEmIngles(nome, opcional, t.slice(inicio, fim), rotulo, idioma, lidos);
+  const campos: CampoDeResumo[] = [];
+  if (!soTermos) {
+    lidos[emIngles ? "abstract" : "resumo"] = texto.join("\n");
+    campos.push(emIngles ? "Abstract" : "Resumo");
   }
-  if (emIngles) {
-    lidos.abstract = texto.join("\n");
-    if (termos) lidos.keywords = termos;
-  } else {
-    lidos.resumo = texto.join("\n");
-    if (termos) lidos.palavrasChave = termos;
+  if (termos.length > 0) {
+    lidos[emIngles ? "keywords" : "palavrasChave"] = termos;
+    campos.push(emIngles ? "Keywords" : "Palavras-chave");
+  }
+  return campos;
+}
+
+// Resumo, abstract e palavras-chave no meio do texto (passo 8.3.1). Num
+// modelo de relatório, o `abstract` vem depois do primeiro título
+// (`\section{Equipe}`), e caía como texto cru na seção. Vai para os campos,
+// como se estivesse antes do texto, e o aviso diz para onde foi.
+export function lerResumosDoCorpo(
+  { fonte, itens }: ItensLidos,
+  lidos: MetadadosLidos,
+  idioma: IdiomaDoTex,
+  contexto: (fonte: Fonte) => ContextoInline,
+) {
+  const ctx = contexto(fonte);
+  for (const item of itens) {
+    if (item.tipo !== "resumo") continue;
+    const opcional = item.opcional
+      ? fonte.texto.slice(item.opcional.inicio, item.opcional.fim)
+      : "";
+    const campos = lerResumo(
+      ctx,
+      item.nome,
+      opcional,
+      item.dentro.inicio,
+      item.dentro.fim,
+      lidos,
+      idioma,
+    );
+    const trecho = fonte.texto.startsWith("\\begin", item.pos)
+      ? `\\begin{${item.nome}}`
+      : `\\${item.nome}`;
+    ctx.avisos.push({
+      ...fonte.posicao(item.pos),
+      mensagem:
+        campos.length === 0
+          ? `${trecho} no meio do texto estava vazio: não foi trazido.`
+          : `${trecho} no meio do texto: foi para ${campos.length === 1 ? "o campo" : "os campos"} ${campos.join(" e ")}.`,
+    });
   }
 }
 
 // O que o aluno escreveu antes do texto: resumo, abstract, dedicatória,
 // agradecimentos e epígrafe. O resto (capa, folhas, listas) o AURA refaz, e
 // o aviso diz o que não foi trazido.
-function lerAmbientesPreTextuais(ctx: ContextoInline, lidos: MetadadosLidos) {
+function lerAmbientesPreTextuais(
+  ctx: ContextoInline,
+  lidos: MetadadosLidos,
+  idioma: IdiomaDoTex,
+) {
   const t = ctx.fonte.texto;
   const naoTrazidos = new Set<string>();
   const abre = /\\begin\s*\{([^{}]+)\}/g;
@@ -190,15 +401,15 @@ function lerAmbientesPreTextuais(ctx: ContextoInline, lidos: MetadadosLidos) {
     }
     const opcional = lerOpcional(t, dentro);
     const inicio = opcional?.depois ?? dentro;
-    if (nome === "resumo" || nome === "abstract") {
+    if (AMBIENTES_DE_RESUMO.has(nome)) {
       lerResumo(
         ctx,
         nome,
         opcional ? t.slice(opcional.inicio, opcional.fim) : "",
-        t.slice(inicio, fecha),
         inicio,
         fecha,
         lidos,
+        idioma,
       );
     } else {
       lidos[nome as "dedicatoria" | "agradecimentos" | "epigrafe"] = paragrafos(
@@ -221,13 +432,14 @@ function lerAmbientesPreTextuais(ctx: ContextoInline, lidos: MetadadosLidos) {
 export function lerMetadadosExternos(
   preambulo: Fonte,
   preTextual: Fonte,
+  idioma: IdiomaDoTex,
   contexto: (fonte: Fonte) => ContextoInline,
 ): MetadadosLidos {
   const lidos: MetadadosLidos = {};
   lerComandosDeDados(contexto(preambulo), lidos);
   const ctx = contexto(preTextual);
   lerComandosDeDados(ctx, lidos);
-  lerAmbientesPreTextuais(ctx, lidos);
+  lerAmbientesPreTextuais(ctx, lidos, idioma);
   return lidos;
 }
 

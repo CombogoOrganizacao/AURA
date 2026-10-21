@@ -2,7 +2,13 @@ import { TITULO_REFERENCIAS } from "../../document/elements/posTextual";
 import type { Metadados, NivelSecao } from "../../document/types";
 import { MACRO, SEPARADOR_TERMOS, VERSAO_FORMATO_TEX } from "../../export/latex/markers";
 import { lerItens, paragrafoLiteral, type BlocoLido, type Item, type ItensLidos } from "./blocos";
-import { inicioDoTexto, lerMetadadosExternos, montarExterno } from "./externo";
+import {
+  idiomaDoTex,
+  inicioDoTexto,
+  lerMetadadosExternos,
+  lerResumosDoCorpo,
+  montarExterno,
+} from "./externo";
 import {
   dividirEmComandos,
   dividirForaDeChaves,
@@ -220,12 +226,13 @@ function ler(conteudo: string, opcoes: OpcoesLeitura): ResultadoLeitura {
       return falha("grande-demais", GRANDE_DEMAIS);
     }
     const comeco = inicioDoTexto(expandido);
-    const metadados = lerMetadadosExternos(
-      Fonte.deLinhas(preambulo),
-      Fonte.deLinhas(expandido.slice(0, comeco)),
-      contexto,
-    );
-    const lidos = lerItens(contexto(Fonte.deLinhas(expandido.slice(comeco))), "externo");
+    const fontePreambulo = Fonte.deLinhas(preambulo);
+    const fontePreTextual = Fonte.deLinhas(expandido.slice(0, comeco));
+    const fonteTexto = Fonte.deLinhas(expandido.slice(comeco));
+    const idioma = idiomaDoTex(fontePreambulo, [fontePreTextual, fonteTexto]);
+    const metadados = lerMetadadosExternos(fontePreambulo, fontePreTextual, idioma, contexto);
+    const lidos = lerItens(contexto(fonteTexto), "externo");
+    lerResumosDoCorpo(lidos, metadados, idioma, contexto);
     const { secoes, apendices, anexos, secaoDoTitulo } = montarExterno(lidos, avisos);
     const tex: TexLido = {
       origem: "externo",

@@ -325,6 +325,30 @@ describe("montarReimportacao de um .tex de fora (§1.6)", () => {
     expect(relatorio.secoes.novas.map((secao) => secao.titulo)).toEqual(["Um"]);
   });
 
+  it("o resumo achado no meio do texto aparece no relatório, nos campos Resumo e Palavras-chave", () => {
+    const comResumoNoCorpo = [
+      "\\documentclass{article}",
+      "\\usepackage[brazil]{babel}",
+      "\\begin{document}",
+      "\\section{Equipe}",
+      "\\begin{abstract}",
+      "Um sistema de monitoramento noturno.",
+      "\\\\\\textbf{\\keyword{Palavras-chave:}} Visão Computacional; YOLO.",
+      "\\end{abstract}",
+      "\\end{document}",
+    ].join("\n");
+    const { documento, relatorio } = reimportar(null, comResumoNoCorpo);
+    expect(documento.metadados.resumo).toBe("Um sistema de monitoramento noturno.");
+    expect(documento.metadados.palavrasChave).toEqual(["Visão Computacional", "YOLO"]);
+    expect(relatorio.metadados).toEqual([
+      { campo: "resumo", antes: "", depois: "Um sistema de monitoramento noturno." },
+      { campo: "palavrasChave", antes: "", depois: "Visão Computacional; YOLO" },
+    ]);
+    expect(relatorio.avisos.map((aviso) => aviso.mensagem)).toContain(
+      "\\begin{abstract} no meio do texto: foi para os campos Resumo e Palavras-chave.",
+    );
+  });
+
   it("figura com imagem fora do .tex avulso entra sem imagem, com aviso", () => {
     const { documento, relatorio } = reimportar(null, externo);
     expect(documento.sections[0].content[1]).toMatchObject({

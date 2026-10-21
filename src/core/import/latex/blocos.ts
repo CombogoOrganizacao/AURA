@@ -67,7 +67,13 @@ export type Item =
   // `\apendices`, `\anexos`, `\appendix` e os ambientes do abnTeX2; `null`
   // no fim do ambiente.
   | { tipo: "contexto"; qual: QualPosTextual | null; pos: number }
-  | { tipo: "bloco"; bloco: BlocoLido; pos: number };
+  // Resumo, abstract ou palavras-chave no meio do texto de fora (passo
+  // 8.3.1): `nome` é o ambiente, ou `keywords` para o comando `\keywords{}`.
+  // Quem lê o conteúdo para os campos é `externo.ts`; aqui só se reconhece.
+  | { tipo: "resumo"; nome: string; opcional: Faixa | null; dentro: Faixa; pos: number }
+  // `fim`: onde o parágrafo acaba no texto, para quem precisa do trecho bruto
+  // (o rótulo das palavras-chave, `externo.ts`).
+  | { tipo: "bloco"; bloco: BlocoLido; pos: number; fim?: number };
 
 export interface ItensLidos {
   fonte: Fonte;
@@ -92,9 +98,14 @@ const AMBIENTE_DE_CONTEXTO: Record<string, QualPosTextual> = {
   anexosenv: "ANEXO",
 };
 
+// Os ambientes que viram campo, e não texto, num `.tex` de fora: o resumo do
+// abnTeX2, o `abstract` das classes padrão e as palavras-chave das classes de
+// revista (`keywords` do elsarticle e de outros, `IEEEkeywords`).
+export const AMBIENTES_DE_RESUMO = new Set(["resumo", "abstract", "keywords", "IEEEkeywords"]);
+
 // Começo de linha que encerra o parágrafo em curso.
 const INICIO_DE_BLOCO =
-  /^[ \t]*(% AURA-|\\(chapter|section|subsection|subsubsection|paragraph|subparagraph|part|pretextualchapter|phantomsection|postextual|backmatter|apendices|anexos|partapendices|partanexos|appendix)(?![a-zA-Z])|\\begin\{|\\end\{(apendicesenv|anexosenv)\}|\\\[|\$\$)/;
+  /^[ \t]*(% AURA-|\\(chapter|section|subsection|subsubsection|paragraph|subparagraph|part|pretextualchapter|phantomsection|postextual|backmatter|apendices|anexos|partapendices|partanexos|appendix|keywords)(?![a-zA-Z])|\\begin\{|\\end\{(apendicesenv|anexosenv)\}|\\\[|\$\$)/;
 
 export function lerItens(
   ctx: ContextoInline,
@@ -153,6 +164,21 @@ export function lerItens(
           itens.push({
             tipo: "contexto",
             qual: nome === "begin" ? AMBIENTE_DE_CONTEXTO[ambiente] : null,
+            pos: i,
+          });
+          i = grupo.depois;
+          continue;
+        }
+      }
+
+      if (modo === "externo" && nome === "keywords") {
+        const grupo = lerGrupo(t, depois, fim);
+        if (grupo) {
+          itens.push({
+            tipo: "resumo",
+            nome,
+            opcional: null,
+            dentro: { inicio: grupo.inicio, fim: grupo.fim },
             pos: i,
           });
           i = grupo.depois;
@@ -252,7 +278,7 @@ export function lerItens(
     const ate = fimDoParagrafo(t, i, fim);
     const content = lerInline(ctx, i, ate);
     if (content.length > 0)
-      itens.push({ tipo: "bloco", bloco: { type: "paragraph", content }, pos: i });
+      itens.push({ tipo: "bloco", bloco: { type: "paragraph", content }, pos: i, fim: ate });
     i = ate;
   }
   return { fonte, itens };
@@ -298,7 +324,7 @@ interface AmbienteLido {
   depois: number;
 }
 
-interface Faixa {
+export interface Faixa {
   inicio: number;
   fim: number;
 }
@@ -415,6 +441,22 @@ function lerAmbienteDentro(
     depois,
   });
 
+  if (modo === "externo" && AMBIENTES_DE_RESUMO.has(nome)) {
+    // `\begin{resumo}[Abstract]`: o opcional diz o idioma.
+    const opcional = lerOpcional(t, dentro.inicio, dentro.fim);
+    return {
+      itens: [
+        {
+          tipo: "resumo",
+          nome,
+          opcional: opcional && { inicio: opcional.inicio, fim: opcional.fim },
+          dentro: { inicio: opcional?.depois ?? dentro.inicio, fim: dentro.fim },
+          pos,
+        },
+      ],
+      depois,
+    };
+  }
   if (nome === "auracitacaolonga") return blocos([citacaoLonga(ctx, pos, dentro)]);
   if (FIGURAS.has(nome)) return blocos(figura(ctx, pos, dentro));
   if (TABELAS.has(nome)) return blocos(tabelaFlutuante(ctx, pos, dentro));
