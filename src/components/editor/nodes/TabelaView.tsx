@@ -1,26 +1,16 @@
 "use client";
 
 import type { Editor } from "@tiptap/core";
-import type { Transaction } from "@tiptap/pm/state";
 import { NodeViewContent, NodeViewWrapper } from "@tiptap/react";
 import type { ReactNodeViewProps } from "@tiptap/react";
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useRef, useSyncExternalStore } from "react";
 
-import { Button } from "@/components/ui/Button";
 import { ROTULO_TABELA } from "@/core/document/elements/legenda";
 import { proporcoesDasColunas } from "@/core/document/elements/tabela";
-import {
-  alternarCabecalho,
-  celulaDaSelecao,
-  excluirTabela,
-  inserirColuna,
-  inserirLinha,
-  linhaEhCabecalho,
-  removerColuna,
-  removerLinha,
-} from "@/core/editor/tabela";
+import { celulaDaSelecao, linhaEhCabecalho } from "@/core/editor/tabela";
 
 import { CampoFonte, CampoLegenda } from "./CamposLegenda";
+import { ControlesDaTabela, type EstadoGrade } from "./ControlesDaTabela";
 import { useNumeroNumeravel } from "./useNumeroNumeravel";
 
 // Node view do nó `tabela` (passo 3.6.3) — ver docs/schema-tiptap.md §4.7.
@@ -40,6 +30,7 @@ export function TabelaView({ node, editor, getPos, updateAttributes }: ReactNode
   const id = node.attrs.id as string | null;
   const numero = useNumeroNumeravel(editor, "tabela", id);
   const grade = useGradeAtiva(editor, getPos);
+  const area = useRef<HTMLDivElement>(null);
 
   return (
     <NodeViewWrapper as="div" data-id={id} className="doc-tabela">
@@ -49,30 +40,33 @@ export function TabelaView({ node, editor, getPos, updateAttributes }: ReactNode
         valor={node.attrs.legenda as string}
         onChange={(legenda) => updateAttributes({ legenda })}
       />
-      <table>
-        {/*
+      {/* A área é o ponto de referência dos controles (`ControlesDaTabela`). */}
+      <div ref={area} className="doc-tabela-area">
+        <table>
+          {/*
           Largura das colunas pelo texto das células, a mesma conta do `.docx`
           e do `.tex` (`proporcoesDasColunas`). Recalculada a cada render, que
           o node view já recebe a cada mudança na tabela.
         */}
-        <colgroup>
-          {proporcoesDasColunas(textosDoNo(node)).map((proporcao, coluna) => (
-            <col key={coluna} style={{ width: `${proporcao * 100}%` }} />
-          ))}
-        </colgroup>
-        {/*
+          <colgroup>
+            {proporcoesDasColunas(textosDoNo(node)).map((proporcao, coluna) => (
+              <col key={coluna} style={{ width: `${proporcao * 100}%` }} />
+            ))}
+          </colgroup>
+          {/*
           Argumento de tipo explícito: `as` é `NoInfer<T>` na assinatura do
           `NodeViewContent`, então TS não deduz "tbody" do próprio valor.
         */}
-        <NodeViewContent<"tbody"> as="tbody" />
-      </table>
+          <NodeViewContent<"tbody"> as="tbody" />
+        </table>
+        {grade && <ControlesDaTabela editor={editor} grade={grade} area={area} />}
+      </div>
       <CampoFonte
         rotulo={ROTULO_TABELA}
         numero={numero}
         valor={node.attrs.fonte as string}
         onChange={(fonte) => updateAttributes({ fonte })}
       />
-      {grade && <BarraGrade editor={editor} grade={grade} />}
     </NodeViewWrapper>
   );
 }
@@ -87,12 +81,6 @@ function textosDoNo(tabela: ReactNodeViewProps["node"]): string[][] {
     linhas.push(celulas);
   });
   return linhas;
-}
-
-interface EstadoGrade {
-  linhas: number;
-  colunas: number;
-  cabecalho: boolean;
 }
 
 // Se o cursor está numa célula DESTA tabela, e como está a grade. A barra só
@@ -116,84 +104,18 @@ function useGradeAtiva(editor: Editor, getPos: () => number | undefined): Estado
     const alvo = celulaDaSelecao(editor.state.selection);
     if (!alvo || alvo.posTabela !== getPos()) return "";
     const colunas = alvo.tabela.child(alvo.linha).childCount;
-    return `${alvo.tabela.childCount}|${colunas}|${linhaEhCabecalho(alvo) ? 1 : 0}`;
+    return `${alvo.tabela.childCount}|${colunas}|${alvo.linha}|${alvo.coluna}|${linhaEhCabecalho(alvo) ? 1 : 0}`;
   }, [editor, getPos]);
   const obterInstantaneoServidor = useCallback(() => "", []);
 
   const instantaneo = useSyncExternalStore(inscrever, obterInstantaneo, obterInstantaneoServidor);
   if (!instantaneo) return null;
-  const [linhas, colunas, cabecalho] = instantaneo.split("|");
-  return { linhas: Number(linhas), colunas: Number(colunas), cabecalho: cabecalho === "1" };
-}
-
-// Botões da grade (passo 6.1.3b). Texto, não ícone: "linha acima" diz o que
-// faz, e os ícones de tabela do Lucide se distinguem mal nesse tamanho.
-//
-// Fica ABAIXO da tabela, e não acima: aparece quando o cursor entra numa
-// célula, e acima empurraria para baixo a célula em que a pessoa acabou de
-// clicar.
-//
-// `onMouseDown` com `preventDefault` segura o foco no editor durante o clique
-// do mouse; a operação roda no `onClick`, que o Enter e o Espaço também
-// disparam. Pelo teclado o foco está no botão, mas a seleção continua no
-// estado do ProseMirror, e é dela que a operação lê a célula. Até o 6.6.4 a
-// operação rodava no próprio `mousedown`, e pelo teclado o botão não fazia
-// nada.
-function BarraGrade({ editor, grade }: { editor: Editor; grade: EstadoGrade }) {
-  function executar(operacao: (tr: Transaction) => boolean) {
-    const tr = editor.state.tr;
-    if (!operacao(tr)) return;
-    editor.view.dispatch(tr.scrollIntoView());
-    editor.view.focus();
-  }
-
-  const botoes: ReadonlyArray<{
-    rotulo: string;
-    operacao: (tr: Transaction) => boolean;
-    desabilitado?: boolean;
-    pressionado?: boolean;
-  }> = [
-    { rotulo: "Linha acima", operacao: (tr) => inserirLinha(tr, "acima") },
-    { rotulo: "Linha abaixo", operacao: (tr) => inserirLinha(tr, "abaixo") },
-    { rotulo: "Remover linha", operacao: removerLinha, desabilitado: grade.linhas <= 1 },
-    { rotulo: "Coluna à esquerda", operacao: (tr) => inserirColuna(tr, "esquerda") },
-    { rotulo: "Coluna à direita", operacao: (tr) => inserirColuna(tr, "direita") },
-    { rotulo: "Remover coluna", operacao: removerColuna, desabilitado: grade.colunas <= 1 },
-    { rotulo: "Linha de cabeçalho", operacao: alternarCabecalho, pressionado: grade.cabecalho },
-  ];
-
-  return (
-    <div
-      role="toolbar"
-      aria-label="Grade da tabela"
-      className="doc-tabela-grade"
-      contentEditable={false}
-    >
-      {botoes.map(({ rotulo, operacao, desabilitado, pressionado }) => (
-        <Button
-          key={rotulo}
-          size="sm"
-          variant={pressionado ? "outline" : "ghost"}
-          aria-pressed={pressionado}
-          disabled={desabilitado}
-          // `mousedown` só segura a seleção no editor; a ação vai no
-          // `click`, que o Enter e o Espaço também disparam. Antes ela
-          // estava no `mousedown`, e pelo teclado o botão não fazia nada
-          // (achado no 6.6.4).
-          onMouseDown={(evento) => evento.preventDefault()}
-          onClick={() => executar(operacao)}
-        >
-          {rotulo}
-        </Button>
-      ))}
-      <Button
-        size="sm"
-        variant="ghost"
-        onMouseDown={(evento) => evento.preventDefault()}
-        onClick={() => executar(excluirTabela)}
-      >
-        Excluir tabela
-      </Button>
-    </div>
-  );
+  const [linhas, colunas, linha, coluna, cabecalho] = instantaneo.split("|");
+  return {
+    linhas: Number(linhas),
+    colunas: Number(colunas),
+    linha: Number(linha),
+    coluna: Number(coluna),
+    cabecalho: cabecalho === "1",
+  };
 }

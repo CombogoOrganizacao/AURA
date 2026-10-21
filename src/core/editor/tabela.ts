@@ -158,7 +158,11 @@ export function inserirColuna(tr: Transaction, lado: LadoColuna): boolean {
   const indice = lado === "esquerda" ? alvo.coluna : alvo.coluna + 1;
   const linhas = linhasDe(alvo.tabela).map((linha) => {
     const celulas = celulasDe(linha);
-    celulas.splice(Math.min(indice, celulas.length), 0, celulaVazia(alvo.tabela, ehCabecalho(linha)));
+    celulas.splice(
+      Math.min(indice, celulas.length),
+      0,
+      celulaVazia(alvo.tabela, ehCabecalho(linha)),
+    );
     return linha.copy(Fragment.from(celulas));
   });
 
@@ -212,5 +216,78 @@ export function excluirTabela(tr: Transaction): boolean {
   if (!alvo) return false;
 
   tr.delete(alvo.posTabela, alvo.posTabela + alvo.tabela.nodeSize);
+  return true;
+}
+
+// Acrescenta uma linha de corpo no fim da tabela, qualquer que seja a linha do
+// cursor (o "+" da borda de baixo, passo 8.5.3). O cursor vai para ela, na
+// mesma coluna em que estava.
+export function acrescentarLinhaNoFim(tr: Transaction): boolean {
+  const alvo = celulaDaSelecao(tr.selection);
+  if (!alvo) return false;
+
+  const linhas = linhasDe(alvo.tabela);
+  const colunas = linhas[linhas.length - 1].childCount;
+  linhas.push(linhaVazia(alvo.tabela, colunas, false));
+  trocarTabela(tr, alvo.posTabela, alvo.tabela, linhas, {
+    linha: linhas.length - 1,
+    coluna: alvo.coluna,
+  });
+  return true;
+}
+
+// O mesmo para a coluna: uma célula nova no fim de cada linha, com o papel
+// da linha. O cursor vai para a coluna nova, na mesma linha.
+export function acrescentarColunaNoFim(tr: Transaction): boolean {
+  const alvo = celulaDaSelecao(tr.selection);
+  if (!alvo) return false;
+
+  let novaColuna = 0;
+  const linhas = linhasDe(alvo.tabela).map((linha) => {
+    const celulas = celulasDe(linha);
+    novaColuna = celulas.length;
+    celulas.push(celulaVazia(alvo.tabela, ehCabecalho(linha)));
+    return linha.copy(Fragment.from(celulas));
+  });
+  trocarTabela(tr, alvo.posTabela, alvo.tabela, linhas, { linha: alvo.linha, coluna: novaColuna });
+  return true;
+}
+
+// Troca a linha do cursor com a vizinha (passo 8.5.3). O conteúdo anda, o
+// papel não: cabeçalho é um bloco contínuo a partir do alto (ver o topo do
+// arquivo), e uma linha de corpo subindo para o cabeçalho, ou o contrário,
+// o quebraria. O cursor acompanha a linha que andou.
+export function moverLinha(tr: Transaction, lado: LadoLinha): boolean {
+  const alvo = celulaDaSelecao(tr.selection);
+  if (!alvo) return false;
+
+  const linhas = linhasDe(alvo.tabela);
+  const destino = lado === "acima" ? alvo.linha - 1 : alvo.linha + 1;
+  if (destino < 0 || destino >= linhas.length) return false;
+
+  const papeis = linhas.map(ehCabecalho);
+  [linhas[alvo.linha], linhas[destino]] = [linhas[destino], linhas[alvo.linha]];
+  const trocadas = linhas.map((linha, indice) => linhaComCabecalho(linha, papeis[indice]));
+  trocarTabela(tr, alvo.posTabela, alvo.tabela, trocadas, { linha: destino, coluna: alvo.coluna });
+  return true;
+}
+
+// Troca a coluna do cursor com a vizinha, em todas as linhas. O papel de cada
+// célula vem da linha, então não muda.
+export function moverColuna(tr: Transaction, lado: LadoColuna): boolean {
+  const alvo = celulaDaSelecao(tr.selection);
+  if (!alvo) return false;
+
+  const destino = lado === "esquerda" ? alvo.coluna - 1 : alvo.coluna + 1;
+  if (destino < 0 || destino >= alvo.tabela.firstChild!.childCount) return false;
+
+  const linhas = linhasDe(alvo.tabela).map((linha) => {
+    const celulas = celulasDe(linha);
+    if (alvo.coluna < celulas.length && destino < celulas.length) {
+      [celulas[alvo.coluna], celulas[destino]] = [celulas[destino], celulas[alvo.coluna]];
+    }
+    return linha.copy(Fragment.from(celulas));
+  });
+  trocarTabela(tr, alvo.posTabela, alvo.tabela, linhas, { linha: alvo.linha, coluna: destino });
   return true;
 }

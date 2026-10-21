@@ -557,20 +557,6 @@
   font-weight: 700;
 }
 
-/* Barra de grade (passo 6.1.3b): interface, não documento — fonte da UI e
-   sem o recuo de parágrafo da folha. Só existe enquanto o cursor está numa
-   célula desta tabela (`TabelaView.tsx`). */
-.ProseMirror .doc-tabela-grade {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-top: 0.25rem;
-  font-family: var(--font-sans);
-  font-style: normal;
-  text-indent: 0;
-  user-select: none;
-}
-
 /* Nota de rodapé (passo 6.1.3c) — docs/schema-tiptap.md §4.9. No texto, só
    o expoente, como na página impressa. O campo que abre embaixo dele é
    interface, não documento: fonte da UI, sem recuo nem justificação da folha.
@@ -799,4 +785,38 @@
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* O espaço depois do travessão da legenda ("Tabela 1 — "): num item de flex o
+   espaço do fim do texto é descartado, e o campo ficava colado no traço
+   (21/10/2026). `pre` o mantém. Só na tela: o `.docx` já o escreve. */
+.ProseMirror .doc-legenda-rotulo {
+  white-space: pre;
+}
+
+/* Controles da grade da tabela (passo 8.5.3): interface, não documento.
+   A área dá o ponto de referência; a camada de controles cobre a tabela sem
+   pegar clique, e só as alças e menus pegam. */
+.ProseMirror .doc-tabela-area {
+  position: relative;
+}
+
+.ProseMirror .doc-tabela-controles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: var(--font-sans);
+  font-style: normal;
+  text-indent: 0;
+  user-select: none;
+}
+
+.ProseMirror .doc-tabela-controles > * {
+  pointer-events: auto;
+}
+
+/* Respiro entre a legenda e a tabela, para a alça da coluna não cobrir o
+   texto da legenda. Só na tela; o `.docx` tem o seu (6 pt). */
+.ProseMirror .doc-tabela > .doc-legenda {
+  padding-bottom: 0.5rem;
 }

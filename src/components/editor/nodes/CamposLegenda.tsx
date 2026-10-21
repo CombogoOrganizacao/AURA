@@ -44,7 +44,7 @@ export function CampoLegenda({ rotulo, numero, valor, onChange }: CampoProps) {
 
   return (
     <div className="doc-legenda" contentEditable={false}>
-      <span aria-hidden="true">
+      <span aria-hidden="true" className="doc-legenda-rotulo">
         {indicativo}
         {SEPARADOR_LEGENDA}
       </span>

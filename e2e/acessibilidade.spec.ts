@@ -181,11 +181,14 @@ test("grade da tabela: o Enter num botão faz o que o clique faz", async ({ page
 
   const linhas = page.locator(".ProseMirror .doc-tabela tr");
   const antes = await linhas.count();
-  await page
-    .getByRole("toolbar", { name: "Grade da tabela" })
-    .getByRole("button", { name: "Linha abaixo" })
-    .focus();
+  // Pelo teclado: a alça abre o menu, as setas andam, o Enter age.
+  await page.getByRole("button", { name: "Linha: mais opções" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("menuitem", { name: "Inserir linha acima" })).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("menuitem", { name: "Inserir linha abaixo" })).toBeFocused();
   await page.keyboard.press("Enter");
 
   await expect(linhas).toHaveCount(antes + 1);
+  await expect(page.getByRole("menu")).toHaveCount(0);
 });

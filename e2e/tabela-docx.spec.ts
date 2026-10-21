@@ -50,7 +50,7 @@ test("tabela digitada na tela sai como grade no .docx", async ({ page }) => {
 });
 
 // Passo 6.1.3b — a grade muda pela interface, e a mudança chega ao `.docx`.
-test("tabela criada 2×2 vira 3×3 pela barra de grade e sai assim no .docx", async ({ page }) => {
+test("tabela criada 2×2 vira 3×3 pelos menus da grade e sai assim no .docx", async ({ page }) => {
   await page.goto("/documentos");
   await page.getByRole("button", { name: "Novo documento" }).click();
   await page.waitForURL(/\/documento\//);
@@ -60,14 +60,15 @@ test("tabela criada 2×2 vira 3×3 pela barra de grade e sai assim no .docx", as
   await confirmarTabela(page);
   await page.getByLabel("Legenda — Tabela 1").fill("Matrículas por curso");
 
-  const barra = page.getByRole("toolbar", { name: "Grade da tabela" });
   const celulas = page.locator(".doc-tabela th, .doc-tabela td");
-  // A barra só aparece com o cursor numa célula.
+  // As alças só aparecem com o cursor numa célula.
   await celulas.nth(3).click();
-  await expect(barra).toBeVisible();
+  await expect(page.getByRole("button", { name: "Linha: mais opções" })).toBeVisible();
 
-  await barra.getByRole("button", { name: "Linha abaixo", exact: true }).click();
-  await barra.getByRole("button", { name: "Coluna à direita", exact: true }).click();
+  await page.getByRole("button", { name: "Linha: mais opções" }).click();
+  await page.getByRole("menuitem", { name: "Inserir linha abaixo" }).click();
+  await page.getByRole("button", { name: "Coluna: mais opções" }).click();
+  await page.getByRole("menuitem", { name: "Inserir coluna à direita" }).click();
   await expect(celulas).toHaveCount(9);
   // A linha nova é de corpo: o cabeçalho continua só na primeira.
   await expect(page.locator(".doc-tabela th")).toHaveCount(3);
