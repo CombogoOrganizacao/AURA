@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import JSZip from "jszip";
 
-import { clicarExportar } from "./apoio";
+import { clicarExportar, confirmarTabela } from "./apoio";
 
 // Passo 6.1.3 — a grade da tabela no `.docx`, pelo caminho que o aluno faz:
 // inserir a tabela pela barra, digitar nas células e exportar. O Vitest
@@ -21,6 +21,7 @@ test("tabela digitada na tela sai como grade no .docx", async ({ page }) => {
   await page.keyboard.type("Parágrafo antes da tabela.");
 
   await page.getByRole("button", { name: BOTAO_TABELA }).click();
+  await confirmarTabela(page);
   await page.getByLabel("Legenda — Tabela 1").fill("Matrículas por curso");
 
   // `novaTabela()` nasce 2×2, com a primeira linha de cabeçalho.
@@ -56,6 +57,7 @@ test("tabela criada 2×2 vira 3×3 pela barra de grade e sai assim no .docx", as
   await page.locator(".ProseMirror p").first().click();
 
   await page.getByRole("button", { name: BOTAO_TABELA }).click();
+  await confirmarTabela(page);
   await page.getByLabel("Legenda — Tabela 1").fill("Matrículas por curso");
 
   const barra = page.getByRole("toolbar", { name: "Grade da tabela" });

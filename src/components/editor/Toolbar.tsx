@@ -1,7 +1,14 @@
 "use client";
 
 import type { Editor } from "@tiptap/core";
-import { createContext, useCallback, useContext, useSyncExternalStore } from "react";
+import { TextSelection } from "@tiptap/pm/state";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { ReactNode } from "react";
 
 import { Icon } from "@/components/ui/Icon";
@@ -19,6 +26,7 @@ import type { FonteTrabalho, NivelSecao, NoConteudo } from "@/core/document/type
 import type { Referencia } from "@/core/references/types";
 
 import { MenuCitacao } from "./MenuCitacao";
+import { SeletorTabela } from "./SeletorTabela";
 import { criarSecaoNoEditor } from "./novaSecao";
 import { lerSelecaoDoNavegador } from "./selecaoDoNavegador";
 import { useDesktop } from "@/lib/useDesktop";
@@ -269,6 +277,7 @@ export function Toolbar({
   onFonteChange,
 }: ToolbarProps) {
   useEstadoEditor(editor);
+  const [escolhendoTabela, setEscolhendoTabela] = useState(false);
 
   if (!editor) return null;
 
@@ -287,11 +296,23 @@ export function Toolbar({
   // não existe posição de texto entre o fim da tabela e o fim da seção, então
   // não havia onde clicar para continuar escrevendo (e, por tabela, nem como
   // inserir a figura seguinte).
+  //
+  // Com o cursor dentro de uma tabela (onde ela nasce desde o 8.5.1), o bloco
+  // entra depois da tabela: uma figura dentro de uma célula não é o que
+  // ninguém pediu.
+  const posicaoDeInsercao = () => {
+    const { $to, to } = editor.state.selection;
+    for (let profundidade = $to.depth; profundidade >= 1; profundidade--) {
+      if ($to.node(profundidade).type.name === "tabela") return $to.after(profundidade);
+    }
+    return to;
+  };
+
   const inserirBloco = (no: NoConteudo) =>
     editor
       .chain()
       .focus()
-      .insertContentAt(editor.state.selection.to, deNoConteudo(no))
+      .insertContentAt(posicaoDeInsercao(), deNoConteudo(no))
       .command(({ tr }) => {
         const fim = fimDoBlocoAtual(tr.selection);
         if (fim !== null) cursorDepoisDoBloco(tr, fim);
@@ -299,8 +320,42 @@ export function Toolbar({
       })
       .run();
 
+  // A tabela nasce do tamanho escolhido, e o cursor cai na primeira célula
+  // (passo 8.5.1): quem insere uma tabela vai preenchê-la, não escrever
+  // abaixo dela. A linha de baixo continua garantida (8.1.3) para o cursor
+  // sair da tabela depois.
+  const inserirTabela = (colunas: number, linhas: number) => {
+    const no = novaTabela(colunas, linhas);
+    setEscolhendoTabela(false);
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(posicaoDeInsercao(), deNoConteudo(no))
+      .command(({ tr }) => {
+        const fim = fimDoBlocoAtual(tr.selection);
+        if (fim !== null) cursorDepoisDoBloco(tr, fim);
+        let inicio: number | null = null;
+        tr.doc.descendants((filho, pos) => {
+          if (inicio !== null) return false;
+          if (filho.type.name === "tabela" && filho.attrs.id === no.id) {
+            inicio = pos;
+            return false;
+          }
+          return true;
+        });
+        if (inicio !== null) tr.setSelection(TextSelection.near(tr.doc.resolve(inicio + 1), 1));
+        return true;
+      })
+      .run();
+    // Na hora, e não no quadro seguinte (ver `fechar()` em `MenuCitacao`).
+    editor.view.focus();
+  };
+
   return (
     <EditorDaBarra.Provider value={editor}>
+      {escolhendoTabela && (
+        <SeletorTabela onInserir={inserirTabela} onFechar={() => setEscolhendoTabela(false)} />
+      )}
       <div
         role="toolbar"
         aria-label="Formatação"
@@ -401,7 +456,7 @@ export function Toolbar({
         <BotaoToolbar
           label="Tabela (só no computador) — padrão IBGE, laterais abertas"
           soNoComputador="Criar tabela é só no computador: montar a grade célula a célula com o teclado do celular cobrindo a tela não cabe nesta versão. A tabela já criada continua editável aqui"
-          onClick={() => inserirBloco(novaTabela())}
+          onClick={() => setEscolhendoTabela(true)}
         >
           <Icon name="table" size={16} />
         </BotaoToolbar>

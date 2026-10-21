@@ -103,3 +103,13 @@ export async function clicarExportar(page: Page, botao?: Locator) {
   await dialogo.getByRole("button", { name: "Fechar" }).click();
   await expect(dialogo).toBeHidden();
 }
+
+// O botão Tabela abre o seletor de tamanho (passo 8.5.1). Quem só precisa de
+// uma tabela confirma o tamanho que já vem escolhido (2×2), ou diz outro.
+export async function confirmarTabela(page: Page, colunas?: number, linhas?: number) {
+  const janela = page.getByRole("dialog", { name: "Inserir tabela" });
+  if (colunas !== undefined) await janela.getByLabel("Colunas").fill(String(colunas));
+  if (linhas !== undefined) await janela.getByLabel("Linhas").fill(String(linhas));
+  await janela.getByRole("button", { name: "Inserir tabela" }).click();
+  await expect(janela).toHaveCount(0);
+}

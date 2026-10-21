@@ -7,7 +7,7 @@ import {
   novoDocumento as novoDocumentoBase,
 } from "../src/core/document/factory";
 import type { Documento } from "../src/core/document/types";
-import { abrirDocumento, secao } from "./apoio";
+import { abrirDocumento, confirmarTabela, secao } from "./apoio";
 
 // O defeito relatado ao conferir a exportação no Word: inserida uma tabela,
 // não havia como escrever depois dela — e, por tabu­la­men­to, nem como
@@ -35,9 +35,13 @@ test("depois de inserir uma tabela dá para continuar escrevendo", async ({ page
   await novoDocumento(page);
 
   await page.getByRole("button", { name: BOTAO_TABELA }).click();
+  await confirmarTabela(page);
 
-  // Sem clicar em lugar nenhum: inserir já deixa o cursor numa linha abaixo
-  // da tabela. Era exatamente o que faltava.
+  // O cursor cai na primeira célula (8.5.1); a linha abaixo da tabela existe
+  // de qualquer jeito, e é nela que se continua o texto. Era o que faltava.
+  await page.keyboard.type("Primeira célula.");
+  await expect(page.locator(".doc-tabela th").first()).toHaveText("Primeira célula.");
+  await page.locator(".ProseMirror p").last().click();
   await page.keyboard.type("Texto depois da tabela.");
 
   await expect(page.locator(".ProseMirror p", { hasText: "Texto depois da tabela." })).toHaveCount(
@@ -49,6 +53,7 @@ test("com a tabela inserida ainda é possível inserir uma figura", async ({ pag
   await novoDocumento(page);
 
   await page.getByRole("button", { name: BOTAO_TABELA }).click();
+  await confirmarTabela(page);
   await page.getByRole("button", { name: BOTAO_FIGURA }).click();
 
   // O caminho que estava bloqueado: a figura entra DEPOIS da tabela, não
@@ -62,6 +67,7 @@ test("clicar no vazio da folha, abaixo do texto, põe o cursor na última linha"
 }) => {
   await novoDocumento(page);
   await page.getByRole("button", { name: BOTAO_TABELA }).click();
+  await confirmarTabela(page);
 
   // Tira o foco do editor para o clique seguinte ser o único gesto em jogo.
   await page.getByRole("button", { name: "Negrito" }).focus();

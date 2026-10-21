@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import JSZip from "jszip";
 
-import { clicarExportar } from "./apoio";
+import { clicarExportar, confirmarTabela } from "./apoio";
 
 // Passo 6.1.3c — nota de rodapé pelo caminho do aluno: inserir pela barra,
 // escrever a nota, continuar o texto, exportar. A numeração é derivada da
@@ -92,6 +92,7 @@ test("o botão de nota fica desligado dentro de uma tabela", async ({ page }) =>
   await page
     .getByRole("button", { name: "Tabela (só no computador) — padrão IBGE, laterais abertas" })
     .click();
+  await confirmarTabela(page);
   await page.locator(".doc-tabela td").first().click();
   await expect(page.getByRole("button", { name: BOTAO_NOTA })).toBeDisabled();
 });

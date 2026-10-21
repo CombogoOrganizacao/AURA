@@ -4,7 +4,7 @@ import type { Locator, Page } from "@playwright/test";
 import { novoDocumento } from "../src/core/document/factory";
 import type { Documento } from "../src/core/document/types";
 
-import { abrirDocumento, secao } from "./apoio";
+import { abrirDocumento, confirmarTabela, secao } from "./apoio";
 
 // Passo 6.4.5 — no celular, tabela, fórmulas, citar, reordenar seções e o
 // cadastro de referências ficam para o computador (decisão §1.12). Eles
@@ -112,5 +112,6 @@ test("no desktop, nada disso muda: os botões agem normalmente", async ({ page }
   await expect(page.getByRole("button", { name: "Nova referência" })).toBeEnabled();
   await page.locator(".ProseMirror p").first().click();
   await page.getByRole("button", { name: BOTOES[0].nome }).click();
+  await confirmarTabela(page);
   await expect(page.locator(".ProseMirror table")).toHaveCount(1);
 });

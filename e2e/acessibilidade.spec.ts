@@ -2,6 +2,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
+import { confirmarTabela } from "./apoio";
+
 // Passo 6.6.4 — revisão de acessibilidade básica. Três garantias:
 // - nenhuma violação WCAG 2.1 A/AA que o axe-core detecte, nas telas e nos
 //   estados do editor (contraste, nome acessível, ARIA);
@@ -174,6 +176,7 @@ test("grade da tabela: o Enter num botão faz o que o clique faz", async ({ page
   await page
     .getByRole("button", { name: "Tabela (só no computador) — padrão IBGE, laterais abertas" })
     .click();
+  await confirmarTabela(page);
   await page.locator(".ProseMirror .doc-tabela td").first().click();
 
   const linhas = page.locator(".ProseMirror .doc-tabela tr");

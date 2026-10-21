@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
+import { confirmarTabela } from "./apoio";
+
 // Passo 3.6.3 — o critério de aceite é literal e comportamental: "inserir no
 // meio renumera as seguintes; a tabela é restrita ao desktop". Nenhum teste
 // de unidade prova isso ponta a ponta: a numeração da tela vem de
@@ -47,6 +49,7 @@ test("figura e tabela têm contagens independentes", async ({ page }) => {
   await novoDocumento(page);
 
   await page.getByRole("button", { name: BOTAO_TABELA }).click();
+  await confirmarTabela(page);
   await page.getByRole("button", { name: BOTAO_FIGURA }).click();
 
   // A tabela antes da figura não empurrou a numeração dela: são duas
@@ -76,6 +79,7 @@ test("a tabela já criada continua editável abaixo do breakpoint", async ({ pag
   await novoDocumento(page);
 
   await page.getByRole("button", { name: BOTAO_TABELA }).click();
+  await confirmarTabela(page);
   await page.getByLabel("Legenda — Tabela 1").fill("Distribuição por faixa");
 
   // O que o breakpoint tira é o botão de CRIAR uma tabela, não a tabela.
