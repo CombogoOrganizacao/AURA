@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 
 import type { Trecho } from "@/core/document/elements/trechos";
-import type { BlocoPrevia, CelulaPrevia, Previa } from "@/core/preview/previa";
+import type { LinhaPreTextual } from "@/core/document/elements/linhaPreTextual";
+import type { BlocoPrevia, CelulaPrevia, ElementoPrevia, Previa } from "@/core/preview/previa";
 import type { TrechoReferencia } from "@/core/references/format/abnt";
 
 // O trabalho como HTML, para o Paged.js quebrar em páginas (passo 8.6.1).
@@ -125,6 +126,44 @@ function Bloco({ bloco, imagens }: { bloco: BlocoPrevia; imagens: ReadonlyMap<st
           {bloco.fonte && <p className="pv-fonte">{bloco.fonte}</p>}
         </div>
       );
+    case "tituloPreTextual":
+      return <h1 className="pv-titulo-centro">{bloco.texto}</h1>;
+    case "linha":
+      return <LinhaDaFolha linha={bloco.linha} espacoAntes={bloco.espacoAntes} />;
+    case "noPe":
+      return (
+        <div className="pv-pe">
+          {bloco.linhas.map((linha, i) => (
+            <p key={i} className="pv-pe-linha">
+              {linha.texto}
+            </p>
+          ))}
+        </div>
+      );
+    case "resumo":
+      return <p className="pv-resumo">{bloco.texto}</p>;
+    case "termos":
+      return (
+        <p className="pv-resumo pv-termos">
+          <strong>{bloco.rotulo}: </strong>
+          {bloco.termos.join("; ")}.
+        </p>
+      );
+    case "entradaIndice":
+      // O número da página vem do Paged.js: `target-counter` no CSS, a partir
+      // do `href` (`estilos.ts`).
+      return (
+        <p className={`pv-indice pv-indice-${bloco.nivel}`}>
+          <a href={`#pv-${bloco.alvo}`}>{bloco.texto}</a>
+        </p>
+      );
+    case "abreviatura":
+      return (
+        <p className="pv-sigla">
+          <span className="pv-sigla-curta">{bloco.sigla}</span>
+          <span>{bloco.significado}</span>
+        </p>
+      );
     case "referencia":
       return (
         <p className="pv-referencia">
@@ -132,6 +171,47 @@ function Bloco({ bloco, imagens }: { bloco: BlocoPrevia; imagens: ReadonlyMap<st
         </p>
       );
   }
+}
+
+// Uma linha da capa, da folha de rosto ou de aprovação, ou do que a norma
+// manda alinhar. O papel diz a ênfase e o alinhamento diz o recuo
+// (`estilos.ts`).
+function LinhaDaFolha({ linha, espacoAntes }: { linha: LinhaPreTextual; espacoAntes: number }) {
+  return (
+    <p
+      className={[
+        "pv-linha",
+        `pv-linha-${linha.alinhamento}`,
+        linha.papel ? `pv-papel-${linha.papel}` : "",
+      ].join(" ")}
+      style={espacoAntes > 0 ? { marginTop: `${espacoAntes}pt` } : undefined}
+    >
+      {linha.texto}
+    </p>
+  );
+}
+
+// As três partes do trabalho (`core/document/order.ts`): a capa fica fora da
+// contagem de páginas, os pré-textuais contam a partir da folha de rosto sem
+// mostrar o número, e o texto e o que vem depois dele contam e mostram. O
+// texto e os pós-textuais dividem a mesma contagem, contínua (NBR 14724:2024
+// §5.3), e por isso o mesmo grupo.
+type GrupoDaPrevia = "capa" | "pre" | "texto";
+
+function grupoDe(elemento: ElementoPrevia): GrupoDaPrevia {
+  if (elemento.parte === "capa") return "capa";
+  return elemento.parte === "preTextual" ? "pre" : "texto";
+}
+
+function agrupar(previa: Previa): { grupo: GrupoDaPrevia; elementos: ElementoPrevia[] }[] {
+  const grupos: { grupo: GrupoDaPrevia; elementos: ElementoPrevia[] }[] = [];
+  for (const elemento of previa.elementos) {
+    const grupo = grupoDe(elemento);
+    const ultimo = grupos.at(-1);
+    if (ultimo?.grupo === grupo) ultimo.elementos.push(elemento);
+    else grupos.push({ grupo, elementos: [elemento] });
+  }
+  return grupos;
 }
 
 export function ConteudoDaPrevia({
@@ -144,16 +224,20 @@ export function ConteudoDaPrevia({
 }) {
   return (
     <div className="pv">
-      {previa.elementos.map((elemento, i) => (
-        // Cada elemento depois do corpo abre folha nova (como no `.docx`).
-        <section
-          key={i}
-          className={elemento.parte === "posTextual" ? "pv-elemento-novo" : undefined}
-        >
-          {elemento.blocos.map((bloco, j) => (
-            <Bloco key={j} bloco={bloco} imagens={imagens} />
+      {agrupar(previa).map(({ grupo, elementos }) => (
+        // Cada grupo é uma página nomeada (`estilos.ts`): é ela que decide se
+        // o número aparece e de onde a contagem parte.
+        <div key={grupo} className={`pv-parte pv-parte-${grupo}`}>
+          {elementos.map((elemento, i) => (
+            // Cada elemento depois do primeiro do grupo abre folha nova (como
+            // no `.docx`).
+            <section key={i} className={i > 0 ? "pv-elemento-novo" : undefined}>
+              {elemento.blocos.map((bloco, j) => (
+                <Bloco key={j} bloco={bloco} imagens={imagens} />
+              ))}
+            </section>
           ))}
-        </section>
+        </div>
       ))}
     </div>
   );

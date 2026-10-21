@@ -23,6 +23,12 @@ import {
   gerarDedicatoria,
   gerarEpigrafe,
 } from "../../document/elements/opcionaisPreTextuais";
+import {
+  ESPACO_ANTES_DA_ASSINATURA,
+  ESPACOS_CAPA,
+  ESPACOS_FOLHA_DE_APROVACAO,
+  ESPACOS_FOLHA_DE_ROSTO,
+} from "../../document/elements/espacosPreTextuais";
 import type { Metadados } from "../../document/types";
 import { ABNT, entrelinha } from "./constants";
 
@@ -165,7 +171,9 @@ function paragrafoDeLinha(linha: LinhaPreTextual): Paragraph {
         new TextRun({ text: linha.texto }),
       ],
       alignment: AlignmentType.JUSTIFIED,
-      spacing: { ...entrelinha(linha.papel === "natureza" ? ABNT.espacamento1 : ABNT.espacamento15) },
+      spacing: {
+        ...entrelinha(linha.papel === "natureza" ? ABNT.espacamento1 : ABNT.espacamento15),
+      },
       indent: { left: RECUO_METADE },
     });
   }
@@ -257,11 +265,7 @@ function comEspacosPorPapel(
 // §4.1.1 não o lista, e `gerarCapa()` segue a enumeração da norma. É divergência
 // consciente da PoC, não esquecimento.
 export function montarCapa(metadados: Metadados): Paragraph[] {
-  return comEspacosPorPapel(gerarCapa(metadados), {
-    autor: 3000,
-    tituloDoTrabalho: 3000,
-    local: 4000,
-  });
+  return comEspacosPorPapel(gerarCapa(metadados), ESPACOS_CAPA);
 }
 
 // Folha de rosto (NBR 14724:2024 §4.2.1.1.1) — passo 3.7.2. **Primeiro elemento da seção
@@ -269,12 +273,7 @@ export function montarCapa(metadados: Metadados): Paragraph[] {
 // (a capa fica fora da contagem), ainda que o número só passe a ser exibido no
 // textual. Ver `sections.ts`.
 export function montarFolhaDeRosto(metadados: Metadados): Paragraph[] {
-  return comEspacosPorPapel(gerarFolhaDeRosto(metadados), {
-    tituloDoTrabalho: 2400,
-    natureza: 1200,
-    orientador: 600,
-    local: 2400,
-  });
+  return comEspacosPorPapel(gerarFolhaDeRosto(metadados), ESPACOS_FOLHA_DE_ROSTO);
 }
 
 // Folha de aprovação (NBR 14724:2024 §4.2.1.3) — passo 4B.3. A ordem vem de
@@ -287,11 +286,6 @@ export function montarFolhaDeRosto(metadados: Metadados): Paragraph[] {
 // banca ocupa a metade de baixo: com três membros a folha cabe numa página.
 // Uma banca de quatro ou mais passa para a página seguinte. 🔍 Conferir no Word.
 export function montarFolhaDeAprovacao(metadados: Metadados): Paragraph[] {
-  const espacos: Partial<Record<PapelLinhaPreTextual, number>> = {
-    tituloDoTrabalho: 1200,
-    natureza: 600,
-    dataAprovacao: 600,
-  };
   const vistos = new Set<PapelLinhaPreTextual>();
   const paragrafos: Paragraph[] = [];
 
@@ -300,7 +294,11 @@ export function montarFolhaDeAprovacao(metadados: Metadados): Paragraph[] {
     if (linha.papel) vistos.add(linha.papel);
 
     const espaco =
-      linha.papel === "assinatura" ? 720 : primeiraDoPapel ? espacos[linha.papel!] : undefined;
+      linha.papel === "assinatura"
+        ? ESPACO_ANTES_DA_ASSINATURA
+        : primeiraDoPapel
+          ? ESPACOS_FOLHA_DE_APROVACAO[linha.papel!]
+          : undefined;
     if (espaco) paragrafos.push(new Paragraph({ text: "", spacing: { after: espaco } }));
     paragrafos.push(paragrafoDeLinha(linha));
   }

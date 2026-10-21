@@ -124,7 +124,9 @@ export function PreviaPaginada({
           }
         };
         const fluxo = await previewer.preview(
-          origem.cloneNode(true),
+          // Só o `.pv`, e não o contêiner escondido: o atributo `hidden` dele
+          // viajaria para dentro de toda folha e esconderia o texto.
+          (origem.querySelector(".pv") as Node).cloneNode(true),
           [{ "previa.css": estilosDaPrevia(instantaneo.metadados.fonte) }],
           alvo,
         );

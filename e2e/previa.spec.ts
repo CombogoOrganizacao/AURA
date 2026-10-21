@@ -111,6 +111,110 @@ test("a prévia abre, pagina o trabalho em A4 e fecha com Esc", async ({ page })
   await expect(page.getByRole("button", { name: "Prévia", exact: true })).toBeFocused();
 });
 
+// O número da folha como o Paged.js o conta: cada folha traz `counter-reset`
+// (quando a parte recomeça a contagem) ou `counter-increment`.
+async function numerosDasFolhas(page: Page): Promise<number[]> {
+  return page.locator(".pagedjs_page").evaluateAll((folhas) => {
+    let numero = 0;
+    return folhas.map((folha) => {
+      const estilo = getComputedStyle(folha);
+      const reinicio = estilo.counterReset.replace("page", "").trim();
+      const incremento = estilo.counterIncrement.replace("page", "").trim();
+      if (reinicio !== "none") numero = parseInt(reinicio, 10);
+      if (incremento !== "none") numero += parseInt(incremento, 10);
+      return numero;
+    });
+  });
+}
+
+function trabalhoCompleto(): Documento {
+  const documento = trabalho();
+  Object.assign(documento.metadados, {
+    titulo: "Robótica inclusiva",
+    autores: ["Eduarda"],
+    instituicao: "UNICAP",
+    local: "Recife",
+    ano: 2026,
+    naturezaTrabalho: "Trabalho de conclusão de curso",
+    orientador: "Maria",
+    resumo: "Um resumo do trabalho.",
+    palavrasChave: ["robôs"],
+  });
+  return documento;
+}
+
+test("a capa fica fora da contagem, os pré-textuais contam sem mostrar e o texto mostra o número", async ({
+  page,
+}) => {
+  await abrirDocumento(page, trabalhoCompleto());
+  await abrirPrevia(page);
+
+  const folhas = page.locator(".pagedjs_page");
+  const textos = await folhas.evaluateAll((els) =>
+    els.map((el) => (el.querySelector(".pagedjs_page_content")?.textContent ?? "").trim()),
+  );
+  const rosto = textos.findIndex((t) => t.includes("Trabalho de conclusão de curso"));
+  const introducao = textos.findIndex((t) => t.startsWith("1 Introdução"));
+  expect(rosto).toBe(1);
+  expect(introducao).toBeGreaterThan(rosto);
+
+  const numeros = await numerosDasFolhas(page);
+  // A folha de rosto é a página 1; a introdução vem depois dos pré-textuais.
+  expect(numeros[rosto]).toBe(1);
+  expect(numeros[introducao]).toBe(introducao); // folhas pré-textuais = introducao - 1
+
+  // O número do canto só existe do texto em diante: nas outras folhas a caixa
+  // do canto não tem conteúdo (`content: none`).
+  const cantos = await folhas.evaluateAll((els) =>
+    els.map((el) => {
+      const caixa = el.querySelector(".pagedjs_margin-top-right .pagedjs_margin-content");
+      return caixa ? getComputedStyle(caixa, "::after").content : "sem caixa";
+    }),
+  );
+  expect(cantos.slice(0, introducao).every((c) => c === "none")).toBe(true);
+  expect(cantos.slice(introducao).every((c) => c.includes("counter(page)"))).toBe(true);
+});
+
+test("o sumário lista cada título com o número da folha onde ele cai", async ({ page }) => {
+  await abrirDocumento(page, trabalhoCompleto());
+  await abrirPrevia(page);
+
+  const numeros = await numerosDasFolhas(page);
+  const alvos = await page.locator(".pagedjs_page .pv-indice a").evaluateAll((links, todos) => {
+    return links.map((a) => {
+      const href = a.getAttribute("href") ?? "";
+      const folha = Array.from(document.querySelectorAll(".pagedjs_page")).findIndex((f) =>
+        f.querySelector(`[id="${href.slice(1)}"]`),
+      );
+      // O Paged.js grava o número da página no `counter-reset` do ::after.
+      const reinicio = getComputedStyle(a, "::after").counterReset;
+      return {
+        texto: a.textContent,
+        escrito: parseInt(reinicio.split(" ").at(-1) ?? "", 10),
+        folha,
+        todos,
+      };
+    });
+  }, numeros);
+
+  // As quatro entradas do trabalho (a lista de tabelas tem a sua, à parte).
+  const doSumario = alvos.filter((a) => /^(\d|REFER|AP[ÊE]NDICE)/.test(a.texto ?? ""));
+  expect(doSumario.map((a) => a.texto)).toEqual([
+    "1 Introdução",
+    "2 Método",
+    "2.1 Amostra",
+    "REFERÊNCIAS",
+    "APÊNDICE A — QUESTIONÁRIO",
+  ]);
+  for (const entrada of doSumario) {
+    expect(entrada.folha).toBeGreaterThanOrEqual(0);
+    expect(entrada.escrito).toBe(numeros[entrada.folha]);
+  }
+  // E em ordem: nunca volta atrás.
+  const escritos = doSumario.map((a) => a.escrito);
+  expect([...escritos].sort((a, b) => a - b)).toEqual(escritos);
+});
+
 test("reabrir a prévia monta de novo, sem acumular folhas", async ({ page }) => {
   await abrirDocumento(page, trabalho());
   await abrirPrevia(page);
