@@ -32,7 +32,7 @@ const MIME: Record<FormatoImagem, string> = { png: "image/png", jpg: "image/jpeg
 
 // Base64 em blocos: `String.fromCharCode(...bytes)` de uma foto inteira
 // estouraria a pilha de argumentos.
-function dataUrl(formato: FormatoImagem, bytes: Uint8Array): string {
+export function dataUrl(formato: FormatoImagem, bytes: Uint8Array): string {
   let binario = "";
   const bloco = 0x8000;
   for (let i = 0; i < bytes.length; i += bloco) {

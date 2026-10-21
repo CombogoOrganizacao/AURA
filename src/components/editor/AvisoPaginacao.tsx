@@ -51,7 +51,8 @@ export function AvisoPaginacao() {
       onDismiss={dispensar}
       className="mx-4 mt-3 shrink-0"
     >
-      É assim de propósito: a paginação real — quebras e numeração — sai só no arquivo .docx
+      É assim de propósito. Para ver o trabalho em folhas, use <strong>Prévia</strong>, ao lado de
+      Exportar: é uma aproximação. A paginação real — quebras e numeração — sai só no arquivo .docx
       exportado.
     </Alert>
   );

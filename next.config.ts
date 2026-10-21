@@ -37,6 +37,17 @@ const nextConfig: NextConfig = {
   // o framework não deve tocá-lo.
   agentRules: false,
 
+  // O Paged.js (prévia paginada, passo 8.6.1) depende de `es5-ext`, cujos
+  // caminhos têm `#` (`es5-ext/string/#/contains`); o Turbopack os resolve
+  // errado ao compilar o código-fonte do pacote, e a prévia quebra com
+  // "contains.call is not a function". O pacote traz o mesmo código já
+  // empacotado, sem esses caminhos: é ele que entra.
+  turbopack: {
+    resolveAlias: {
+      pagedjs: "./node_modules/pagedjs/dist/paged.esm.js",
+    },
+  },
+
   experimental: {
     sri: {
       algorithm: "sha256",

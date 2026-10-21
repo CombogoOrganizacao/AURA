@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppTopBar } from "@/components/app/AppTopBar";
 import { SeloDadosLocais } from "@/components/AvisoDadosLocais";
 import { BotaoExportar } from "@/components/editor/BotaoExportar";
+import { BotaoPrevia } from "@/components/previa/BotaoPrevia";
 import { BotaoReimportar } from "@/components/editor/BotaoReimportar";
 import { ProvedorImagens } from "@/components/editor/ImagensDoDocumento";
 import {
@@ -313,6 +314,7 @@ function Carregado({
               substituir={historico.substituir}
               salvarAgora={salvarAgora}
             />
+            <BotaoPrevia documento={documento} />
             {botaoExportar}
           </div>
         }
