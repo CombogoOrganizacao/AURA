@@ -72,8 +72,13 @@ export function Dialog({
     const overflowOriginal = raiz.style.overflow;
     raiz.style.overflow = "hidden";
 
-    const primeiroFocavel = dialogRef.current?.querySelector<HTMLElement>(seletorFocavel);
-    (primeiroFocavel ?? dialogRef.current)?.focus();
+    // `data-foco-inicial` marca o campo que quem usa a janela quer receber o
+    // foco. Sem ele, o primeiro focável é o X do cabeçalho, e um Enter logo
+    // ao abrir fechava a janela.
+    const inicial =
+      dialogRef.current?.querySelector<HTMLElement>("[data-foco-inicial]") ??
+      dialogRef.current?.querySelector<HTMLElement>(seletorFocavel);
+    (inicial ?? dialogRef.current)?.focus();
 
     return () => {
       raiz.style.overflow = overflowOriginal;

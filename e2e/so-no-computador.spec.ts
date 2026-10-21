@@ -51,7 +51,7 @@ const BOTOES = [
   { nome: /^Tabela \(só no computador\)/, motivo: "Criar tabela é só no computador" },
   { nome: /^Fórmula \(só no computador\)/, motivo: "Criar fórmula é só no computador" },
   { nome: /^Fórmula no texto \(só no computador\)/, motivo: "Criar fórmula é só no computador" },
-  { nome: /^Citar \(só no computador\)/, motivo: "Citar é só no computador" },
+  { nome: /^Citar \(Ctrl\+K, só no computador\)/, motivo: "Citar é só no computador" },
 ];
 
 test("os botões da barra ficam à vista, desabilitados, e tocar mostra o motivo sem agir", async ({

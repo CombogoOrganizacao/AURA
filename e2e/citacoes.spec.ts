@@ -277,6 +277,66 @@ test.describe("inserir citação pela interface (passo 4.10)", () => {
   });
 });
 
+// Passo 8.4.1 — citar com menos cliques.
+test.describe("citar só com o teclado (passo 8.4.1)", () => {
+  test("selecionar, Ctrl+K, página, Enter", async ({ page }) => {
+    await documentoComReferencias(page);
+    await escreverESelecionar(page, "O mundo se globaliza");
+
+    await page.keyboard.press("Control+k");
+    await expect(dialogo(page)).toBeVisible();
+    // O foco já está na página, e não no X de fechar.
+    await expect(dialogo(page).getByLabel("Página ou localização")).toBeFocused();
+    await page.keyboard.type("45");
+    await page.keyboard.press("Enter");
+
+    await expect(dialogo(page)).toHaveCount(0);
+    await expect(chamadas(page)).toHaveText([" (Bauman, 1999, p. 45)"]);
+    await expect(page.locator(".ProseMirror")).toBeFocused();
+  });
+
+  test("a janela lembra a última referência e o último tipo", async ({ page }) => {
+    await documentoComReferencias(page);
+    await escreverESelecionar(page, "Primeiro trecho");
+    await abrirMenu(page);
+    await escolherModo(page, "Indireta");
+    await dialogo(page)
+      .getByLabel("Referência", { exact: true })
+      .selectOption({ label: "Silva — 2019 — Educação popular" });
+    await dialogo(page).getByRole("button", { name: "Inserir citação" }).click();
+    await expect(chamadas(page)).toHaveText([" (Silva, 2019)"]);
+
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("Segundo trecho");
+    await page.locator(".ProseMirror p").last().click({ clickCount: 3 });
+    await abrirMenu(page);
+
+    await expect(
+      dialogo(page).getByLabel("Referência", { exact: true }).locator("option:checked"),
+    ).toHaveText("Silva — 2019 — Educação popular");
+    await expect(dialogo(page).getByRole("radio", { name: /^Indireta/ })).toBeChecked();
+  });
+
+  test("Enter logo ao abrir não fecha a janela sem citar: com o trecho, insere; sem, segue aberta", async ({
+    page,
+  }) => {
+    await documentoComReferencias(page);
+    await escreverESelecionar(page, "Um trecho");
+    await abrirMenu(page);
+    await page.keyboard.press("Enter");
+    await expect(dialogo(page)).toHaveCount(0);
+    await expect(chamadas(page)).toHaveCount(1);
+
+    // Sem trecho selecionado, direta não pode ser inserida: o Enter não fecha.
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("Outra linha");
+    await abrirMenu(page);
+    await page.keyboard.press("Enter");
+    await expect(dialogo(page)).toBeVisible();
+    await expect(chamadas(page)).toHaveCount(1);
+  });
+});
+
 test("depois de citar, o foco volta ao texto — Enter quebra a linha, não reabre o menu", async ({
   page,
 }) => {

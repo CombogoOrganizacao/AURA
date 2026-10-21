@@ -2,7 +2,8 @@
 
 import type { ChainedCommands, Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import type { ReactNode } from "react";
 
 import { nomeDaReferencia } from "@/components/referencias/PreviaReferencia";
@@ -20,6 +21,7 @@ import {
 } from "@/core/editor/nodes/citacaoNarrativa";
 import { formatarChamada, formatarChamadaNarrativa } from "@/core/references/format/inText";
 import type { Referencia } from "@/core/references/types";
+import { useDesktop } from "@/lib/useDesktop";
 
 // Inserir e editar citação pela interface (passo 4.10): direta, indireta,
 // longa e apud — NBR 10520:2023 §7.1, §7.2, §7.1.1 e §7.3.
@@ -88,6 +90,10 @@ const ROTULO_MODO: Record<Modo, { label: string; description: string }> = {
 
 export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
   const [formulario, setFormulario] = useState<Formulario | null>(null);
+  const desktop = useDesktop();
+  // A referência e o tipo da última citação feita neste trabalho: quem cita a
+  // mesma obra várias vezes não a escolhe de novo a cada vez (passo 8.4.1).
+  const [ultima, setUltima] = useState<{ refId: string; modo: Modo } | null>(null);
 
   // O que está sob o cursor quando o menu abre decide o que ele faz: editar a
   // citação existente, ligar a citação longa em que o cursor está, ou citar o
@@ -105,13 +111,19 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
   function abrir() {
     const longa = naLonga ? editor.getAttributes("citacao_longa") : null;
     const ligada = narrativaAtual ?? citacaoAtual;
+    // A última só vale se a obra ainda existe na lista.
+    const lembrada = references.some((item) => item.id === ultima?.refId) ? ultima : null;
     setFormulario({
-      refId: (ligada?.refId ?? (longa?.refId as string | null)) || references[0]?.id || "",
+      refId:
+        (ligada?.refId ?? (longa?.refId as string | null)) ||
+        lembrada?.refId ||
+        references[0]?.id ||
+        "",
       modo: narrativaAtual
         ? "narrativa"
         : naLonga
           ? "longa"
-          : (citacaoAtual?.modo ?? "direta_curta"),
+          : (citacaoAtual?.modo ?? lembrada?.modo ?? "direta_curta"),
       pagina: ligada?.pagina ?? (longa?.pagina as string | undefined) ?? "",
       apud: Boolean(citacaoAtual?.apud),
       apudSobrenome: citacaoAtual?.apud?.author[0]?.family ?? "",
@@ -129,10 +141,33 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
 
   // O foco volta ao texto, com a seleção onde estava: quem citou continua
   // escrevendo dali. O `Dialog` não o devolve ao botão (`restaurarFoco`).
+  //
+  // `view.focus()` na hora, e não só o `commands.focus()`: o do TipTap espera
+  // o próximo quadro, e as teclas de quem continua a frase logo depois de
+  // "Inserir citação" se perdiam nesse intervalo (achado no 8.1.1).
   function fechar() {
     setFormulario(null);
+    editor.view.focus();
     editor.commands.focus();
   }
+
+  // Ctrl+K (⌘K no Mac) com o foco no texto abre o menu. Não é reservado pelo
+  // Chrome nem pelo Firefox (o `preventDefault` vale nos dois) e não usa o
+  // Alt, que no ABNT2 é o AltGr: Ctrl+Alt+C escreve "₢". `abrir` é recriado a
+  // cada render, então a escuta é refeita a cada um (sem lista de
+  // dependências) e guarda sempre o mais novo.
+  useEffect(() => {
+    if (!desktop) return;
+    function aoTeclar(evento: KeyboardEvent) {
+      if (!(evento.ctrlKey || evento.metaKey) || evento.altKey || evento.shiftKey) return;
+      if (evento.key.toLowerCase() !== "k") return;
+      evento.preventDefault();
+      abrir();
+    }
+    const alvo = editor.view.dom;
+    alvo.addEventListener("keydown", aoTeclar);
+    return () => alvo.removeEventListener("keydown", aoTeclar);
+  });
 
   function confirmar() {
     if (!formulario || !podeConfirmar(formulario)) return;
@@ -197,6 +232,7 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
         ),
       ).run();
     }
+    setUltima({ refId: formulario.refId, modo: formulario.modo });
     fechar();
   }
 
@@ -271,7 +307,7 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
                 <Button variant="ghost" onClick={fechar}>
                   Cancelar
                 </Button>
-                <Button disabled={!podeConfirmar(formulario)} onClick={confirmar}>
+                <Button type="submit" form="form-citacao" disabled={!podeConfirmar(formulario)}>
                   {editando ? "Salvar citação" : "Inserir citação"}
                 </Button>
               </>
@@ -284,14 +320,25 @@ export function MenuCitacao({ editor, references, gatilho }: MenuCitacaoProps) {
               citá-la. A citação aponta para a referência, e é dela que sai a chamada.
             </p>
           ) : (
-            <CamposCitacao
-              formulario={formulario}
-              references={references}
-              modoFixo={naLonga ? "longa" : narrativaAtual ? "narrativa" : null}
-              semNarrativa={Boolean(citacaoAtual)}
-              semTrecho={!temSelecao && !citacaoAtual}
-              onMudar={mudar}
-            />
+            // Enter em qualquer campo insere (ou salva). O botão do rodapé fica
+            // fora do `<form>`, ligado por `form=`; desabilitado, ele também
+            // segura o Enter, como `podeConfirmar()` quer.
+            <form
+              id="form-citacao"
+              onSubmit={(evento: FormEvent) => {
+                evento.preventDefault();
+                confirmar();
+              }}
+            >
+              <CamposCitacao
+                formulario={formulario}
+                references={references}
+                modoFixo={naLonga ? "longa" : narrativaAtual ? "narrativa" : null}
+                semNarrativa={Boolean(citacaoAtual)}
+                semTrecho={!temSelecao && !citacaoAtual}
+                onMudar={mudar}
+              />
+            </form>
           )}
         </Dialog>
       )}
@@ -358,7 +405,10 @@ function CamposCitacao({
             disabled={desabilitado(modo)}
             onChange={() => onMudar("modo", modo)}
             label={ROTULO_MODO[modo].label}
-            description={ROTULO_MODO[modo].description}
+            // A explicação só do tipo escolhido: com as quatro à mostra, a
+            // janela passava de meia tela. As outras vão na dica.
+            description={formulario.modo === modo ? ROTULO_MODO[modo].description : undefined}
+            title={ROTULO_MODO[modo].description}
           />
         ))}
       </fieldset>
@@ -377,6 +427,7 @@ function CamposCitacao({
       />
 
       <Input
+        data-foco-inicial
         label="Página ou localização"
         hint={
           formulario.modo === "indireta"

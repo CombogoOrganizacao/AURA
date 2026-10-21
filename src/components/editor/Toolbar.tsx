@@ -375,7 +375,7 @@ export function Toolbar({
           references={references}
           gatilho={({ abrir, ativo }) => (
             <BotaoToolbar
-              label="Citar (só no computador) — liga o trecho selecionado a uma referência"
+              label="Citar (Ctrl+K, só no computador) — liga o trecho selecionado a uma referência"
               soNoComputador="Citar é só no computador: a citação liga o trecho a uma referência, e cadastrar referências é só no computador"
               ativo={ativo}
               onClick={abrir}
