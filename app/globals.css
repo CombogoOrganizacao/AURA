@@ -569,8 +569,16 @@
 }
 
 .ProseMirror .doc-tabela th {
-  border-bottom: 1px solid var(--doc-ink);
   font-weight: 700;
+}
+
+/* O fio que separa o cabeçalho do corpo (IBGE §4.3.1) vai só nas células que
+   fecham o cabeçalho, marcadas por decoração (`decoracoesDoCabecalho()`,
+   core/editor/tabela.ts). Com `border-bottom` em todo `th`, "Matrículas",
+   sobre "2020" e "2021", ganhava um traço entre as duas linhas do
+   cabeçalho. */
+.ProseMirror .doc-tabela .fim-cabecalho {
+  border-bottom: 1px solid var(--doc-ink);
 }
 
 /* Células mescladas (passo 8.5.4). A coberta continua no documento, para a

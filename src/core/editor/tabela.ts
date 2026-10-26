@@ -1,8 +1,20 @@
 import { closeHistory } from "@tiptap/pm/history";
 import { Fragment, type Node as NoProseMirror } from "@tiptap/pm/model";
-import { TextSelection, type Selection, type Transaction } from "@tiptap/pm/state";
+import {
+  Plugin,
+  PluginKey,
+  TextSelection,
+  type Selection,
+  type Transaction,
+} from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
-import { mapaDeMesclas, mesclaEm, type Mescla } from "../document/elements/tabela";
+import {
+  fecharOCabecalho,
+  mapaDeMesclas,
+  mesclaEm,
+  type Mescla,
+} from "../document/elements/tabela";
 import { cursorDepoisDoBloco } from "./caret";
 
 // Editar a grade da tabela (passo 6.1.3b): acrescentar e remover linha e
@@ -792,4 +804,64 @@ export function apagarFundiriaCelulas(selecao: Selection, tecla: "Backspace" | "
   return tecla === "Backspace"
     ? $from.parentOffset === 0
     : $from.parentOffset === $from.parent.content.size;
+}
+
+// --- O fio do cabeçalho (passo 8.5.4) ----------------------------------------
+
+// Classe do CSS do editor (app/globals.css): o fio que separa o cabeçalho do
+// corpo, na borda de baixo da célula.
+const CLASSE_FIM_DO_CABECALHO = "fim-cabecalho";
+
+// Quantas linhas, do alto da tabela, são de cabeçalho: as primeiras em que
+// toda célula é de cabeçalho (a mesma conta de `linhasDeCabecalho()`).
+function linhasDoCabecalho(matriz: Matriz): number {
+  const primeiraDoCorpo = matriz.findIndex(
+    (linha) => linha.length === 0 || !linha.every((celula) => celula.attrs.cabecalho === true),
+  );
+  return primeiraDoCorpo === -1 ? matriz.length : primeiraDoCorpo;
+}
+
+// As células que levam o fio, em cada tabela do documento. Era um
+// `border-bottom` em toda célula de cabeçalho, que riscava o meio de um
+// cabeçalho de dois níveis; quem sabe qual célula fecha o cabeçalho é
+// `fecharOCabecalho()`, que entende as mesclas.
+export function decoracoesDoCabecalho(doc: NoProseMirror): Decoration[] {
+  const decoracoes: Decoration[] = [];
+  doc.descendants((no, posTabela) => {
+    if (no.type.name !== "tabela") return true;
+    const matriz = matrizDe(no);
+    const fecham = fecharOCabecalho(
+      matriz.map((linha) => linha.map((celula) => celula.attrs)),
+      linhasDoCabecalho(matriz),
+    );
+    let posLinha = posTabela + 1;
+    matriz.forEach((linha, l) => {
+      let posCelula = posLinha + 1;
+      linha.forEach((celula, c) => {
+        if (fecham[l][c]) {
+          decoracoes.push(
+            Decoration.node(posCelula, posCelula + celula.nodeSize, {
+              class: CLASSE_FIM_DO_CABECALHO,
+            }),
+          );
+        }
+        posCelula += celula.nodeSize;
+      });
+      posLinha += no.child(l).nodeSize;
+    });
+    return false;
+  });
+  return decoracoes;
+}
+
+// O plugin, separado do nó para o teste montá-lo com `EditorState` puro.
+// Decoração é desenho, não conteúdo: não entra em `getJSON()`, e por isso
+// nunca chega ao documento salvo nem ao `.docx`.
+export function pluginFioDoCabecalho(): Plugin {
+  return new Plugin({
+    key: new PluginKey("fioDoCabecalho"),
+    props: {
+      decorations: (estado) => DecorationSet.create(estado.doc, decoracoesDoCabecalho(estado.doc)),
+    },
+  });
 }

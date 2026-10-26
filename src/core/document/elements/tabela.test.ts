@@ -48,7 +48,7 @@ describe("proporcoesDasColunas", () => {
   });
 });
 
-import { mapaDeMesclas, mesclaEm, normalizarMesclas } from "./tabela";
+import { fecharOCabecalho, mapaDeMesclas, mesclaEm, normalizarMesclas } from "./tabela";
 import type { CelulaTabela, LinhaTabela } from "../types";
 
 // Passo 8.5.4: a regra única das mesclas.
@@ -123,5 +123,56 @@ describe("normalizarMesclas", () => {
       },
       { celulas: [{ cabecalho: false }, { cabecalho: false }, { cabecalho: false }] },
     ]);
+  });
+});
+
+describe("fecharOCabecalho", () => {
+  it("cabeçalho de uma linha: todas as células levam o fio", () => {
+    expect(
+      fecharOCabecalho(
+        [
+          [c(), c()],
+          [c(), c()],
+        ],
+        1,
+      ),
+    ).toEqual([
+      [true, true],
+      [false, false],
+    ]);
+  });
+
+  it("cabeçalho de dois níveis: o fio vai nas de baixo e em quem ocupa as duas linhas", () => {
+    // Região (2 linhas) | Matrículas (2 colunas) | Total (2 linhas)
+    //  coberta          | 2020 | 2021           | coberta
+    const grade = [
+      [c({ rowspan: 2 }), c({ colspan: 2 }), c(), c({ rowspan: 2 })],
+      [c(), c(), c(), c()],
+      [c(), c(), c(), c()],
+    ];
+    expect(fecharOCabecalho(grade, 2)).toEqual([
+      [true, false, false, true],
+      [false, true, true, false],
+      [false, false, false, false],
+    ]);
+  });
+
+  it("a mescla de cima que termina antes do fim do cabeçalho não leva o fio", () => {
+    const grade = [
+      [c({ rowspan: 2 }), c()],
+      [c(), c()],
+      [c(), c()],
+      [c(), c()],
+    ];
+    expect(fecharOCabecalho(grade, 3)).toEqual([
+      [false, false],
+      [false, false],
+      [true, true],
+      [false, false],
+    ]);
+  });
+
+  it("sem cabeçalho não há fio", () => {
+    expect(fecharOCabecalho([[c()], [c()]], 0)).toEqual([[false], [false]]);
   });
 });

@@ -7,6 +7,7 @@ import {
   celulaDaSelecao,
   celulaSeguinte,
   descerOuSair,
+  pluginFioDoCabecalho,
 } from "../tabela";
 
 export interface TabelaOptions {
@@ -68,6 +69,11 @@ export const Tabela = Node.create<TabelaOptions>({
     return {
       HTMLAttributes: {},
     };
+  },
+
+  // O fio entre o cabeçalho e o corpo, como decoração (passo 8.5.4).
+  addProseMirrorPlugins() {
+    return [pluginFioDoCabecalho()];
   },
 
   addAttributes() {

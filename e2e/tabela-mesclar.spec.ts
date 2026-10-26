@@ -148,3 +148,61 @@ test("a mescla sobrevive ao recarregar a página", async ({ page }) => {
   await expect(page.locator(".doc-tabela td[colspan='2']")).toHaveText("Sul 2020");
   await expect(page.locator(".doc-tabela [data-coberta]")).toHaveCount(1);
 });
+
+// O fio entre o cabeçalho e o corpo: só embaixo das células que fecham o
+// cabeçalho. Com um `border-bottom` em todo `th`, "Matrículas" ganhava um
+// traço entre as duas linhas do cabeçalho.
+test("cabeçalho de dois níveis: o fio não risca o meio, só fecha o cabeçalho", async ({ page }) => {
+  await page.goto("/documentos");
+  await page.getByRole("button", { name: "Novo documento" }).click();
+  await page.waitForURL(/\/documento\//);
+  await page.locator(".ProseMirror p").first().click();
+  await page.getByRole("button", { name: BOTAO_TABELA }).click();
+  await confirmarTabela(page, 4, 3);
+  const celulas = page.locator(".doc-tabela th, .doc-tabela td");
+  const textos = [
+    "Região",
+    "Matrículas",
+    "",
+    "Total",
+    "",
+    "2020",
+    "2021",
+    "",
+    "Sul",
+    "120",
+    "130",
+    "250",
+  ];
+  for (let i = 0; i < textos.length; i++) {
+    if (!textos[i]) continue;
+    await celulas.nth(i).click();
+    await page.keyboard.type(textos[i]);
+  }
+
+  // As duas primeiras linhas viram cabeçalho, e as mesclas fazem o resto.
+  await celulas.nth(4).click();
+  await page.getByRole("button", { name: "Linha: mais opções" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Linha de cabeçalho" }).click();
+  await celulas.nth(0).click();
+  await page.getByRole("button", { name: "Linha: mais opções" }).click();
+  await page.getByRole("menuitem", { name: "Mesclar com a célula de baixo" }).click();
+  await celulas.nth(3).click();
+  await page.getByRole("button", { name: "Linha: mais opções" }).click();
+  await page.getByRole("menuitem", { name: "Mesclar com a célula de baixo" }).click();
+  await celulas.nth(1).click();
+  await page.getByRole("button", { name: "Coluna: mais opções" }).click();
+  await page.getByRole("menuitem", { name: "Mesclar com a célula à direita" }).click();
+
+  const fio = (texto: string) =>
+    page
+      .locator(".doc-tabela th:not([data-coberta])", { hasText: texto })
+      .evaluate((el) => getComputedStyle(el).borderBottomWidth);
+  await expect.poll(() => fio("2020")).toBe("1px");
+  expect(await fio("2021")).toBe("1px");
+  // As que ocupam as duas linhas do cabeçalho levam o fio na borda de baixo.
+  expect(await fio("Região")).toBe("1px");
+  expect(await fio("Total")).toBe("1px");
+  // E a que ocupa só a linha de cima, não.
+  expect(await fio("Matrículas")).toBe("0px");
+});

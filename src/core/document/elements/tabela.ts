@@ -77,6 +77,27 @@ export function mapaDeMesclas(grade: readonly (readonly CelulaMesclavel[])[]): {
   return { mesclas, cobertas };
 }
 
+// As células de cabeçalho cuja borda de baixo é a do fim do cabeçalho: nelas
+// passa o fio que o separa do corpo (IBGE §4.3.1). `grade[l][c]` é `true` na
+// âncora (ou célula solta) que o carrega. A célula de uma linha só de cima de
+// um cabeçalho de dois níveis ("Matrículas" sobre "2020" e "2021") não está
+// entre elas: o fio vai embaixo das de baixo, e a que ocupa as duas linhas
+// ("Região") o leva na sua borda de baixo. Sem esta regra a tela desenhava o
+// fio sob toda célula de cabeçalho, e riscava o meio do cabeçalho.
+export function fecharOCabecalho(
+  grade: readonly (readonly CelulaMesclavel[])[],
+  cabecalho: number,
+): boolean[][] {
+  const { mesclas, cobertas } = mapaDeMesclas(grade);
+  return grade.map((linha, l) =>
+    linha.map((_, c) => {
+      if (l >= cabecalho || cobertas[l][c]) return false;
+      const mescla = mesclas.find((m) => m.linha === l && m.coluna === c);
+      return l + (mescla?.linhas ?? 1) - 1 === cabecalho - 1;
+    }),
+  );
+}
+
 // A mescla que contém a célula (linha, coluna), ou `null` se ela está solta.
 export function mesclaEm(mesclas: readonly Mescla[], linha: number, coluna: number): Mescla | null {
   return (

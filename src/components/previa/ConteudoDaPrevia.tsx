@@ -47,7 +47,12 @@ function Celulas({ linhas, tag }: { linhas: CelulaPrevia[][]; tag: "th" | "td" }
   return linhas.map((linha, i) => (
     <tr key={i}>
       {linha.map((celula, j) => (
-        <Celula key={j} colSpan={celula.colspan} rowSpan={celula.rowspan}>
+        <Celula
+          key={j}
+          colSpan={celula.colspan}
+          rowSpan={celula.rowspan}
+          className={celula.fechaOCabecalho ? "pv-fim-cabecalho" : undefined}
+        >
           <Trechos trechos={celula.trechos} />
         </Celula>
       ))}

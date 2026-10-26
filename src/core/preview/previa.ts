@@ -39,6 +39,7 @@ import {
   textoItemSumario,
 } from "../document/elements/sumario";
 import {
+  fecharOCabecalho,
   linhasDeCabecalho,
   mapaDeMesclas,
   proporcoesDasColunas,
@@ -81,6 +82,9 @@ export interface CelulaPrevia {
   // o lugar delas, como no HTML.
   colspan?: number;
   rowspan?: number;
+  // A célula de cabeçalho que leva o fio entre o cabeçalho e o corpo
+  // (`fecharOCabecalho()`, elements/tabela.ts).
+  fechaOCabecalho?: true;
 }
 
 export type BlocoPrevia =
@@ -169,7 +173,9 @@ function blocoDeConteudo(no: NoConteudo, contexto: Contexto): BlocoPrevia {
         fonte: textoFonte(no.fonte),
       };
     case "tabela": {
-      const { mesclas, cobertas } = mapaDeMesclas(no.linhas.map((linha) => linha.celulas));
+      const grade = no.linhas.map((linha) => linha.celulas);
+      const { mesclas, cobertas } = mapaDeMesclas(grade);
+      const fecham = fecharOCabecalho(grade, linhasDeCabecalho(no.linhas));
       const celulas = no.linhas.map((linha, l) =>
         linha.celulas.flatMap((celula, c): CelulaPrevia[] => {
           if (cobertas[l][c]) return [];
@@ -180,6 +186,7 @@ function blocoDeConteudo(no: NoConteudo, contexto: Contexto): BlocoPrevia {
               trechos: trechosDoInline(celula.content, contexto.references),
               ...(mescla && mescla.colunas > 1 ? { colspan: mescla.colunas } : {}),
               ...(mescla && mescla.linhas > 1 ? { rowspan: mescla.linhas } : {}),
+              ...(fecham[l][c] ? { fechaOCabecalho: true as const } : {}),
             },
           ];
         }),

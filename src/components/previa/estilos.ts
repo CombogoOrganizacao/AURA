@@ -160,7 +160,8 @@ export function estilosDaPrevia(fonte: FonteTrabalho = "times"): string {
   line-height: var(--pv-entrelinha-15);
   overflow-wrap: anywhere;
 }
-.pv-tabela th { font-weight: 700; border-bottom: 1px solid #000; }
+.pv-tabela th { font-weight: 700; }
+.pv-tabela .pv-fim-cabecalho { border-bottom: 1px solid #000; }
 .pv-tabela [rowspan] { vertical-align: middle; }
 .pv-tabela tr { break-inside: avoid; }
 

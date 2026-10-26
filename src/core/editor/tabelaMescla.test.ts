@@ -11,6 +11,7 @@ import { CelulaTabela, LinhaTabela, Tabela } from "./nodes/table";
 import {
   alternarCabecalho,
   celulaAnterior,
+  decoracoesDoCabecalho,
   celulaSeguinte,
   descerOuSair,
   estadoDaGrade,
@@ -258,5 +259,48 @@ describe("a grade com uma mescla no caminho", () => {
     const cabecalhos: boolean[] = [];
     tabelaDe(estado.doc).forEach((linha) => cabecalhos.push(linha.firstChild!.attrs.cabecalho));
     expect(cabecalhos).toEqual([true, true, true, false]);
+  });
+});
+
+// O fio entre o cabeçalho e o corpo é decoração, e quem a recebe depende da
+// mescla: "Matrículas" sobre "2020" e "2021" não leva o fio, "Região" e "Total"
+// (as duas linhas do cabeçalho) levam, junto com as de baixo.
+describe("o fio do cabeçalho", () => {
+  function textosComFio(estado: EditorState): string[] {
+    return decoracoesDoCabecalho(estado.doc)
+      .map((decoracao) => estado.doc.nodeAt(decoracao.from)!.textContent)
+      .sort();
+  }
+
+  it("cabeçalho de duas linhas com mescla: o fio só nas células que o fecham", () => {
+    let estado = estadoCom(
+      [
+        ["Região", "Matrículas", "", "Total"],
+        ["", "2020", "2021", ""],
+        ["Sul", "120", "130", "250"],
+      ],
+      2,
+    );
+    estado = aplicar(naCelula(estado, 0, 0), (tr) => mesclarComVizinha(tr, "abaixo")).estado;
+    estado = aplicar(naCelula(estado, 0, 1), (tr) => mesclarComVizinha(tr, "direita")).estado;
+    estado = aplicar(naCelula(estado, 0, 3), (tr) => mesclarComVizinha(tr, "abaixo")).estado;
+    expect(textosComFio(estado)).toEqual(["2020", "2021", "Região", "Total"].sort());
+    expect(textosComFio(estado)).not.toContain("Matrículas");
+  });
+
+  it("tabela de uma linha de cabeçalho: todas levam o fio; a do corpo, não", () => {
+    const estado = estadoCom(
+      [
+        ["A", "B"],
+        ["1", "2"],
+      ],
+      1,
+    );
+    expect(textosComFio(estado)).toEqual(["A", "B"]);
+  });
+
+  it("a decoração é desenho: não entra no documento", () => {
+    const estado = estadoCom([["A"], ["1"]], 1);
+    expect(JSON.stringify(estado.doc.toJSON())).not.toContain("fim-cabecalho");
   });
 });
