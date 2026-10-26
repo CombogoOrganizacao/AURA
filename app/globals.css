@@ -333,6 +333,22 @@
   }
 }
 
+/* Foco dentro da folha. O corpo do texto não leva anel: o cursor piscando já
+   diz onde se escreve (`e2e/acessibilidade.spec.ts` aceita o foco do editor
+   pelo cursor), e o contorno padrão do navegador, uma moldura azul em volta
+   da página inteira, destoava da folha. Nos campos de texto da folha
+   (título da seção, legenda, fonte, fórmula) o foco é um sublinhado bordô:
+   delimita onde se digita sem desenhar uma caixa. */
+.ProseMirror:focus,
+.ProseMirror:focus-visible {
+  outline: none;
+}
+
+.campo-da-folha:focus-visible {
+  border-radius: 0;
+  box-shadow: inset 0 -2px 0 var(--border-focus);
+}
+
 /* Recuo de primeira linha do parágrafo de corpo (passo 3.3.2, NBR 14724).
    Fonte 12pt, entrelinha 1,5, justificado e tinta preta já chegam ao
    `<p>` por herança do `<div>` de conteúdo em `PaperSheet.tsx` (`--doc-body`,

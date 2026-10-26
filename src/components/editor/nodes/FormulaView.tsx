@@ -145,7 +145,7 @@ export function FormulaView({ node, updateAttributes }: ReactNodeViewProps) {
           placeholder="ex.: E = mc^2"
           aria-label="Fórmula em LaTeX"
           spellCheck={false}
-          className="border-none bg-transparent outline-none placeholder:text-subtle focus-visible:rounded-xs focus-visible:shadow-focus-ring"
+          className="campo-da-folha border-none bg-transparent outline-none placeholder:text-subtle"
         />
       </div>
     </NodeViewWrapper>

@@ -117,7 +117,7 @@ export function SectionView({ node, editor, getPos, updateAttributes }: ReactNod
             "w-full min-w-0 border-none bg-transparent outline-none",
             estiloNivel,
             "placeholder:font-normal placeholder:normal-case placeholder:text-subtle",
-            "focus-visible:shadow-focus-ring focus-visible:rounded-xs",
+            "campo-da-folha",
           ].join(" ")}
         />
       </div>

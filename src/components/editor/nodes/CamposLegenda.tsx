@@ -26,7 +26,7 @@ import { SEPARADOR_LEGENDA, textoLegenda } from "@/core/document/elements/legend
 // só de interação: foco, largura, placeholder.
 
 const CLASSE_CAMPO =
-  "border-none bg-transparent outline-none placeholder:text-subtle focus-visible:rounded-xs focus-visible:shadow-focus-ring";
+  "campo-da-folha border-none bg-transparent outline-none placeholder:text-subtle";
 
 interface CampoProps {
   rotulo: string;
