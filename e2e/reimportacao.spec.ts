@@ -21,7 +21,7 @@ import { abrirDocumento, documentoSalvo, tresSecoes } from "./apoio";
 // gravado no IndexedDB, como em `busca.spec.ts`.
 
 async function reimportar(page: Page, conteudo: string, nome = "trabalho.tex") {
-  await page.getByLabel("Arquivo .tex ou .zip").setInputFiles({
+  await page.getByLabel("Arquivo .docx, .tex ou .zip").setInputFiles({
     name: nome,
     mimeType: "application/x-tex",
     buffer: Buffer.from(conteudo),
@@ -161,7 +161,7 @@ test("o .zip traz a edição do capítulo e a referência escolhida do .bib", as
   zip.file(capitulo, texto.replace("Aplicamos o questionário em campo.", "Aplicamos duas vezes."));
   const bib = await zip.file("referencias.bib")!.async("string");
   zip.file("referencias.bib", bib.replace("Pedagogia do oprimido", "Pedagogia da autonomia"));
-  await page.getByLabel("Arquivo .tex ou .zip").setInputFiles({
+  await page.getByLabel("Arquivo .docx, .tex ou .zip").setInputFiles({
     name: "projeto.zip",
     mimeType: "application/zip",
     buffer: Buffer.from(await zip.generateAsync({ type: "uint8array" })),
@@ -257,7 +257,7 @@ test("projeto de fora em .zip, com quaisquer nomes, vira trabalho novo com a fig
     "\\chapter{Introdução}\nTexto do capítulo.\n\n\\begin{figure}\\caption{Fluxo}\\includegraphics{fluxo}\\end{figure}",
   );
   zip.file("imagens/fluxo.png", PNG_1X1);
-  await page.getByLabel("Arquivo .tex ou .zip").setInputFiles({
+  await page.getByLabel("Arquivo .docx, .tex ou .zip").setInputFiles({
     name: "Projeto.zip",
     mimeType: "application/zip",
     buffer: Buffer.from(await zip.generateAsync({ type: "uint8array" })),

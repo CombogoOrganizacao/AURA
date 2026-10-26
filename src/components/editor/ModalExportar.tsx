@@ -272,7 +272,7 @@ export function ModalExportar({
 
         <p className="text-xs text-muted">
           O que você editar fora do AURA não volta sozinho. Para trazer as mudanças de um projeto
-          LaTeX, use “Importar LaTeX” (no Overleaf, Menu → Download → Source).
+          LaTeX, use “Importar” (no Overleaf, Menu → Download → Source).
         </p>
       </div>
     </Dialog>

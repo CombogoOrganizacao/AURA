@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { EstadoCarregando } from "@/components/ui/Estados";
 import { PaperSheet } from "@/components/ui/PaperSheet";
+import { arvoreDoHtml } from "@/lib/arvoreHtml";
 import { useDesktop } from "@/lib/useDesktop";
 import { novaSecao } from "@/core/document/factory";
 import { fromDocumento, toDocumento } from "@/core/document/serialize";
@@ -43,7 +44,7 @@ import { Formula as FormulaNode } from "@/core/editor/nodes/formula";
 import { CitacaoLonga } from "@/core/editor/nodes/longQuote";
 import { Secao as SecaoNode } from "@/core/editor/nodes/section";
 import { CelulaTabela, LinhaTabela, Tabela as TabelaNode } from "@/core/editor/nodes/table";
-import { mapearHtmlColado, type NoHtmlColado } from "@/core/editor/paste";
+import { mapearHtmlColado } from "@/core/editor/paste";
 import { moverSecaoDeTopo } from "@/core/editor/reorder";
 import type { LocalAchado } from "@/core/rules/compliance";
 
@@ -118,29 +119,6 @@ const CitacaoNarrativaComVisualizacao = CitacaoNarrativaNode.extend({
     return ReactNodeViewRenderer(CitacaoNarrativaView, { as: "span" });
   },
 });
-
-// Ponte entre `DOMParser` (só existe no navegador) e a árvore própria que
-// `mapearHtmlColado()` (src/core/editor/paste.ts, passo 3.3.4) sabe
-// percorrer — a decisão de "o que vira o quê" mora inteira lá, testável sem
-// navegador; aqui só anda o DOM e converte a forma, sem decidir nada.
-function noDomParaArvoreColada(no: Node): NoHtmlColado | null {
-  if (no.nodeType === Node.TEXT_NODE) {
-    return { tipo: "texto", texto: no.textContent ?? "" };
-  }
-  if (no.nodeType !== Node.ELEMENT_NODE) return null; // comentário etc. — descartado
-  const elemento = no as Element;
-  const filhos = Array.from(elemento.childNodes)
-    .map(noDomParaArvoreColada)
-    .filter((filho): filho is NoHtmlColado => filho !== null);
-  return { tipo: "elemento", tag: elemento.tagName.toLowerCase(), filhos };
-}
-
-function arvoreColadaDoHtml(html: string): NoHtmlColado[] {
-  const documento = new DOMParser().parseFromString(html, "text/html");
-  return Array.from(documento.body.childNodes)
-    .map(noDomParaArvoreColada)
-    .filter((no): no is NoHtmlColado => no !== null);
-}
 
 // Assinatura do comando imperativo de reordenar (passo 3.2.4) que `Editor`
 // expõe pro pai via `onReorderReady` — não a instância inteira do editor:
@@ -326,7 +304,7 @@ export function Editor({
         const html = event.clipboardData?.getData("text/html");
         if (!html) return false; // sem HTML (só texto puro) — o padrão do TipTap já serve
 
-        const conteudo = mapearHtmlColado(arvoreColadaDoHtml(html));
+        const conteudo = mapearHtmlColado(arvoreDoHtml(html));
         if (conteudo.length === 0) return false; // nada aproveitável — sem handler nenhum sobraria só texto puro, se houver
 
         event.preventDefault();

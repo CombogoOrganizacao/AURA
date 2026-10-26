@@ -15,6 +15,10 @@ import type {
 } from "@/core/import/latex/reimport";
 import type { RelatorioDoProjeto } from "@/core/import/latex/reimportZip";
 
+// De onde o arquivo vem: `.tex` avulso, `.zip` de projeto LaTeX ou `.docx`
+// do Word (passo 8.7.1).
+export type Origem = "tex" | "zip" | "docx";
+
 // Para onde o arquivo vai (docs/latex-abntex.md §1.5 e §1.6): o trabalho
 // aberto, outro trabalho desta máquina, ou um novo.
 export type Destino =
@@ -29,7 +33,7 @@ export interface Alternativa {
 
 interface ModalReimportacaoProps {
   arquivo: string;
-  origem: "tex" | "zip";
+  origem: Origem;
   // Arquivo de fora do AURA (§1.6): o aluno escolhe o destino.
   externo: boolean;
   alternativas: readonly Alternativa[];
@@ -81,6 +85,11 @@ function rotuloDoConfirmar(destino: Destino, externo: boolean): string {
   return externo ? "Substituir" : "Reimportar";
 }
 
+function tituloDoModal(origem: Origem, externo: boolean): string {
+  if (origem === "docx") return "Importar do Word";
+  return externo ? "Importar do LaTeX" : "Reimportar do LaTeX";
+}
+
 // Relatório da importação (passos 6.2.4 e 6.2.5) antes de qualquer gravação:
 // nada muda no trabalho até a confirmação (§1.5, princípio 2). Tudo o que o
 // arquivo trouxe de diferente aparece, e os avisos dizem a linha, para o
@@ -108,7 +117,7 @@ export function ModalReimportacao({
     <Dialog
       open
       width={720}
-      title={externo ? "Importar do LaTeX" : "Reimportar do LaTeX"}
+      title={tituloDoModal(origem, externo)}
       subtitle={arquivo}
       onClose={gravando ? undefined : onFechar}
       footer={
@@ -219,17 +228,25 @@ function EscolhaDeDestino({
   alternativas: readonly Alternativa[];
   escolhida: number | null;
   onEscolher: (indice: number) => void;
-  origem: "tex" | "zip";
+  origem: Origem;
 }) {
   return (
     <section aria-label="Destino" className="flex flex-col gap-3">
-      <Alert tone="info" title="Este arquivo não foi exportado pelo AURA">
-        Ele é lido como um trabalho novo: capítulos, seções e texto entram como estão, e o que não
-        tem equivalente no AURA vem com aviso.{" "}
-        {origem === "tex"
-          ? "Figuras e referências só vêm no .zip do projeto."
-          : "As referências vêm dos arquivos .bib do pacote."}
-      </Alert>
+      {origem === "docx" ? (
+        <Alert tone="info" title="Lido pelos estilos do Word">
+          As seções vêm dos títulos com o estilo Título 1, 2 e 3, e o texto entra com negrito e
+          itálico. Capa, folhas, sumário e listas o AURA monta sozinho: preencha título, autoria e
+          instituição em Dados do trabalho. O que não tem equivalente no AURA vem com aviso.
+        </Alert>
+      ) : (
+        <Alert tone="info" title="Este arquivo não foi exportado pelo AURA">
+          Ele é lido como um trabalho novo: capítulos, seções e texto entram como estão, e o que não
+          tem equivalente no AURA vem com aviso.{" "}
+          {origem === "tex"
+            ? "Figuras e referências só vêm no .zip do projeto."
+            : "As referências vêm dos arquivos .bib do pacote."}
+        </Alert>
+      )}
       <fieldset className="flex flex-col gap-2.5">
         <legend className="mb-1 text-xs font-semibold text-title">
           O que fazer com este arquivo?
@@ -257,7 +274,7 @@ function EscolhaDeDestino({
   );
 }
 
-function AvisoDeDestino({ destino, origem }: { destino: Destino; origem: "tex" | "zip" }) {
+function AvisoDeDestino({ destino, origem }: { destino: Destino; origem: Origem }) {
   if (destino.tipo === "outro") {
     return (
       <Alert tone="info" title={`Este arquivo é do trabalho “${destino.titulo || "sem título"}”`}>
@@ -455,9 +472,15 @@ function ListaDeAvisos({ avisos }: { avisos: readonly Aviso[] }) {
       <ul className="flex flex-col gap-1.5">
         {avisos.map((aviso, indice) => (
           <li key={indice} className="text-xs text-body">
-            <span className="font-mono text-2xs text-muted">
-              {aviso.linha > 0 ? `${aviso.arquivo}, linha ${aviso.linha}` : aviso.arquivo}
-            </span>{" "}
+            {/* O aviso do `.docx` não tem arquivo nem linha: diz o lugar na
+                própria mensagem, pelo título da seção. */}
+            {aviso.arquivo && (
+              <>
+                <span className="font-mono text-2xs text-muted">
+                  {aviso.linha > 0 ? `${aviso.arquivo}, linha ${aviso.linha}` : aviso.arquivo}
+                </span>{" "}
+              </>
+            )}
             {aviso.mensagem}
           </li>
         ))}

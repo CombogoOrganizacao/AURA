@@ -75,7 +75,7 @@ function falha<T>(codigo: ErroReimportacao["codigo"], mensagem: string): Resulta
 
 // --- Diretório central -------------------------------------------------------
 
-interface EntradaDeclarada {
+export interface EntradaDeclarada {
   nome: string;
   tamanho: number;
 }
@@ -89,7 +89,8 @@ const NAO_CABE_32 = 0xffffffff;
 
 // As entradas como o próprio `.zip` as declara, ou `null` se o arquivo não
 // é um `.zip` legível. Formato: APPNOTE.TXT do PKWARE, §4.3.12 e §4.3.16.
-function lerDiretorioCentral(bytes: Uint8Array): EntradaDeclarada[] | "zip64" | null {
+// Também o `.docx`, que é um `.zip` (`import/docx/arquivo.ts`).
+export function lerDiretorioCentral(bytes: Uint8Array): EntradaDeclarada[] | "zip64" | null {
   if (bytes.length < 22) return null;
   const dados = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let fim = -1;

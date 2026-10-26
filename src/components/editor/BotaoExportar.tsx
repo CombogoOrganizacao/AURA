@@ -38,7 +38,7 @@ export function BotaoExportar({ documento, salvarAgora, onPreencherDados }: Bota
 
   return (
     <>
-      {/* `Button` do sistema, do mesmo tamanho do "Importar LaTeX" ao lado:
+      {/* `Button` do sistema, do mesmo tamanho do "Importar" ao lado:
           um `<button>` com padding próprio saía mais alto que ele. */}
       <Button onClick={() => setAberto(true)} disabled={!persistencia}>
         Exportar

@@ -33,7 +33,7 @@ test("o texto ocupa a tela, sem rolagem lateral, e as gavetas começam fechadas"
   await expect(
     page.getByRole("button", { name: "Exportar", exact: true }).first(),
   ).toBeInViewport();
-  await expect(page.getByRole("button", { name: "Importar LaTeX" })).toBeInViewport();
+  await expect(page.getByRole("button", { name: "Importar", exact: true })).toBeInViewport();
   await expect(page.getByRole("banner").getByRole("status")).toBeVisible();
 });
 

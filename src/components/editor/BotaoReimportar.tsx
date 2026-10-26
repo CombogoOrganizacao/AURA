@@ -8,6 +8,8 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import type { Documento } from "@/core/document/types";
+import { eDocAntigo, eDocx, MENSAGEM_DOC_ANTIGO, recusaDoDocx } from "@/core/import/docx/arquivo";
+import { lerDocx } from "@/core/import/docx/lerDocx";
 import {
   decodificarUtf8,
   idDoDocumento,
@@ -25,6 +27,7 @@ import {
 } from "@/core/import/latex/reimportZip";
 import type { ImagemArmazenada } from "@/core/persistence/types";
 import { substituirDocumento } from "@/core/persistence/versions";
+import { converterDocx, type DocxConvertido } from "@/lib/lerDocx";
 import { usePersistencia } from "@/lib/persistence-provider";
 
 import {
@@ -32,6 +35,7 @@ import {
   NOME_DA_VERSAO_ANTERIOR,
   type Alternativa as AlternativaDoModal,
   type Destino,
+  type Origem,
 } from "./ModalReimportacao";
 
 interface BotaoReimportarProps {
@@ -60,7 +64,7 @@ interface Alternativa extends Montado, AlternativaDoModal {
 
 interface Previa {
   arquivo: string;
-  origem: "tex" | "zip";
+  origem: Origem;
   // Arquivo de fora do AURA (§1.6): duas alternativas, trabalho novo ou
   // substituir o aberto, e o aluno escolhe.
   externo: boolean;
@@ -81,11 +85,12 @@ function eZip(bytes: Uint8Array): boolean {
   return bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04;
 }
 
-// "Reimportar LaTeX" (passos 6.2.4 e 6.2.5): o caminho de volta do Overleaf,
-// e a entrada do TCC que o aluno começou em LaTeX, pelo `.tex` avulso ou
-// pelo `.zip` do projeto. Lê o arquivo no navegador (nada vai a servidor),
-// monta o relatório, e só grava depois da confirmação, com o trabalho de
-// agora guardado antes como versão (docs/latex-abntex.md §1.5 e §1.6).
+// "Importar" (passos 6.2.4, 6.2.5 e 8.7.1): o caminho de volta do Overleaf,
+// a entrada do TCC que o aluno começou em LaTeX, pelo `.tex` avulso ou pelo
+// `.zip` do projeto, e a do TCC que ele começou no Word, pelo `.docx`. Lê o
+// arquivo no navegador (nada vai a servidor), monta o relatório, e só grava
+// depois da confirmação, com o trabalho de agora guardado antes como versão
+// (docs/latex-abntex.md §1.5 e §1.6).
 export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoReimportarProps) {
   const persistencia = usePersistencia();
   const router = useRouter();
@@ -119,7 +124,11 @@ export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoRei
       return;
     }
 
-    if (eZip(bytes)) await lerZip(arquivo.name, bytes);
+    // O `.docx` também é um `.zip`: o que o separa do projeto LaTeX é a parte
+    // `word/document.xml`, não a extensão do nome.
+    if (eDocAntigo(bytes)) setFalhaAoLer(MENSAGEM_DOC_ANTIGO);
+    else if (eZip(bytes) && eDocx(bytes)) await lerArquivoDocx(arquivo.name, bytes);
+    else if (eZip(bytes)) await lerZip(arquivo.name, bytes);
     else await lerTexAvulso(arquivo.name, bytes);
   }
 
@@ -151,7 +160,7 @@ export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoRei
     }
   }
 
-  async function preparar(nome: string, origem: "tex" | "zip", id: string | null, montar: Montar) {
+  async function preparar(nome: string, origem: Origem, id: string | null, montar: Montar) {
     const destinos = await destinosDe(id);
     if (!destinos) return;
     const alternativas: Alternativa[] = [];
@@ -225,6 +234,36 @@ export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoRei
     });
   }
 
+  // O `.docx` (passo 8.7.1): sempre de fora do AURA, então trabalho novo ou
+  // o aberto substituído, à escolha do aluno, como o `.tex` de fora.
+  async function lerArquivoDocx(nome: string, bytes: Uint8Array) {
+    const recusa = recusaDoDocx(bytes);
+    if (recusa) {
+      setFalhaAoLer(recusa);
+      return;
+    }
+    let convertido: DocxConvertido;
+    try {
+      convertido = await converterDocx(bytes);
+    } catch (erro) {
+      console.error("Falha ao ler o .docx:", erro);
+      setFalhaAoLer(`Não foi possível ler ${nome}: o arquivo está corrompido ou não é do Word.`);
+      return;
+    }
+    const lido = lerDocx(convertido.arvore, { mensagens: convertido.mensagens });
+    if (
+      lido.secoes.length + lido.apendices.length + lido.anexos.length === 0 &&
+      lido.metadados === null
+    ) {
+      setFalhaAoLer(`${nome} não tem texto que o AURA leia.`);
+      return;
+    }
+    await preparar(nome, "docx", null, async (atual) => {
+      const { documento: novo, relatorio } = montarReimportacao(atual, lido);
+      return { ok: true, valor: { documento: novo, relatorio, imagens: [], conflitos: [] } };
+    });
+  }
+
   function alternarReferencia(id: string, usar: boolean) {
     setPrevia((atual) => {
       if (!atual) return atual;
@@ -281,27 +320,28 @@ export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoRei
   return (
     <>
       {/* No celular só o ícone (6.4.4), para a barra caber; o nome do botão
-          continua "Importar LaTeX". */}
+          continua "Importar". */}
       <Button
         variant="outline"
         disabled={!persistencia}
         onClick={() => entradaArquivo.current?.click()}
-        aria-label="Importar LaTeX"
+        aria-label="Importar"
+        title="Importar .docx do Word, ou .tex e .zip do LaTeX"
         icon={
           <span className="flex md:hidden">
             <Icon name="file-up" size={16} />
           </span>
         }
       >
-        <span className="sr-only md:not-sr-only">Importar LaTeX</span>
+        <span className="sr-only md:not-sr-only">Importar</span>
       </Button>
       <input
         ref={entradaArquivo}
         type="file"
-        accept=".tex,.zip,text/x-tex,application/x-tex,application/zip"
+        accept=".docx,.tex,.zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/x-tex,application/x-tex,application/zip"
         className="sr-only"
         tabIndex={-1}
-        aria-label="Arquivo .tex ou .zip"
+        aria-label="Arquivo .docx, .tex ou .zip"
         onChange={aoEscolherArquivo}
       />
 

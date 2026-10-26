@@ -47,7 +47,7 @@ test("abrir a janela e fechar não envia nada", async ({ page, context }) => {
 
   const dialogo = await abrirJanela(page);
   await expect(dialogo).toContainText("não volta sozinho");
-  await expect(dialogo).toContainText("Importar LaTeX");
+  await expect(dialogo).toContainText("“Importar”");
   await expect(dialogo).toContainText("Tamanho do projeto");
 
   await dialogo.getByRole("button", { name: "Fechar" }).click();

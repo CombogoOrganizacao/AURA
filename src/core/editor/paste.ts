@@ -10,10 +10,10 @@ import type { JSONContent } from "@tiptap/core";
 // Fica em `src/core/` porque a árvore que esta função percorre
 // (`NoHtmlColado`) é um tipo próprio, não `Node`/`Element` do DOM — CLAUDE.md
 // proíbe DOM em `src/core/`. Quem tem um `Node` de verdade (`DOMParser`, só
-// existe no navegador) é `Editor.tsx`, o primeiro lugar de cima pra baixo
-// onde isso está disponível; a função ali (`arvoreColadaDoHtml`) só anda o
-// DOM e converte pra esta forma, sem decidir nada — toda a decisão de "o que
-// vira o quê" mora aqui, testável sem navegador.
+// existe no navegador) é `src/lib/arvoreHtml.ts`, chamado por `Editor.tsx`;
+// a função ali (`arvoreDoHtml`) só anda o DOM e converte pra esta forma, sem
+// decidir nada — toda a decisão de "o que vira o quê" mora aqui, testável
+// sem navegador.
 //
 // O schema de hoje só tem `secao`/`paragrafo`/`negrito`/`italico`
 // (docs/schema-tiptap.md) — sem lista, citação, título como nó. Por isso a
@@ -27,8 +27,18 @@ import type { JSONContent } from "@tiptap/core";
 // numerado ainda), então uma seção nova nascendo do nada, sem id nem lugar
 // na hierarquia, seria pior que virar parágrafo.
 
+// `classe` e `atributos` só existem para quem lê o `.docx` (src/core/import/
+// docx/): o mammoth marca o estilo do Word numa classe, e a imagem e a nota
+// de rodapé se ligam por atributo. A colagem nunca os preenche nem os lê.
 export type NoHtmlColado =
-  { tipo: "texto"; texto: string } | { tipo: "elemento"; tag: string; filhos: NoHtmlColado[] };
+  | { tipo: "texto"; texto: string }
+  | {
+      tipo: "elemento";
+      tag: string;
+      classe?: string;
+      atributos?: Readonly<Record<string, string>>;
+      filhos: NoHtmlColado[];
+    };
 
 // Tags que Word, Google Docs e navegadores usam pra negrito/itálico — as
 // duas únicas marcas que o schema tem (docs/schema-tiptap.md §5.1). Mesmas
