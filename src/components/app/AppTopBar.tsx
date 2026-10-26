@@ -124,8 +124,14 @@ export function AppTopBar({ mode, docTitle, statusAutosave, aviso, acoes }: AppT
               <Icon name="arrow-left" size={17} />
             </Link>
             {/* No celular o título não cabe ao lado das ações e sai; o status
-                do autosave fica, porque é ele que diz se o trabalho salvou. */}
-            <span className="hidden truncate font-serif text-md text-body md:block">
+                do autosave fica, porque é ele que diz se o trabalho salvou.
+                Largura máxima: título de TCC passa fácil de cem caracteres,
+                e inteiro ele empurrava o status e o selo contra o
+                "Importar". O título completo fica no `title`. */}
+            <span
+              title={docTitle || undefined}
+              className="hidden min-w-0 truncate font-serif text-md text-body md:block md:max-w-[28rem]"
+            >
               {docTitle || "Documento sem título"}
             </span>
             {statusAutosave && (
@@ -137,8 +143,10 @@ export function AppTopBar({ mode, docTitle, statusAutosave, aviso, acoes }: AppT
               </span>
             )}
             {/* Fora do `role="status"`: é fixo, não muda, e não deve ser
-                anunciado de novo a cada mudança do autosave. */}
-            {aviso}
+                anunciado de novo a cada mudança do autosave. O invólucro não
+                encolhe: o do `Tooltip` encolhia até a última palavra, e o
+                texto transbordava por cima do "Importar". */}
+            {aviso && <span className="flex shrink-0">{aviso}</span>}
           </div>
           {acoes}
           <UserChip />
