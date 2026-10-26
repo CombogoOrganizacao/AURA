@@ -1,21 +1,32 @@
-import type { Marca, NivelSecao, NoParagrafo, NoTexto } from "../../document/types";
-import { mapearHtmlColado, type NoHtmlColado } from "../../editor/paste";
+import type { NivelSecao, NoParagrafo } from "../../document/types";
+import type { NoHtmlColado } from "../../editor/paste";
 import type { BlocoLido } from "../latex/blocos";
 import type { Aviso } from "../latex/fonte";
 import type { MetadadosLidos, PosTextualLido, SecaoLida, TexLido } from "../latex/lerTex";
 import { CLASSE } from "./estilos";
+import {
+  figura,
+  fonteDe,
+  imagensNoTexto,
+  imagensSozinhas,
+  legendaDe,
+  tabelaDe,
+  type Legenda,
+} from "./ilustracoes";
+import { normal, paragrafosDe, separarNotas, textoDe, textoDoParagrafo, type Notas } from "./texto";
 
-// Leitor do `.docx` (passo 8.7.1, docs/to-do-correcoes.md). Recebe o HTML que
-// o mammoth fez do arquivo, já na árvore neutra da colagem (`NoHtmlColado`,
-// montada no navegador por `src/lib/lerDocx.ts`), e devolve o que o arquivo
-// diz na mesma forma da leitura do `.tex` (`TexLido`). Comparar com o
-// trabalho de destino, montar o relatório e aplicar é de
+// Leitor do `.docx` (passos 8.7.1 e 8.7.2, docs/to-do-correcoes.md). Recebe o
+// HTML que o mammoth fez do arquivo, já na árvore neutra da colagem
+// (`NoHtmlColado`, montada no navegador por `src/lib/lerDocx.ts`), e devolve o
+// que o arquivo diz na mesma forma da leitura do `.tex` (`TexLido`). Comparar
+// com o trabalho de destino, montar o relatório e aplicar é de
 // `import/latex/reimport.ts`, o mesmo da importação de LaTeX: o mesmo
 // relatório, os mesmos destinos, a mesma versão "Antes da reimportação".
 //
 // **O texto passa pela regra da colagem.** Cada parágrafo vira nó do editor
 // por `mapearHtmlColado()` (src/core/editor/paste.ts): só texto, negrito e
-// itálico. Nenhum HTML do arquivo chega ao documento (CLAUDE.md, "Segurança").
+// itálico, mais a nota de rodapé no lugar da chamada (`texto.ts`). Nenhum
+// HTML do arquivo chega ao documento (CLAUDE.md, "Segurança").
 //
 // **Títulos pelos estilos do Word** (decisão da usuária, 16/10/2026): Título 1
 // a 3 viram seções de nível 1 a 3. O que só parece título (parágrafo curto,
@@ -32,66 +43,6 @@ export interface OpcoesLeituraDocx {
   // As mensagens do mammoth (`result.messages`), em texto: dizem o que ele
   // não leu (equações, caixas de texto…).
   mensagens?: readonly string[];
-}
-
-// --- Texto -------------------------------------------------------------------
-
-function textoDe(no: NoHtmlColado): string {
-  return no.tipo === "texto" ? no.texto : no.filhos.map(textoDe).join("");
-}
-
-function normal(texto: string): string {
-  return texto.replace(/\s+/g, " ").trim();
-}
-
-function mesmasMarcas(a: NoTexto, b: NoTexto): boolean {
-  const tipos = (no: NoTexto) =>
-    (no.marks ?? [])
-      .map((marca) => marca.type)
-      .sort()
-      .join();
-  return tipos(a) === tipos(b);
-}
-
-// O espaço do Word como o editor o guarda: espaços seguidos viram um (o
-// tabulador do recuo também), as pontas saem, e trechos vizinhos com as
-// mesmas marcas se juntam.
-function limparInline(nos: readonly NoTexto[]): NoTexto[] {
-  const saida: NoTexto[] = [];
-  for (const no of nos) {
-    let texto = no.text.replace(/\s+/g, " ");
-    const anterior = saida.at(-1);
-    if (anterior?.text.endsWith(" ")) texto = texto.replace(/^ /, "");
-    if (!texto) continue;
-    if (anterior && mesmasMarcas(anterior, no)) anterior.text += texto;
-    else
-      saida.push(
-        no.marks ? { type: "text", text: texto, marks: no.marks } : { type: "text", text: texto },
-      );
-  }
-  if (saida[0]) saida[0].text = saida[0].text.trimStart();
-  const ultimo = saida.at(-1);
-  if (ultimo) ultimo.text = ultimo.text.trimEnd();
-  return saida.filter((no) => no.text.length > 0);
-}
-
-// Os parágrafos de um bloco do HTML, pela regra da colagem. Um `<br>` do
-// Word (quebra de linha manual) separa parágrafos, como na colagem.
-function paragrafosDe(no: NoHtmlColado): NoParagrafo[] {
-  return mapearHtmlColado([no]).flatMap((paragrafo): NoParagrafo[] => {
-    const content = limparInline(
-      (paragrafo.content ?? []).map((texto) => ({
-        type: "text" as const,
-        text: texto.text ?? "",
-        ...(texto.marks ? { marks: texto.marks as Marca[] } : {}),
-      })),
-    );
-    return content.length > 0 ? [{ type: "paragraph", content }] : [];
-  });
-}
-
-function textoDoParagrafo(paragrafo: NoParagrafo): string {
-  return (paragrafo.content ?? []).map((no) => (no.type === "text" ? no.text : "")).join("");
 }
 
 // --- Títulos -----------------------------------------------------------------
@@ -118,6 +69,8 @@ type Especial =
   | { tipo: "resumo" | "abstract" | "referencias" }
   | { tipo: "preIgnorado"; texto: string }
   | { tipo: "apendice" | "anexo"; titulo: string };
+
+type Elemento = Extract<NoHtmlColado, { tipo: "elemento" }>;
 
 function eTituloDoWord(no: NoHtmlColado): boolean {
   return no.tipo === "elemento" && /^h[1-6]$/.test(no.tag);
@@ -192,6 +145,7 @@ interface Estado {
   // Do documento sem estilo de título: tudo o que não é resumo, abstract,
   // referências, apêndice ou anexo vai para uma seção só.
   semTitulos: boolean;
+  notas: Notas;
   secoes: SecaoLida[];
   apendices: PosTextualLido[];
   anexos: PosTextualLido[];
@@ -206,8 +160,7 @@ interface Estado {
   itensDeLista: number;
   numeracoesRemovidas: number;
   chamadasDigitadas: number;
-  tabelas: number;
-  imagens: number;
+  ilustracaoNoPosTextual: boolean;
 }
 
 function aviso(estado: Estado, mensagem: string) {
@@ -218,8 +171,9 @@ function aviso(estado: Estado, mensagem: string) {
 function onde(estado: Estado): string {
   const { zona } = estado;
   if (zona.tipo === "corpo") return zona.secao.titulo ? ` em “${zona.secao.titulo}”` : "";
-  if (zona.tipo === "posTextual")
+  if (zona.tipo === "posTextual") {
     return zona.elemento.titulo ? ` em “${zona.elemento.titulo}”` : "";
+  }
   return "";
 }
 
@@ -247,47 +201,6 @@ function conteudoAtual(estado: Estado): BlocoLido[] | null {
   return null;
 }
 
-// Notas de rodapé: o mammoth põe a chamada como `<sup><a href="#footnote-1">`
-// e o texto numa lista no fim. Ainda não entram no documento.
-function eChamadaDeNota(no: NoHtmlColado): boolean {
-  return (
-    no.tipo === "elemento" &&
-    no.tag === "sup" &&
-    no.filhos.some(
-      (filho) =>
-        filho.tipo === "elemento" &&
-        filho.tag === "a" &&
-        /^#(footnote|endnote)-/.test(filho.atributos?.href ?? ""),
-    )
-  );
-}
-
-function eListaDeNotas(no: NoHtmlColado): boolean {
-  return (
-    no.tipo === "elemento" &&
-    no.tag === "ol" &&
-    no.filhos.length > 0 &&
-    no.filhos.every(
-      (item) => item.tipo === "elemento" && /^(footnote|endnote)-/.test(item.atributos?.id ?? ""),
-    )
-  );
-}
-
-function semChamadasDeNota(no: NoHtmlColado): NoHtmlColado {
-  if (no.tipo === "texto") return no;
-  return {
-    ...no,
-    filhos: no.filhos.filter((filho) => !eChamadaDeNota(filho)).map(semChamadasDeNota),
-  };
-}
-
-function contarImagens(no: NoHtmlColado): number {
-  if (no.tipo === "texto") return 0;
-  return (
-    (no.tag === "img" ? 1 : 0) + no.filhos.reduce((soma, filho) => soma + contarImagens(filho), 0)
-  );
-}
-
 function contarItens(no: NoHtmlColado): number {
   if (no.tipo === "texto") return 0;
   return (
@@ -295,21 +208,14 @@ function contarItens(no: NoHtmlColado): number {
   );
 }
 
-// Entra no conteúdo da seção (ou do apêndice) o que o bloco tem de texto.
+// Entra no conteúdo da seção (ou do apêndice) o que o bloco tem de texto, e,
+// depois dele, as imagens que estavam no meio do texto.
 function guardarConteudo(estado: Estado, no: NoHtmlColado, conteudo: BlocoLido[]) {
   if (no.tipo === "elemento" && (no.tag === "ul" || no.tag === "ol")) {
     estado.itensDeLista += contarItens(no);
   }
-  const imagens = contarImagens(no);
-  if (imagens > 0) {
-    estado.imagens += imagens;
-    aviso(
-      estado,
-      `${imagens === 1 ? "Uma imagem" : `${imagens} imagens`}${onde(estado)} ainda não ${imagens === 1 ? "vem" : "vêm"} do .docx.`,
-    );
-  }
   const citacaoLonga = no.tipo === "elemento" && no.classe === CLASSE.citacaoLonga;
-  for (const paragrafo of paragrafosDe(no)) {
+  for (const paragrafo of paragrafosDe(no, estado.notas)) {
     const texto = textoDoParagrafo(paragrafo);
     estado.chamadasDigitadas += texto.match(CHAMADA_DIGITADA)?.length ?? 0;
     if (citacaoLonga) {
@@ -323,6 +229,13 @@ function guardarConteudo(estado: Estado, no: NoHtmlColado, conteudo: BlocoLido[]
       );
     }
     conteudo.push(paragrafo);
+  }
+  for (const chave of imagensNoTexto(no)) {
+    conteudo.push(figura(chave, "", ""));
+    aviso(
+      estado,
+      `Uma imagem no meio do texto${onde(estado)} entrou como figura sem legenda, logo depois do parágrafo.`,
+    );
   }
 }
 
@@ -340,7 +253,126 @@ function possivelTitulo(paragrafo: NoParagrafo, texto: string): boolean {
   );
 }
 
-function abrirTitulo(estado: Estado, no: Extract<NoHtmlColado, { tipo: "elemento" }>) {
+// --- Figura e tabela ---------------------------------------------------------
+
+type Objeto = { tipo: "imagens"; chaves: (string | null)[] } | { tipo: "tabela"; no: Elemento };
+
+function objetoDe(no: NoHtmlColado | undefined): Objeto | null {
+  if (!no || no.tipo !== "elemento") return null;
+  if (no.tag === "table") return { tipo: "tabela", no };
+  const chaves = imagensSozinhas(no);
+  return chaves ? { tipo: "imagens", chaves } : null;
+}
+
+// O bloco `i` e, se ele é legenda, figura ou tabela, os vizinhos que vão
+// junto. Devolve o índice do último bloco usado.
+function guardarBloco(
+  estado: Estado,
+  blocos: readonly NoHtmlColado[],
+  i: number,
+  conteudo: BlocoLido[],
+): number {
+  const no = blocos[i];
+  const legenda = legendaDe(no);
+  if (legenda) {
+    const objeto = objetoDe(blocos[i + 1]);
+    if (objeto) return guardarIlustracao(estado, blocos, i + 1, objeto, legenda, conteudo);
+    if (legenda.doEstilo) {
+      aviso(
+        estado,
+        `A legenda “${legenda.texto}”${onde(estado)} não tem imagem nem tabela logo abaixo e entrou como parágrafo.`,
+      );
+    }
+  } else {
+    const objeto = objetoDe(no);
+    if (objeto) return guardarIlustracao(estado, blocos, i, objeto, null, conteudo);
+  }
+  guardarConteudo(estado, no, conteudo);
+  return i;
+}
+
+function guardarIlustracao(
+  estado: Estado,
+  blocos: readonly NoHtmlColado[],
+  j: number,
+  objeto: Objeto,
+  acima: Legenda | null,
+  conteudo: BlocoLido[],
+): number {
+  let fim = j;
+  let legenda = acima;
+  // No trabalho feito à mão, a legenda às vezes vem embaixo. Só é dela se não
+  // for a legenda do objeto seguinte.
+  if (!legenda) {
+    const abaixo = legendaDe(blocos[j + 1]);
+    if (abaixo && !objetoDe(blocos[j + 2])) {
+      legenda = abaixo;
+      fim = j + 1;
+    }
+  }
+  const fonte = fonteDe(blocos[fim + 1]);
+  if (fonte !== null) fim++;
+  const titulo = legenda?.titulo ?? "";
+  if (estado.zona.tipo === "posTextual") estado.ilustracaoNoPosTextual = true;
+
+  if (objeto.tipo === "tabela") {
+    const lida = tabelaDe(objeto.no);
+    const nome = titulo ? `A tabela “${titulo}”` : "Uma tabela sem legenda";
+    if (!lida) {
+      aviso(estado, `${nome}${onde(estado)} não tem texto e não entrou.`);
+      return fim;
+    }
+    conteudo.push({ ...lida.tabela, legenda: titulo, fonte: fonte ?? "" });
+    if (!legenda)
+      aviso(estado, `Uma tabela${onde(estado)} veio sem legenda: escreva a legenda nela.`);
+    else if (legenda.rotulo === "figura") {
+      aviso(estado, `“${legenda.texto}” está acima de uma tabela e entrou como Tabela.`);
+    } else if (!/^tabela$/i.test(legenda.palavra)) {
+      aviso(
+        estado,
+        `“${legenda.texto}” entrou como Tabela: o AURA ainda não separa quadro de tabela.`,
+      );
+    }
+    if (lida.mesclada) {
+      aviso(
+        estado,
+        `${nome}${onde(estado)} tinha células mescladas, e elas entraram separadas: o AURA ainda não mescla células.`,
+      );
+    }
+    if (lida.semCabecalho) {
+      aviso(
+        estado,
+        `${nome}${onde(estado)} entrou sem linha de cabeçalho: marque o cabeçalho no AURA.`,
+      );
+    }
+    return fim;
+  }
+
+  const { chaves } = objeto;
+  chaves.forEach((chave, k) => {
+    conteudo.push(
+      figura(chave, k === 0 ? titulo : "", k === chaves.length - 1 ? (fonte ?? "") : ""),
+    );
+  });
+  if (!legenda)
+    aviso(estado, `Uma imagem${onde(estado)} veio sem legenda: escreva a legenda na figura.`);
+  else if (legenda.rotulo === "tabela") {
+    aviso(estado, `“${legenda.texto}” é uma imagem no Word e entrou como Figura.`);
+  } else if (!/^figura$/i.test(legenda.palavra)) {
+    aviso(estado, `“${legenda.texto}” entrou como Figura: o AURA chama toda ilustração de Figura.`);
+  }
+  if (chaves.length > 1) {
+    aviso(
+      estado,
+      `${chaves.length} imagens lado a lado${onde(estado)} entraram como ${chaves.length} figuras, uma embaixo da outra.`,
+    );
+  }
+  return fim;
+}
+
+// --- Títulos e zonas ---------------------------------------------------------
+
+function abrirTitulo(estado: Estado, no: Elemento) {
   let titulo = normal(textoDe(no));
   if (!titulo) return;
   const semNumero = titulo.replace(NUMERACAO_DIGITADA, "");
@@ -416,7 +448,8 @@ function abrirEspecial(estado: Estado, especial: Especial) {
 // Bloco dentro do resumo ou do abstract: texto, ou a linha de palavras-chave,
 // que fecha o elemento.
 function guardarNoResumo(estado: Estado, no: NoHtmlColado) {
-  for (const paragrafo of paragrafosDe(no)) {
+  // O resumo é texto simples: a nota que estiver nele não entra.
+  for (const paragrafo of paragrafosDe(no, { textos: estado.notas.textos, usadas: new Set() })) {
     const texto = normal(textoDoParagrafo(paragrafo));
     const chave = PALAVRAS_CHAVE.exec(texto);
     const keywords = KEYWORDS.exec(texto);
@@ -436,18 +469,19 @@ function guardarNoResumo(estado: Estado, no: NoHtmlColado) {
 
 // Tudo o que não tem lugar fica contado, para o aviso do fim.
 function ignorar(estado: Estado, no: NoHtmlColado) {
-  const paragrafos = paragrafosDe(no).length;
+  if (no.tipo === "elemento" && no.tag === "table") return;
+  const paragrafos = paragrafosDe(no, { textos: estado.notas.textos, usadas: new Set() }).length;
   if (estado.zona.tipo === "inicio") estado.antesDoPrimeiroTitulo += paragrafos;
   else if (estado.zona.tipo === "referencias") estado.paragrafosDeReferencias += paragrafos;
 }
 
 export function lerDocx(raiz: readonly NoHtmlColado[], opcoes: OpcoesLeituraDocx = {}): TexLido {
-  const notas = raiz.filter(eListaDeNotas).reduce((soma, lista) => soma + contarItens(lista), 0);
-  const blocos = raiz.filter((no) => !eListaDeNotas(no)).map(semChamadasDeNota);
+  const { blocos, notas } = separarNotas(raiz);
 
   const estado: Estado = {
     zona: { tipo: "inicio" },
     semTitulos: !blocos.some((no) => eTituloDoWord(no) && especialDe(no) === null),
+    notas,
     secoes: [],
     apendices: [],
     anexos: [],
@@ -461,11 +495,11 @@ export function lerDocx(raiz: readonly NoHtmlColado[], opcoes: OpcoesLeituraDocx
     itensDeLista: 0,
     numeracoesRemovidas: 0,
     chamadasDigitadas: 0,
-    tabelas: 0,
-    imagens: 0,
+    ilustracaoNoPosTextual: false,
   };
 
-  for (const no of blocos) {
+  for (let i = 0; i < blocos.length; i++) {
+    const no = blocos[i];
     // Texto solto fora de parágrafo: o que o Word guarda de um campo (o
     // sumário já montado, por exemplo). Não é texto do aluno.
     if (no.tipo === "texto") continue;
@@ -498,22 +532,33 @@ export function lerDocx(raiz: readonly NoHtmlColado[], opcoes: OpcoesLeituraDocx
       continue;
     }
 
-    if (no.tag === "table") {
-      estado.tabelas++;
-      aviso(estado, `Uma tabela${onde(estado)} ainda não vem do .docx.`);
-      continue;
-    }
-
     if (estado.zona.tipo === "resumo" || estado.zona.tipo === "abstract") {
-      guardarNoResumo(estado, no);
+      if (no.tag !== "table") guardarNoResumo(estado, no);
       continue;
     }
     const conteudo = conteudoAtual(estado);
-    if (conteudo) guardarConteudo(estado, no, conteudo);
+    if (conteudo) i = guardarBloco(estado, blocos, i, conteudo);
     else ignorar(estado, no);
   }
 
-  // --- Metadados e avisos do fim ---
+  avisosDoFim(estado);
+  estado.avisos.push(...avisosDoMammoth(opcoes.mensagens ?? []));
+
+  const temMetadados = Object.keys(estado.metadados).length > 0;
+  return {
+    origem: "externo",
+    documentoId: null,
+    versaoFormato: null,
+    metadados: temMetadados ? estado.metadados : null,
+    secoes: estado.secoes,
+    apendices: estado.apendices,
+    anexos: estado.anexos,
+    chamadas: [],
+    avisos: estado.avisos,
+  };
+}
+
+function avisosDoFim(estado: Estado) {
   if (estado.resumo.length > 0) estado.metadados.resumo = estado.resumo.join(" ");
   if (estado.abstract.length > 0) estado.metadados.abstract = estado.abstract.join(" ");
   for (const [rotulo, paragrafos] of [
@@ -570,28 +615,19 @@ export function lerDocx(raiz: readonly NoHtmlColado[], opcoes: OpcoesLeituraDocx
       `As listas (${estado.itensDeLista} ${estado.itensDeLista === 1 ? "item" : "itens"}) viraram um parágrafo por item: o AURA ainda não tem lista.`,
     );
   }
-  if (notas > 0) {
+  const notasDeFora = estado.notas.textos.size - estado.notas.usadas.size;
+  if (notasDeFora > 0) {
     aviso(
       estado,
-      notas === 1
-        ? "A nota de rodapé ainda não vem do .docx."
-        : `As ${notas} notas de rodapé ainda não vêm do .docx.`,
+      `${notasDeFora === 1 ? "Uma nota de rodapé ficou" : `${notasDeFora} notas de rodapé ficaram`} de fora: no AURA, a nota só entra no texto da seção, do apêndice ou do anexo, e não num título, no resumo ou numa tabela.`,
     );
   }
-  estado.avisos.push(...avisosDoMammoth(opcoes.mensagens ?? []));
-
-  const temMetadados = Object.keys(estado.metadados).length > 0;
-  return {
-    origem: "externo",
-    documentoId: null,
-    versaoFormato: null,
-    metadados: temMetadados ? estado.metadados : null,
-    secoes: estado.secoes,
-    apendices: estado.apendices,
-    anexos: estado.anexos,
-    chamadas: [],
-    avisos: estado.avisos,
-  };
+  if (estado.ilustracaoNoPosTextual) {
+    aviso(
+      estado,
+      "As figuras e tabelas de apêndice e anexo entraram no trabalho, mas o AURA ainda não as mostra no editor nem as exporta.",
+    );
+  }
 }
 
 // --- O que o mammoth não leu -------------------------------------------------

@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/Icon";
 import type { Documento } from "@/core/document/types";
 import { eDocAntigo, eDocx, MENSAGEM_DOC_ANTIGO, recusaDoDocx } from "@/core/import/docx/arquivo";
 import { lerDocx } from "@/core/import/docx/lerDocx";
+import { montarImportacaoDocx } from "@/core/import/docx/montarDocx";
 import {
   decodificarUtf8,
   idDoDocumento,
@@ -259,8 +260,8 @@ export function BotaoReimportar({ documento, substituir, salvarAgora }: BotaoRei
       return;
     }
     await preparar(nome, "docx", null, async (atual) => {
-      const { documento: novo, relatorio } = montarReimportacao(atual, lido);
-      return { ok: true, valor: { documento: novo, relatorio, imagens: [], conflitos: [] } };
+      const montado = montarImportacaoDocx({ atual, lido, imagens: convertido.imagens });
+      return { ok: true, valor: { ...montado, conflitos: [] } };
     });
   }
 

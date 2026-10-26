@@ -10,9 +10,10 @@ import type { NoHtmlColado } from "@/core/editor/paste";
 // nem carrega imagem. E a árvore que sai daqui não guarda HTML nenhum.
 
 // O que a leitura do `.docx` usa: a classe que o mapa de estilos põe
-// (`import/docx/estilos.ts`) e os atributos que ligam a nota de rodapé à
-// chamada e a imagem aos bytes. Nada mais é copiado.
-const ATRIBUTOS_LIDOS = ["id", "href", "src", "alt"] as const;
+// (`import/docx/estilos.ts`), os atributos que ligam a nota de rodapé à
+// chamada e a imagem aos bytes, e a mescla das células da tabela. Nada mais
+// é copiado.
+const ATRIBUTOS_LIDOS = ["id", "href", "src", "alt", "colspan", "rowspan"] as const;
 
 function noDomParaArvore(no: Node, comAtributos: boolean): NoHtmlColado | null {
   if (no.nodeType === Node.TEXT_NODE) {

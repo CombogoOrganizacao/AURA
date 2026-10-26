@@ -4,11 +4,12 @@ import type { Page } from "@playwright/test";
 import { Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
 
 import { fromDocumento } from "../src/core/export/docx/fromDocumento";
-import type { Documento } from "../src/core/document/types";
+import { PNG_1X1 } from "../src/core/export/latex/__fixtures__/documento";
+import type { Documento, NoConteudo } from "../src/core/document/types";
 
 import { abrirDocumento, documentoSalvo, secao, tresSecoes } from "./apoio";
 
-// Passo 8.7.1 — importar um `.docx`. O Vitest prova a leitura da árvore
+// Passos 8.7.1 e 8.7.2 — importar um `.docx`. O Vitest prova a leitura da árvore
 // (`core/import/docx/`); aqui, o caminho inteiro no navegador: o mammoth, o
 // `DOMParser`, o relatório e a gravação.
 
@@ -90,6 +91,95 @@ test("o .docx exportado pelo AURA volta com títulos, níveis, texto e resumo", 
   await expect(page.locator(".ProseMirror em")).toHaveText("termo");
   await page.getByRole("tab", { name: /Histórico/ }).click();
   await expect(page.getByRole("list", { name: "Versões" })).toContainText("Antes da reimportação");
+});
+
+// Passo 8.7.2.
+test("figura com a imagem, tabela e nota de rodapé voltam do .docx do AURA", async ({ page }) => {
+  const aberto = tresSecoes();
+  await abrirDocumento(page, aberto);
+  const documento = tresSecoes();
+  const conteudo: NoConteudo[] = [
+    {
+      type: "paragraph",
+      content: [
+        { type: "text", text: "Os dados" },
+        { type: "nota_rodape", texto: "Coletados em 2025." },
+        { type: "text", text: " mostram isto." },
+      ],
+    },
+    {
+      type: "figura",
+      id: "f1",
+      legenda: "Fluxo do processo",
+      fonte: "Elaborado pela autora",
+      imagem: "img1",
+    },
+    {
+      type: "tabela",
+      id: "t1",
+      legenda: "Resultados por grupo",
+      fonte: "Dados da pesquisa",
+      linhas: [
+        {
+          celulas: [
+            { cabecalho: true, content: [{ type: "text", text: "Grupo" }] },
+            { cabecalho: true, content: [{ type: "text", text: "Total (%)" }] },
+          ],
+        },
+        {
+          celulas: [
+            { cabecalho: false, content: [{ type: "text", text: "A" }] },
+            { cabecalho: false, content: [{ type: "text", text: "40%" }] },
+          ],
+        },
+      ],
+    },
+  ];
+  documento.sections = [{ id: "s1", ordem: 0, nivel: 1, titulo: "Resultados", content: conteudo }];
+  const imagem = {
+    id: "img1",
+    documentoId: documento.id,
+    formato: "png" as const,
+    largura: 1,
+    altura: 1,
+    bytes: PNG_1X1,
+  };
+  await importar(
+    page,
+    await Packer.toBuffer(fromDocumento(documento, new Map([["img1", imagem]]))),
+  );
+
+  const dialogo = page.getByRole("dialog", { name: "Importar do Word" });
+  await dialogo.getByRole("radio", { name: /Substituir o conteúdo de/ }).check({ force: true });
+  await expect(dialogo.getByRole("region", { name: "Seções" })).toContainText("Resultados");
+  // Os avisos são os de sempre (capa, sumário e listas não entram); nenhum
+  // fala de figura, tabela ou nota perdida.
+  const avisos = dialogo.getByRole("region", { name: "Avisos da reimportação" });
+  await expect(avisos).toContainText("Não foram importados: LISTA DE FIGURAS");
+  for (const perda of ["figura", "tabela", "imagem", "nota de rodapé", "legenda"]) {
+    await expect(avisos).not.toContainText(perda);
+  }
+  await dialogo.getByRole("button", { name: "Substituir" }).click();
+  await expect(dialogo).toBeHidden();
+
+  await expect
+    .poll(async () =>
+      (await documentoSalvo(page, aberto.id)).sections[0]?.content.map((no) => no.type),
+    )
+    .toEqual(["paragraph", "figura", "tabela"]);
+  const [paragrafo, figura, tabela] = (await documentoSalvo(page, aberto.id)).sections[0].content;
+  expect(paragrafo).toEqual(conteudo[0]);
+  expect(figura).toMatchObject({ legenda: "Fluxo do processo", fonte: "Elaborado pela autora" });
+  expect(figura.type === "figura" && figura.imagem).toBeTruthy();
+  const original = conteudo[2] as Extract<NoConteudo, { type: "tabela" }>;
+  expect(tabela).toMatchObject({
+    legenda: original.legenda,
+    fonte: original.fonte,
+    linhas: original.linhas,
+  });
+
+  // A imagem foi gravada na loja de imagens: o editor a mostra.
+  await expect(page.locator(".ProseMirror img")).toHaveCount(1);
 });
 
 test("TCC feito à mão no Word: o negrito sem estilo vira aviso, e o trabalho novo abre", async ({
