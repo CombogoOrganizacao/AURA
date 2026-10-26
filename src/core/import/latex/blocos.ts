@@ -8,6 +8,7 @@ import type {
   NoParagrafo,
   NoTabela,
 } from "../../document/types";
+import { MESCLA_MAXIMA, normalizarMesclas } from "../../document/elements/tabela";
 import {
   dividirForaDeChaves,
   fechaChave,
@@ -995,9 +996,13 @@ function grade(
     linhasDeCabecalho ?? (primeiroMidrule > 0 ? primeiroMidrule : linhas.length > 1 ? 1 : 0);
   return {
     legenda,
-    linhas: linhas.map((linha, indice) => ({
-      celulas: linha.celulas.map((celula) => lerCelula(ctx, celula, indice < cabecalho)),
-    })),
+    linhas: normalizarMesclas(
+      linhas.map((linha, indice) => ({
+        celulas: comCobertas(
+          linha.celulas.map((celula) => lerCelula(ctx, celula, indice < cabecalho)),
+        ),
+      })),
+    ),
   };
 }
 
@@ -1074,14 +1079,15 @@ function tabelaLonga(
 
 // Célula de cabeçalho sai com o texto inteiro em `\textbf{}`. Célula toda em
 // negrito também volta como cabeçalho: é a mesma marcação, e a mesma
-// aparência. `\multicolumn` e `\multirow` ficam com o texto. O
-// `\multicolumn{1}` não mescla nada, só troca o alinhamento da célula, e
-// entra sem aviso.
+// aparência. `\multicolumn` e `\multirow` viram mescla (passo 8.5.4): o
+// número do primeiro argumento é o vão. O `\multicolumn{1}` não mescla nada,
+// só troca o alinhamento da célula.
 function lerCelula(ctx: ContextoInline, faixa: Faixa, linhaDeCabecalho: boolean): CelulaTabela {
   const t = ctx.fonte.texto;
   let inicio = pularEspacos(t, faixa.inicio, faixa.fim);
   let fim = faixa.fim;
   while (fim > inicio && /\s/.test(t[fim - 1])) fim--;
+  const vaos: { colspan?: number; rowspan?: number } = {};
   for (const [comando, argumentos] of [
     ["\\multicolumn", 3],
     ["\\multirow", 3],
@@ -1097,17 +1103,18 @@ function lerCelula(ctx: ContextoInline, faixa: Faixa, linhaDeCabecalho: boolean)
       i = ultimo.depois;
     }
     if (ultimo) {
-      const umaColuna =
-        comando === "\\multicolumn" && t.slice(primeiro!.inicio, primeiro!.fim).trim() === "1";
-      if (!umaColuna) {
-        ctx.avisos.push({
-          ...ctx.fonte.posicao(inicio),
-          mensagem: `Célula mesclada (${comando}): o AURA não mescla células, e ficou o texto numa célula só.`,
-        });
+      const vao = Number.parseInt(t.slice(primeiro!.inicio, primeiro!.fim).trim(), 10);
+      if (Number.isInteger(vao) && vao > 1) {
+        vaos[comando === "\\multicolumn" ? "colspan" : "rowspan"] = vao;
       }
       inicio = ultimo.inicio;
       fim = ultimo.fim;
     }
+  }
+  // `\centering` no começo da célula (o `\multirow` do AURA o leva dentro da
+  // caixa dele) é alinhamento, não dado.
+  if (/^\\centering(?![a-zA-Z])/.test(t.slice(inicio, fim))) {
+    inicio = pularEspacos(t, inicio + "\\centering".length, fim);
   }
   let cabecalho = linhaDeCabecalho;
   if (t.startsWith("\\textbf{", inicio)) {
@@ -1119,7 +1126,21 @@ function lerCelula(ctx: ContextoInline, faixa: Faixa, linhaDeCabecalho: boolean)
     }
   }
   const content = lerInlineDeCelula(ctx, inicio, fim);
-  return content.length > 0 ? { cabecalho, content } : { cabecalho };
+  return { cabecalho, ...(content.length > 0 ? { content } : {}), ...vaos };
+}
+
+// A linha como a grade do AURA a guarda: o `\multicolumn` ocupa no `.tex` o
+// lugar de várias células, e aqui cada uma volta, coberta. As de baixo de
+// um `\multirow` já estão no `.tex` (o lugar vazio que ele pede), e
+// `normalizarMesclas()` as marca.
+function comCobertas(celulas: readonly CelulaTabela[]): CelulaTabela[] {
+  return celulas.flatMap((celula) => [
+    celula,
+    ...Array.from(
+      { length: Math.min(celula.colspan ?? 1, MESCLA_MAXIMA) - 1 },
+      (): CelulaTabela => ({ cabecalho: celula.cabecalho, coberta: true }),
+    ),
+  ]);
 }
 
 const NAO_EXPORTADO = /\[ (figura|tabela) dentro de apêndice\/anexo ainda não exportada/;

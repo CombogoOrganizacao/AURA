@@ -21,6 +21,8 @@ import { textoTituloPosTextual, type ItemPosTextual } from "../../document/eleme
 import { gerarListaReferencias } from "../../document/elements/referencias";
 import {
   linhasDeCabecalho,
+  mapaDeMesclas,
+  mesclaEm,
   proporcoesDasColunas,
   textosDasCelulas,
 } from "../../document/elements/tabela";
@@ -247,6 +249,12 @@ function figura(no: NoFigura, imagens: ImagensParaTex): string {
 // coluna `p{}` quebra linha mas não centraliza; o `>{\centering
 // \arraybackslash}` do pacote `array` centraliza a coluna inteira, e o
 // `\arraybackslash` devolve ao `\\` o papel de fim de linha da tabela.
+//
+// Célula mesclada (passo 8.5.4): `\multicolumn` com a largura somada das
+// colunas que ocupa, e `\multirow` (pacote `multirow`, no preâmbulo) para as
+// linhas, com `=`, a largura da coluna. Nas linhas de baixo da mescla fica o
+// lugar vazio que o `\multirow` pede (um `\multicolumn` vazio, se a mescla
+// também ocupa colunas).
 function tabela(no: NoTabela, references: readonly Referencia[]): string {
   if (no.linhas.length === 0) {
     return [
@@ -263,22 +271,44 @@ function tabela(no: NoTabela, references: readonly Referencia[]): string {
   const colunas = proporcoes.length;
   // Milésimos da largura útil sem o respiro das células: `\dimexpr` só
   // multiplica e divide por inteiro.
-  const especificacao = proporcoes
-    .map(
-      (proporcao) =>
-        `>{\\centering\\arraybackslash}p{\\dimexpr(\\linewidth-${2 * colunas}\\tabcolsep)*${Math.round(proporcao * 1000)}/1000\\relax}`,
-    )
+  const milesimos = proporcoes.map((proporcao) => Math.round(proporcao * 1000));
+  // A largura de `quantas` colunas a partir de `coluna`, com o respiro entre
+  // elas, que a célula mesclada também ocupa.
+  const largura = (coluna: number, quantas: number) => {
+    const soma = milesimos.slice(coluna, coluna + quantas).reduce((a, b) => a + b, 0);
+    const respiro = quantas > 1 ? `+${2 * (quantas - 1)}\\tabcolsep` : "";
+    return `p{\\dimexpr(\\linewidth-${2 * colunas}\\tabcolsep)*${soma}/1000${respiro}\\relax}`;
+  };
+  const especificacao = milesimos
+    .map((_, coluna) => `>{\\centering\\arraybackslash}${largura(coluna, 1)}`)
     .join("");
   const cabecalho = linhasDeCabecalho(no.linhas);
+  const { mesclas } = mapaDeMesclas(no.linhas.map((linha) => linha.celulas));
 
   const linhaLatex = (indice: number) => {
     const linha = no.linhas[indice];
-    const celulas = Array.from({ length: colunas }, (_, coluna) => {
+    const celulas: string[] = [];
+    for (let coluna = 0; coluna < colunas; coluna++) {
+      const mescla = mesclaEm(mesclas, indice, coluna);
+      // As outras colunas da mescla não escrevem nada: o `\multicolumn` já
+      // ocupa o lugar delas.
+      if (mescla && coluna !== mescla.coluna) continue;
       const celula = linha.celulas[coluna];
-      if (!celula) return "";
-      const texto = inlineLatex(celula.content, references);
-      return celula.cabecalho && texto ? `\\textbf{${texto}}` : texto;
-    });
+      let texto = "";
+      if (celula && (!mescla || indice === mescla.linha)) {
+        texto = inlineLatex(celula.content, references);
+        if (celula.cabecalho && texto) texto = `\\textbf{${texto}}`;
+        // O `\multirow` abre uma caixa própria, que não herda o
+        // `\centering` da coluna: ele vai dentro dela.
+        if (mescla && mescla.linhas > 1) {
+          texto = `\\multirow{${mescla.linhas}}{=}{\\centering ${texto}}`;
+        }
+      }
+      if (mescla && mescla.colunas > 1) {
+        texto = `\\multicolumn{${mescla.colunas}}{>{\\centering\\arraybackslash}${largura(coluna, mescla.colunas)}}{${texto}}`;
+      }
+      celulas.push(texto);
+    }
     return `${celulas.join(" & ")} \\\\`;
   };
 

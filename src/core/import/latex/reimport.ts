@@ -464,10 +464,21 @@ function normalizar(content: readonly NoConteudo[]): unknown[] {
             linhas: no.linhas.map((linha) => {
               const celulas = linha.celulas.map((celula) => {
                 const texto = inline(celula.content);
-                return { cabecalho: texto.length > 0 && celula.cabecalho, texto };
+                return {
+                  cabecalho: texto.length > 0 && celula.cabecalho,
+                  texto,
+                  // A mescla (passo 8.5.4) também é edição.
+                  vao: [celula.colspan ?? 1, celula.rowspan ?? 1],
+                };
               });
               // O `.tex` completa a linha curta com células vazias.
-              while (celulas.length > 0 && celulas.at(-1)!.texto.length === 0) celulas.pop();
+              while (
+                celulas.length > 0 &&
+                celulas.at(-1)!.texto.length === 0 &&
+                celulas.at(-1)!.vao.every((n) => n === 1)
+              ) {
+                celulas.pop();
+              }
               return celulas;
             }),
           },

@@ -50,6 +50,8 @@ import {
   Star,
   Superscript,
   Table,
+  TableCellsMerge,
+  TableCellsSplit,
   Trash2,
   TriangleAlert,
   Underline,
@@ -132,6 +134,9 @@ const icones = {
   "undo-2": Undo2,
   "redo-2": Redo2,
   table: Table,
+  // Mesclar e separar células (passo 8.5.4).
+  "table-cells-merge": TableCellsMerge,
+  "table-cells-split": TableCellsSplit,
   // `Image as ImageIcon` no import: `Image` colide com o construtor global
   // de mesmo nome do DOM.
   image: ImageIcon,

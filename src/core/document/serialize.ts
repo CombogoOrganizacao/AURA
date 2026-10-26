@@ -3,6 +3,7 @@ import type { JSONContent } from "@tiptap/core";
 import { lerAcrescimos, lerAtributosCitacao } from "../editor/marks/citation";
 import { atributosNoEditor } from "../editor/nodes/citacaoNarrativa";
 import { lerAtributosSugestao } from "../editor/marks/suggestion";
+import { normalizarMesclas } from "./elements/tabela";
 import type {
   CelulaTabela,
   LinhaTabela,
@@ -144,7 +145,9 @@ function paraNoConteudo(no: JSONContent): NoConteudo {
       id,
       legenda: legenda ?? "",
       fonte: fonte ?? "",
-      linhas: (no.content ?? []).map(paraLinhaTabela),
+      // As mesclas saem coerentes mesmo se o editor deixou passar algo
+      // (passo 8.5.4): a grade gravada é a que os exportadores leem.
+      linhas: normalizarMesclas((no.content ?? []).map(paraLinhaTabela)),
     };
   }
   if (no.type === "formula") {
@@ -173,11 +176,22 @@ function paraCelulaTabela(no: JSONContent): CelulaTabela {
   if (no.type !== "celula_tabela") {
     throw new Error(`Nó inesperado dentro de linha: "${no.type}" (esperava "celula_tabela")`);
   }
-  const { cabecalho } = (no.attrs ?? {}) as { cabecalho?: boolean };
+  const { cabecalho, colspan, rowspan, coberta } = (no.attrs ?? {}) as {
+    cabecalho?: boolean;
+    colspan?: number;
+    rowspan?: number;
+    coberta?: boolean;
+  };
   const conteudo = (no.content ?? []).map(paraNoTexto);
+  // A mescla (passo 8.5.4) só vai para o dado quando existe: 1 e "não
+  // coberta" são o padrão, e a tabela sem mescla continua com a forma de
+  // antes.
   return {
     cabecalho: cabecalho === true,
     ...(conteudo.length > 0 ? { content: conteudo } : {}),
+    ...(colspan && colspan > 1 ? { colspan } : {}),
+    ...(rowspan && rowspan > 1 ? { rowspan } : {}),
+    ...(coberta ? { coberta: true as const } : {}),
   };
 }
 
@@ -323,7 +337,7 @@ export function deNoConteudo(no: NoConteudo): JSONContent {
     return {
       type: "tabela",
       attrs: { id: no.id, legenda: no.legenda, fonte: no.fonte },
-      content: no.linhas.map(deLinhaTabela),
+      content: normalizarMesclas(no.linhas).map(deLinhaTabela),
     };
   }
 
@@ -358,7 +372,13 @@ function deCelulaTabela(celula: CelulaTabela): JSONContent {
   const conteudo = deConteudoInline(celula.content);
   return {
     type: "celula_tabela",
-    attrs: { cabecalho: celula.cabecalho },
+    // Só o que difere do padrão do nó (1, 1, não coberta).
+    attrs: {
+      cabecalho: celula.cabecalho,
+      ...(celula.colspan ? { colspan: celula.colspan } : {}),
+      ...(celula.rowspan ? { rowspan: celula.rowspan } : {}),
+      ...(celula.coberta ? { coberta: true } : {}),
+    },
     ...(conteudo ? { content: conteudo } : {}),
   };
 }

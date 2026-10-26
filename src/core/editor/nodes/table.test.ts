@@ -26,7 +26,12 @@ describe("nós tabela / linha_tabela / celula_tabela (passo 3.6.3)", () => {
     const json = doc.toJSON();
     expect(json.content[0].attrs).toEqual({ id: "t1", legenda: "Faixas", fonte: "IBGE (2024)" });
     expect(json.content[0].content).toHaveLength(2);
-    expect(json.content[0].content[0].content[0].attrs).toEqual({ cabecalho: true });
+    expect(json.content[0].content[0].content[0].attrs).toEqual({
+      cabecalho: true,
+      colspan: 1,
+      rowspan: 1,
+      coberta: false,
+    });
 
     expect(schema.nodeFromJSON(json).toJSON()).toEqual(json);
   });
@@ -59,7 +64,22 @@ describe("nós tabela / linha_tabela / celula_tabela (passo 3.6.3)", () => {
   it("`cabecalho` decide a tag, e é o que a torna acessível a leitor de tela", () => {
     expect(schema.nodes.celula_tabela.create({ cabecalho: false }).attrs).toEqual({
       cabecalho: false,
+      colspan: 1,
+      rowspan: 1,
+      coberta: false,
     });
+  });
+
+  // Passo 8.5.4: a âncora leva o vão em atributo de HTML, e a coberta fica
+  // marcada para o CSS do editor escondê-la.
+  it("a mescla vira `colspan`/`rowspan` na âncora e `data-coberta` na coberta", () => {
+    const ancora = schema.nodes.celula_tabela.create({ colspan: 2, rowspan: 3 });
+    const coberta = schema.nodes.celula_tabela.create({ coberta: true });
+    const html = (no: typeof ancora) =>
+      no.type.spec.toDOM!(no) as [string, Record<string, unknown>];
+    expect(html(ancora)[1]).toMatchObject({ colspan: 2, rowspan: 3 });
+    expect(html(coberta)[1]).toHaveProperty("data-coberta");
+    expect(html(schema.nodes.celula_tabela.create())[1]).not.toHaveProperty("colspan");
   });
 
   it("nasce sem id por default — quem cria é `novaTabela()`, nunca o schema", () => {

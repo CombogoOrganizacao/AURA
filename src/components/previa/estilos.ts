@@ -161,6 +161,7 @@ export function estilosDaPrevia(fonte: FonteTrabalho = "times"): string {
   overflow-wrap: anywhere;
 }
 .pv-tabela th { font-weight: 700; border-bottom: 1px solid #000; }
+.pv-tabela [rowspan] { vertical-align: middle; }
 .pv-tabela tr { break-inside: avoid; }
 
 .pv-formula {

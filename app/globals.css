@@ -557,6 +557,19 @@
   font-weight: 700;
 }
 
+/* Células mescladas (passo 8.5.4). A coberta continua no documento, para a
+   grade seguir retangular (`CelulaTabela` em document/types.ts), mas sai do
+   layout: o navegador monta a tabela só com as visíveis, e a âncora ocupa o
+   lugar pelo `colspan`/`rowspan`. A mescla de mais de uma linha centraliza
+   na vertical, como no `.docx` e no `.tex`. */
+.ProseMirror .doc-tabela [data-coberta] {
+  display: none;
+}
+
+.ProseMirror .doc-tabela [rowspan] {
+  vertical-align: middle;
+}
+
 /* Nota de rodapé (passo 6.1.3c) — docs/schema-tiptap.md §4.9. No texto, só
    o expoente, como na página impressa. O campo que abre embaixo dele é
    interface, não documento: fonte da UI, sem recuo nem justificação da folha.

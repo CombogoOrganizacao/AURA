@@ -265,7 +265,9 @@ describe("grade da tabela no .docx (passo 6.1.3)", () => {
     ]);
     const tbl = tabelas((await pacote(cronograma)).documento)[0];
 
-    const [atividades, mes] = [...tbl.matchAll(/<w:gridCol w:w="(\d+)"\/>/g)].map((m) => Number(m[1]));
+    const [atividades, mes] = [...tbl.matchAll(/<w:gridCol w:w="(\d+)"\/>/g)].map((m) =>
+      Number(m[1]),
+    );
     expect(atividades).toBeGreaterThan(mes * 3);
   });
 });
@@ -318,7 +320,9 @@ describe("estilo CelulaTabela", () => {
     const respiro = /<w:spacing w:before="140"\/>/;
     // Sem cabeçalho nada repete: o respiro vai na linha 0, sob o traço do topo.
     const semCabecalho = todasAsLinhasXml(
-      tabelas((await pacote(tabela([linha(["Brasil", "42,74"]), linha(["Sul", "50"])]))).documento)[0],
+      tabelas(
+        (await pacote(tabela([linha(["Brasil", "42,74"]), linha(["Sul", "50"])]))).documento,
+      )[0],
     );
     expect(semCabecalho.filter(ehLinhaDeRespiro)).toHaveLength(0);
     for (const tc of celulasXml(semCabecalho[0])) expect(tc).toMatch(respiro);
@@ -342,5 +346,79 @@ describe("estilo CelulaTabela", () => {
     expect(estilo).toMatch(/<w:spacing [^>]*w:line="360"/);
     expect(estilo).toContain('<w:jc w:val="center"/>');
     expect(estilo).toMatch(/<w:ind [^>]*w:firstLine="0"/);
+  });
+});
+
+// Passo 8.5.4 — células mescladas. `w:gridSpan` nas colunas, `w:vMerge` nas
+// linhas: a âncora abre a mescla e cada linha de baixo continua. Como o Word
+// e o LibreOffice a desenham só se confere abrindo-os (passo 🔍).
+describe("células mescladas no .docx (passo 8.5.4)", () => {
+  const ancora = (texto: string, extra: Partial<CelulaTabela>): CelulaTabela => ({
+    ...celula(texto),
+    ...extra,
+  });
+  const coberta = (): CelulaTabela => ({ cabecalho: false, coberta: true });
+  const MESCLADA = tabela(
+    [
+      {
+        celulas: [
+          { ...celula("Região", true), rowspan: 2 },
+          { ...celula("Ano", true), colspan: 2 },
+          { cabecalho: true, coberta: true },
+        ],
+      },
+      { celulas: [{ cabecalho: true, coberta: true }, celula("2020", true), celula("2021", true)] },
+      { celulas: [ancora("Sul", { rowspan: 2 }), celula("10"), celula("20")] },
+      { celulas: [coberta(), celula("30"), celula("40")] },
+    ],
+    "Por região",
+  );
+
+  it("a âncora leva o gridSpan e o vMerge de início; a de baixo, a continuação", async () => {
+    const trs = linhasXml(tabelas((await pacote(MESCLADA)).documento)[0]);
+    expect(trs).toHaveLength(4);
+
+    const [topo, segunda, terceira, quarta] = trs.map(celulasXml);
+    // Linha 0: Região (início do vMerge), Ano (gridSpan 2). A coberta não sai.
+    expect(topo).toHaveLength(2);
+    expect(topo[0]).toContain('<w:vMerge w:val="restart"/>');
+    expect(topo[1]).toContain('<w:gridSpan w:val="2"/>');
+    // Linha 1: a continuação da Região, e as duas colunas do ano.
+    expect(segunda).toHaveLength(3);
+    expect(segunda[0]).toContain('<w:vMerge w:val="continue"/>');
+    expect(segunda[0]).not.toContain(">Região<");
+    expect(terceira[0]).toContain('<w:vMerge w:val="restart"/>');
+    expect(quarta[0]).toContain('<w:vMerge w:val="continue"/>');
+  });
+
+  it("cada linha soma as colunas da grade, e a mescla centraliza na vertical", async () => {
+    const tbl = tabelas((await pacote(MESCLADA)).documento)[0];
+    for (const tr of linhasXml(tbl)) {
+      const colunas = celulasXml(tr).reduce(
+        (soma, tc) => soma + Number(/<w:gridSpan w:val="(\d+)"/.exec(tc)?.[1] ?? 1),
+        0,
+      );
+      expect(colunas).toBe(3);
+    }
+    expect(celulasXml(linhasXml(tbl)[0])[0]).toContain('<w:vAlign w:val="center"/>');
+  });
+
+  it("o traço do cabeçalho vai na última linha dele e também na âncora que a termina", async () => {
+    const trs = linhasXml(tabelas((await pacote(MESCLADA)).documento)[0]);
+    // O cabeçalho tem 2 linhas, e a Região as ocupa as duas. O Word e o
+    // LibreOffice não concordam sobre qual célula da mescla manda no traço de
+    // baixo; os dois recebem, e o traço não duplica (bordas fundidas).
+    const [topo, segunda] = trs.map(celulasXml);
+    expect(borda(bordasDaCelula(topo[0]), "bottom")).toBe("single");
+    expect(borda(bordasDaCelula(segunda[0]), "bottom")).toBe("single");
+    // O "Ano" ocupa só a linha de cima: o traço dele é o das células de baixo.
+    expect(borda(bordasDaCelula(topo[1]), "bottom")).toBe("none");
+    expect(borda(bordasDaCelula(segunda[1]), "bottom")).toBe("single");
+  });
+
+  it("tabela sem mescla continua sem gridSpan nem vMerge", async () => {
+    const { documento } = await pacote(TRES_POR_TRES);
+    expect(documento).not.toContain("w:gridSpan");
+    expect(documento).not.toContain("w:vMerge");
   });
 });

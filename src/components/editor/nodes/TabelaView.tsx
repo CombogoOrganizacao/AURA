@@ -3,14 +3,14 @@
 import type { Editor } from "@tiptap/core";
 import { NodeViewContent, NodeViewWrapper } from "@tiptap/react";
 import type { ReactNodeViewProps } from "@tiptap/react";
-import { useCallback, useRef, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 
 import { ROTULO_TABELA } from "@/core/document/elements/legenda";
 import { proporcoesDasColunas } from "@/core/document/elements/tabela";
-import { celulaDaSelecao, linhaEhCabecalho } from "@/core/editor/tabela";
+import { estadoDaGrade, type EstadoGrade } from "@/core/editor/tabela";
 
 import { CampoFonte, CampoLegenda } from "./CamposLegenda";
-import { ControlesDaTabela, type EstadoGrade } from "./ControlesDaTabela";
+import { ControlesDaTabela } from "./ControlesDaTabela";
 import { useNumeroNumeravel } from "./useNumeroNumeravel";
 
 // Node view do nó `tabela` (passo 3.6.3) — ver docs/schema-tiptap.md §4.7.
@@ -72,12 +72,13 @@ export function TabelaView({ node, editor, getPos, updateAttributes }: ReactNode
 }
 
 // O texto de cada célula, linha a linha — o equivalente, no nó do
-// ProseMirror, de `textosDasCelulas()` sobre a tabela canônica.
+// ProseMirror, de `textosDasCelulas()` sobre a tabela canônica, com a mesma
+// regra: a célula de várias colunas não entra na conta.
 function textosDoNo(tabela: ReactNodeViewProps["node"]): string[][] {
   const linhas: string[][] = [];
   tabela.forEach((linha) => {
     const celulas: string[] = [];
-    linha.forEach((celula) => celulas.push(celula.textContent));
+    linha.forEach((celula) => celulas.push(celula.attrs.colspan > 1 ? "" : celula.textContent));
     linhas.push(celulas);
   });
   return linhas;
@@ -101,21 +102,15 @@ function useGradeAtiva(editor: Editor, getPos: () => number | undefined): Estado
     [editor],
   );
   const obterInstantaneo = useCallback(() => {
-    const alvo = celulaDaSelecao(editor.state.selection);
-    if (!alvo || alvo.posTabela !== getPos()) return "";
-    const colunas = alvo.tabela.child(alvo.linha).childCount;
-    return `${alvo.tabela.childCount}|${colunas}|${alvo.linha}|${alvo.coluna}|${linhaEhCabecalho(alvo) ? 1 : 0}`;
+    const estado = estadoDaGrade(editor.state.selection);
+    if (!estado || estado.posTabela !== getPos()) return "";
+    return JSON.stringify(estado);
   }, [editor, getPos]);
   const obterInstantaneoServidor = useCallback(() => "", []);
 
   const instantaneo = useSyncExternalStore(inscrever, obterInstantaneo, obterInstantaneoServidor);
-  if (!instantaneo) return null;
-  const [linhas, colunas, linha, coluna, cabecalho] = instantaneo.split("|");
-  return {
-    linhas: Number(linhas),
-    colunas: Number(colunas),
-    linha: Number(linha),
-    coluna: Number(coluna),
-    cabecalho: cabecalho === "1",
-  };
+  return useMemo(
+    () => (instantaneo ? (JSON.parse(instantaneo) as EstadoGrade) : null),
+    [instantaneo],
+  );
 }

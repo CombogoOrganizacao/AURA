@@ -21,6 +21,14 @@ export interface TabelaAttributes {
 
 export interface CelulaTabelaAttributes {
   cabecalho: boolean;
+  colspan: number;
+  rowspan: number;
+  coberta: boolean;
+}
+
+function inteiroDoAtributo(element: HTMLElement, nome: string): number {
+  const valor = Number.parseInt(element.getAttribute(nome) ?? "", 10);
+  return Number.isInteger(valor) && valor > 1 ? valor : 1;
 }
 
 // Nós `tabela`, `linha_tabela` e `celula_tabela` — ver docs/schema-tiptap.md
@@ -160,6 +168,25 @@ export const CelulaTabela = Node.create({
         // leitor de tela — duplicá-la num atributo criaria duas fontes que
         // podem discordar.
         renderHTML: () => ({}),
+      },
+      // Mescla (passo 8.5.4, `CelulaTabela` em document/types.ts): a âncora
+      // leva o vão; a célula coberta fica na grade, escondida pelo CSS do
+      // editor (`app/globals.css`), e o navegador monta a tabela só com as
+      // visíveis.
+      colspan: {
+        default: 1,
+        parseHTML: (element) => inteiroDoAtributo(element, "colspan"),
+        renderHTML: (attributes) => (attributes.colspan > 1 ? { colspan: attributes.colspan } : {}),
+      },
+      rowspan: {
+        default: 1,
+        parseHTML: (element) => inteiroDoAtributo(element, "rowspan"),
+        renderHTML: (attributes) => (attributes.rowspan > 1 ? { rowspan: attributes.rowspan } : {}),
+      },
+      coberta: {
+        default: false,
+        parseHTML: (element) => element.hasAttribute("data-coberta"),
+        renderHTML: (attributes) => (attributes.coberta ? { "data-coberta": "" } : {}),
       },
     };
   },

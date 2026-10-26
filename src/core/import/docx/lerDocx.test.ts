@@ -483,7 +483,7 @@ describe("lerDocx — tabelas", () => {
     ]);
   });
 
-  it("célula mesclada vira células separadas, com o texto na primeira, e avisa", () => {
+  it("célula mesclada do Word entra mesclada, com as partes cobertas na grade", () => {
     const lido = lerDocx([
       h(1, "A"),
       el("table", [
@@ -503,8 +503,22 @@ describe("lerDocx — tabelas", () => {
       ["Região", "Ano", ""],
       ["", "2020", "2021"],
     ]);
+    expect(
+      tabela.linhas.map((l) => l.celulas.map((c) => [c.colspan, c.rowspan, c.coberta])),
+    ).toEqual([
+      [
+        [undefined, 2, undefined],
+        [2, undefined, undefined],
+        [undefined, undefined, true],
+      ],
+      [
+        [undefined, undefined, true],
+        [undefined, undefined, undefined],
+        [undefined, undefined, undefined],
+      ],
+    ]);
     const texto = mensagens(lido);
-    expect(texto).toContain("tinha células mescladas");
+    expect(texto).not.toContain("mescladas");
     expect(texto).toContain("entrou sem linha de cabeçalho");
     expect(texto).toContain("Uma tabela em “A” veio sem legenda");
   });

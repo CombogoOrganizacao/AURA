@@ -1,4 +1,117 @@
-import type { LinhaTabela } from "../types";
+import type { CelulaTabela, LinhaTabela } from "../types";
+
+// --- Células mescladas (passo 8.5.4) -----------------------------------------
+//
+// A grade é retangular: a âncora diz quantas colunas e linhas ocupa
+// (`colspan`, `rowspan`), e as células que ela cobre continuam na grade,
+// marcadas `coberta` (ver `CelulaTabela` em types.ts). Daqui sai o que é
+// mescla válida para a tela, o `.docx`, o `.tex`, a prévia e as importações:
+// nenhum deles decide sozinho.
+
+export interface Mescla {
+  linha: number;
+  coluna: number;
+  linhas: number;
+  colunas: number;
+}
+
+// O que a regra lê de uma célula: a da tabela canônica ou os atributos do
+// nó do editor.
+export interface CelulaMesclavel {
+  colspan?: number;
+  rowspan?: number;
+}
+
+// Mescla maior que isto não é de tabela de TCC; o teto protege a grade de um
+// arquivo importado com `colspan="10000"`.
+export const MESCLA_MAXIMA = 50;
+
+function vao(valor: number | undefined): number {
+  return Number.isInteger(valor) && valor! > 1 ? Math.min(valor!, MESCLA_MAXIMA) : 1;
+}
+
+// As mesclas da grade e quais células elas cobrem, em ordem de leitura. A
+// âncora que cairia sobre uma célula já coberta, ou passaria da borda, é
+// encolhida até caber; a que encolhe até 1 × 1 deixa de ser mescla. O
+// `coberta` gravado não é lido: a cobertura sai das âncoras.
+export function mapaDeMesclas(grade: readonly (readonly CelulaMesclavel[])[]): {
+  mesclas: Mescla[];
+  cobertas: boolean[][];
+} {
+  const linhas = grade.length;
+  const colunas = Math.max(0, ...grade.map((linha) => linha.length));
+  const cobertas = grade.map(() => Array<boolean>(colunas).fill(false));
+  const mesclas: Mescla[] = [];
+
+  grade.forEach((linha, l) => {
+    linha.forEach((celula, c) => {
+      if (cobertas[l][c]) return;
+      let largura = Math.min(vao(celula.colspan), colunas - c);
+      let altura = Math.min(vao(celula.rowspan), linhas - l);
+      // A primeira linha da mescla não pode passar por cima de célula já
+      // coberta; as de baixo também não.
+      for (let k = 1; k < largura; k++) {
+        if (cobertas[l][c + k] || c + k >= grade[l].length) {
+          largura = k;
+          break;
+        }
+      }
+      for (let k = 1; k < altura; k++) {
+        const livre = Array.from({ length: largura }, (_, d) => c + d).every(
+          (coluna) => !cobertas[l + k][coluna] && coluna < grade[l + k].length,
+        );
+        if (!livre) {
+          altura = k;
+          break;
+        }
+      }
+      if (largura === 1 && altura === 1) return;
+      mesclas.push({ linha: l, coluna: c, linhas: altura, colunas: largura });
+      for (let dl = 0; dl < altura; dl++) {
+        for (let dc = 0; dc < largura; dc++) {
+          if (dl > 0 || dc > 0) cobertas[l + dl][c + dc] = true;
+        }
+      }
+    });
+  });
+  return { mesclas, cobertas };
+}
+
+// A mescla que contém a célula (linha, coluna), ou `null` se ela está solta.
+export function mesclaEm(mesclas: readonly Mescla[], linha: number, coluna: number): Mescla | null {
+  return (
+    mesclas.find(
+      (m) =>
+        linha >= m.linha &&
+        linha < m.linha + m.linhas &&
+        coluna >= m.coluna &&
+        coluna < m.coluna + m.colunas,
+    ) ?? null
+  );
+}
+
+// A tabela canônica com as mesclas coerentes: âncora com o vão que cabe,
+// células cobertas vazias e marcadas, e o resto sem marca nenhuma. Quem
+// recebe uma grade de fora (importação, documento gravado) passa por aqui.
+export function normalizarMesclas(linhas: readonly LinhaTabela[]): LinhaTabela[] {
+  const { mesclas, cobertas } = mapaDeMesclas(linhas.map((linha) => linha.celulas));
+  return linhas.map((linha, l) => ({
+    celulas: linha.celulas.map((celula, c): CelulaTabela => {
+      if (cobertas[l][c]) return { cabecalho: celula.cabecalho, coberta: true };
+      const solta: CelulaTabela = {
+        cabecalho: celula.cabecalho,
+        ...(celula.content ? { content: celula.content } : {}),
+      };
+      const mescla = mesclas.find((m) => m.linha === l && m.coluna === c);
+      if (!mescla) return solta;
+      return {
+        ...solta,
+        ...(mescla.colunas > 1 ? { colspan: mescla.colunas } : {}),
+        ...(mescla.linhas > 1 ? { rowspan: mescla.linhas } : {}),
+      };
+    }),
+  }));
+}
 
 // Quantas linhas, do começo da tabela, formam o espaço do cabeçalho: as
 // primeiras linhas em que toda célula é de cabeçalho. Morava em
@@ -37,9 +150,16 @@ const CARACTERES_NA_LARGURA_UTIL = 70; // 16 cm em 12 pt, já sem o respiro das 
 
 // O texto de cada célula da tabela canônica, para `proporcoesDasColunas`. A
 // tela passa o `textContent` das células do ProseMirror, que dá o mesmo.
+//
+// A célula que ocupa mais de uma coluna não entra na conta (passo 8.5.4): o
+// texto dela se reparte entre as colunas que ocupa, e contá-lo inteiro na
+// primeira alargaria só essa. Como no layout automático do navegador, as
+// colunas saem das células soltas.
 export function textosDasCelulas(linhas: readonly LinhaTabela[]): string[][] {
   return linhas.map((linha) =>
-    linha.celulas.map((celula) => (celula.content ?? []).map((no) => no.text).join("")),
+    linha.celulas.map((celula) =>
+      (celula.colspan ?? 1) > 1 ? "" : (celula.content ?? []).map((no) => no.text).join(""),
+    ),
   );
 }
 

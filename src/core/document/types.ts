@@ -224,6 +224,17 @@ export interface CelulaTabela {
   cabecalho: boolean;
   // Mesma forma inline de `NoParagrafo`: texto com `negrito`/`italico`.
   content?: NoTexto[];
+  // Célula mesclada (passo 8.5.4). **A grade continua retangular:** a célula
+  // de cima à esquerda da mescla (a âncora) diz quantas colunas e linhas ela
+  // ocupa, e as outras continuam na grade, vazias e marcadas `coberta`. Os
+  // comandos de linha e coluna seguem contando por índice, e o que é mescla
+  // válida mora num lugar só (`mapaDeMesclas()`, elements/tabela.ts).
+  //
+  // Opcionais, como os campos novos de `Metadados`: tabela gravada antes do
+  // passo não os tem, e ausente quer dizer 1 e "não coberta". Sem migração.
+  colspan?: number;
+  rowspan?: number;
+  coberta?: true;
 }
 
 export interface LinhaTabela {

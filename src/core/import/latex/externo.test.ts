@@ -362,7 +362,7 @@ describe("fonte solta em figura e tabela (6.2.8)", () => {
 
   // `\multicolumn{1}` só troca o alinhamento da célula: não é mescla, e não
   // avisa.
-  it("\\multicolumn{1} entra sem aviso; o de mais colunas avisa a mescla", () => {
+  it("\\multicolumn{1} só alinha; o de mais colunas vira mescla (passo 8.5.4)", () => {
     const lido = ler(
       corpo(
         [
@@ -385,12 +385,46 @@ describe("fonte solta em figura e tabela (6.2.8)", () => {
             { cabecalho: true, content: [{ type: "text", text: "Uso" }] },
           ],
         },
-        { celulas: [{ cabecalho: false, content: [{ type: "text", text: "Juntas" }] }] },
+        {
+          celulas: [
+            { cabecalho: false, content: [{ type: "text", text: "Juntas" }], colspan: 2 },
+            { cabecalho: false, coberta: true },
+          ],
+        },
       ],
     });
-    expect(lido.avisos.map((aviso) => aviso.mensagem)).toEqual([
-      "Célula mesclada (\\multicolumn): o AURA não mescla células, e ficou o texto numa célula só.",
-    ]);
+    expect(lido.avisos).toEqual([]);
+  });
+
+  it("\\multirow ocupa as linhas de baixo, que no .tex vêm vazias", () => {
+    const lido = ler(
+      corpo(
+        [
+          "\\begin{table}",
+          "\\caption{Regiões}",
+          "\\begin{tabular}{ll}",
+          "\\textbf{Região} & \\textbf{Ano} \\\\",
+          "\\multirow{2}{*}{Sul} & 2020 \\\\",
+          " & 2021 \\\\",
+          "\\end{tabular}",
+          "\\end{table}",
+        ].join("\n"),
+      ),
+    );
+    const tabela = lido.secoes[0].content[0];
+    expect(tabela).toMatchObject({
+      type: "tabela",
+      linhas: [
+        { celulas: [{ cabecalho: true }, { cabecalho: true }] },
+        {
+          celulas: [
+            { content: [{ type: "text", text: "Sul" }], rowspan: 2 },
+            { content: [{ type: "text", text: "2020" }] },
+          ],
+        },
+        { celulas: [{ coberta: true }, { content: [{ type: "text", text: "2021" }] }] },
+      ],
+    });
   });
 
   it("fonte em grupo logo depois da longtable", () => {

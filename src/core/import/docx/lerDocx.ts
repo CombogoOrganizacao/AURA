@@ -333,12 +333,6 @@ function guardarIlustracao(
         `“${legenda.texto}” entrou como Tabela: o AURA ainda não separa quadro de tabela.`,
       );
     }
-    if (lida.mesclada) {
-      aviso(
-        estado,
-        `${nome}${onde(estado)} tinha células mescladas, e elas entraram separadas: o AURA ainda não mescla células.`,
-      );
-    }
     if (lida.semCabecalho) {
       aviso(
         estado,

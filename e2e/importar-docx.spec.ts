@@ -182,6 +182,64 @@ test("figura com a imagem, tabela e nota de rodapé voltam do .docx do AURA", as
   await expect(page.locator(".ProseMirror img")).toHaveCount(1);
 });
 
+// Passo 8.5.4: a mescla que o AURA grava (`gridSpan` e `vMerge`) volta pelo
+// mammoth como `colspan` e `rowspan`, e entra mesclada, sem aviso.
+test("a tabela com células mescladas volta mesclada do .docx do AURA", async ({ page }) => {
+  const aberto = tresSecoes();
+  await abrirDocumento(page, aberto);
+  const documento = tresSecoes();
+  const t = (texto: string, cabecalho = false) => ({
+    cabecalho,
+    content: [{ type: "text" as const, text: texto }],
+  });
+  const coberta = (cabecalho = false) => ({ cabecalho, coberta: true as const });
+  const linhas = [
+    {
+      celulas: [
+        { ...t("Região", true), rowspan: 2 },
+        { ...t("Matrículas", true), colspan: 2 },
+        coberta(true),
+      ],
+    },
+    { celulas: [coberta(true), t("2020", true), t("2021", true)] },
+    { celulas: [{ ...t("Sul"), rowspan: 2 }, t("120"), t("130")] },
+    { celulas: [coberta(), t("80"), t("90")] },
+    { celulas: [t("Norte"), { ...t("Sem dados"), colspan: 2 }, coberta()] },
+  ];
+  documento.sections = [
+    {
+      id: "s1",
+      ordem: 0,
+      nivel: 1,
+      titulo: "Resultados",
+      content: [
+        { type: "tabela", id: "t1", legenda: "Por região", fonte: "Dados da pesquisa", linhas },
+      ],
+    },
+  ];
+  await importar(page, await Packer.toBuffer(fromDocumento(documento)));
+
+  const dialogo = page.getByRole("dialog", { name: "Importar do Word" });
+  await dialogo.getByRole("radio", { name: /Substituir o conteúdo de/ }).check({ force: true });
+  await expect(dialogo.getByRole("region", { name: "Avisos da reimportação" })).not.toContainText(
+    "mescla",
+  );
+  await dialogo.getByRole("button", { name: "Substituir" }).click();
+  await expect(dialogo).toBeHidden();
+
+  await expect
+    .poll(async () => (await documentoSalvo(page, aberto.id)).sections[0]?.content[0]?.type)
+    .toBe("tabela");
+  const salvo = (await documentoSalvo(page, aberto.id)).sections[0].content[0];
+  if (salvo.type !== "tabela") throw new Error("sem tabela");
+  expect(salvo.linhas).toEqual(linhas);
+
+  // E o editor desenha a mescla: a âncora com o vão, e as cobertas escondidas.
+  await expect(page.locator(".doc-tabela [rowspan]")).toHaveCount(2);
+  await expect(page.locator(".doc-tabela [colspan]")).toHaveCount(2);
+  await expect(page.locator(".doc-tabela [data-coberta]")).toHaveCount(4);
+});
+
 test("TCC feito à mão no Word: o negrito sem estilo vira aviso, e o trabalho novo abre", async ({
   page,
 }) => {

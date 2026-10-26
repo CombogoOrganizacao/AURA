@@ -40,6 +40,7 @@ import {
 } from "../document/elements/sumario";
 import {
   linhasDeCabecalho,
+  mapaDeMesclas,
   proporcoesDasColunas,
   textosDasCelulas,
 } from "../document/elements/tabela";
@@ -76,6 +77,10 @@ import type { Referencia } from "../references/types";
 export interface CelulaPrevia {
   cabecalho: boolean;
   trechos: Trecho[];
+  // Célula mesclada (passo 8.5.4). As cobertas não vêm: o vão da âncora ocupa
+  // o lugar delas, como no HTML.
+  colspan?: number;
+  rowspan?: number;
 }
 
 export type BlocoPrevia =
@@ -164,11 +169,20 @@ function blocoDeConteudo(no: NoConteudo, contexto: Contexto): BlocoPrevia {
         fonte: textoFonte(no.fonte),
       };
     case "tabela": {
-      const celulas = no.linhas.map((linha) =>
-        linha.celulas.map((celula) => ({
-          cabecalho: celula.cabecalho,
-          trechos: trechosDoInline(celula.content, contexto.references),
-        })),
+      const { mesclas, cobertas } = mapaDeMesclas(no.linhas.map((linha) => linha.celulas));
+      const celulas = no.linhas.map((linha, l) =>
+        linha.celulas.flatMap((celula, c): CelulaPrevia[] => {
+          if (cobertas[l][c]) return [];
+          const mescla = mesclas.find((m) => m.linha === l && m.coluna === c);
+          return [
+            {
+              cabecalho: celula.cabecalho,
+              trechos: trechosDoInline(celula.content, contexto.references),
+              ...(mescla && mescla.colunas > 1 ? { colspan: mescla.colunas } : {}),
+              ...(mescla && mescla.linhas > 1 ? { rowspan: mescla.linhas } : {}),
+            },
+          ];
+        }),
       );
       const nCabecalho = linhasDeCabecalho(no.linhas);
       return {

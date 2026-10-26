@@ -58,8 +58,9 @@ ${FONTE_DO_TEXTO[fonte]}
 \usepackage{indentfirst}
 \usepackage{graphicx}
 % Tabela IBGE com cabeçalho repetido na página seguinte: longtable, não
-% \IBGEtab, que não funciona com ela (manual §6.5).
-\usepackage{longtable,booktabs,array}
+% \IBGEtab, que não funciona com ela (manual §6.5). multirow: célula
+% mesclada em mais de uma linha.
+\usepackage{longtable,booktabs,array,multirow}
 % [H]: figura no lugar em que o aluno a pôs, não onde o LaTeX preferir
 % (14724 §5.8, "o mais próximo possível do trecho").
 \usepackage{float}`;

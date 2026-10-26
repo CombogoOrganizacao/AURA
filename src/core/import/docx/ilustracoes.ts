@@ -1,3 +1,4 @@
+import { MESCLA_MAXIMA, normalizarMesclas } from "../../document/elements/tabela";
 import type { CelulaTabela, LinhaTabela, NoTexto } from "../../document/types";
 import type { NoHtmlColado } from "../../editor/paste";
 import type { FiguraLida, TabelaLida } from "../latex/blocos";
@@ -104,13 +105,16 @@ export function figura(chave: string | null, legenda: string, fonte: string): Fi
 
 // --- Tabela ------------------------------------------------------------------
 
-// Mescla maior que isto não é de tabela de TCC, e não vale a grade gigante.
-const MESCLA_MAXIMA = 50;
-
 interface CelulaLida {
   trechos: NoTexto[];
   // `<th>`: a linha está marcada para repetir no Word.
   th: boolean;
+  // Mescla do Word (`gridSpan` e `vMerge`, que o mammoth escreve como
+  // `colspan` e `rowspan`): o vão fica na âncora, e as partes cobertas, na
+  // grade, como o AURA guarda (passo 8.5.4).
+  colspan?: number;
+  rowspan?: number;
+  coberta?: boolean;
 }
 
 function linhasDoHtml(tabela: Elemento): Elemento[] {
@@ -145,14 +149,12 @@ const todaEmNegrito = (celula: CelulaLida) =>
 
 export interface TabelaDoDocx {
   tabela: Omit<TabelaLida, "legenda" | "fonte">;
-  mesclada: boolean;
   semCabecalho: boolean;
 }
 
 // A grade da tabela, ou `null` se ela não tem texto nenhum.
 export function tabelaDe(no: Elemento): TabelaDoDocx | null {
   const grade: (CelulaLida | undefined)[][] = [];
-  let mesclada = false;
   const linhas = linhasDoHtml(no);
 
   linhas.forEach((linha, l) => {
@@ -164,14 +166,14 @@ export function tabelaDe(no: Elemento): TabelaDoDocx | null {
       while (grade[l][c] !== undefined) c++;
       const colunas = inteiro(celula.atributos?.colspan);
       const linhasMescladas = Math.min(inteiro(celula.atributos?.rowspan), linhas.length - l);
-      if (colunas > 1 || linhasMescladas > 1) mesclada = true;
       const th = celula.tag === "th";
       for (let dl = 0; dl < linhasMescladas; dl++) {
         grade[l + dl] ??= [];
         for (let dc = 0; dc < colunas; dc++) {
-          // O texto fica na primeira; as outras partes da mescla, vazias.
           grade[l + dl][c + dc] =
-            dl === 0 && dc === 0 ? { trechos: trechosDaCelula(celula), th } : { trechos: [], th };
+            dl === 0 && dc === 0
+              ? { trechos: trechosDaCelula(celula), th, colspan: colunas, rowspan: linhasMescladas }
+              : { trechos: [], th, coberta: true };
         }
       }
       c += colunas;
@@ -180,13 +182,14 @@ export function tabelaDe(no: Elemento): TabelaDoDocx | null {
 
   // A linha toda vazia sai: é o respiro que o exportador do AURA põe abaixo
   // do cabeçalho (`linhaDeRespiro()`, export/docx/table.ts), ou linha em
-  // branco do aluno.
+  // branco do aluno. A que tem parte de uma mescla fica: tirá-la deixaria a
+  // mescla de cima maior que a tabela.
   const largura = Math.max(0, ...grade.map((linha) => linha.length));
   const cheias = grade
     .map((linha) =>
       Array.from({ length: largura }, (_, c) => linha[c] ?? { trechos: [], th: false }),
     )
-    .filter((linha) => linha.some((celula) => !vazia(celula)));
+    .filter((linha) => linha.some((celula) => !vazia(celula) || celula.coberta));
   if (cheias.length === 0) return null;
 
   // O cabeçalho: as primeiras linhas marcadas para repetir no Word. Se todas
@@ -216,15 +219,19 @@ export function tabelaDe(no: Elemento): TabelaDoDocx | null {
             return resto.length > 0 ? { ...no, marks: resto } : no;
           })
         : celula.trechos;
-      return trechos.length > 0
-        ? { cabecalho: eCabecalho, content: trechos }
-        : { cabecalho: eCabecalho };
+      return {
+        cabecalho: eCabecalho,
+        ...(trechos.length > 0 ? { content: trechos } : {}),
+        ...(celula.colspan && celula.colspan > 1 ? { colspan: celula.colspan } : {}),
+        ...(celula.rowspan && celula.rowspan > 1 ? { rowspan: celula.rowspan } : {}),
+      };
     }),
   }));
 
+  // `normalizarMesclas()` marca as cobertas a partir das âncoras, e encolhe a
+  // mescla que passaria da borda.
   return {
-    tabela: { type: "tabela", linhas: linhasDaTabela },
-    mesclada,
+    tabela: { type: "tabela", linhas: normalizarMesclas(linhasDaTabela) },
     semCabecalho: cabecalho === 0,
   };
 }

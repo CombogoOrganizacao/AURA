@@ -6,13 +6,18 @@ import {
   Table,
   TableCell,
   TableRow,
+  VerticalAlign,
+  VerticalMergeType,
   WidthType,
 } from "docx";
 
 import {
   linhasDeCabecalho,
+  mapaDeMesclas,
+  mesclaEm,
   proporcoesDasColunas,
   textosDasCelulas,
+  type Mescla,
 } from "../../document/elements/tabela";
 import { trechosDoInline } from "../../document/elements/trechos";
 import type { CelulaTabela, NoTabela } from "../../document/types";
@@ -93,6 +98,17 @@ import { runsDeTrechos } from "./trechos";
 // Largura das colunas pelo texto das
 // células (`proporcoesDasColunas`, document/elements/tabela.ts), a mesma do
 // `.tex` e da tela; até 04/10/2026 eram iguais, como na PoC.
+//
+// **Células mescladas** (passo 8.5.4). A âncora sai com `w:gridSpan` (as
+// colunas) e `w:vMerge` de início (as linhas); em cada linha de baixo da
+// mescla sai uma célula de continuação (`w:vMerge` sem valor), com o mesmo
+// `gridSpan`. As células cobertas da mesma linha não saem: o `gridSpan` já
+// ocupa o lugar delas (ECMA-376, parte 1, §17.4.17 e §17.4.85). A biblioteca
+// `docx` cria a continuação sozinha quando recebe `rowSpan`, mas copiando as
+// bordas da âncora, e o traço de cima apareceria no meio da mescla; por isso
+// a continuação é montada aqui. A mescla de várias linhas centraliza na
+// vertical, como na tela e no `.tex`. O traço de baixo do cabeçalho vai na
+// célula da última linha dele, seja a âncora ou a continuação.
 
 const TRACO: IBorderOptions = { style: BorderStyle.SINGLE, size: 4, color: "000000" };
 const SEM_TRACO: IBorderOptions = { style: BorderStyle.NONE, size: 0, color: "auto" };
@@ -111,6 +127,7 @@ function celulaDocx(
   bordas: { top: boolean; bottom: boolean },
   respiro: boolean,
   references: readonly Referencia[],
+  mescla: Mescla | null,
 ): TableCell {
   const runs = runsDeTrechos(
     trechosDoInline(celula.content, references).map((trecho) =>
@@ -119,6 +136,10 @@ function celulaDocx(
   );
   return new TableCell({
     width: { size: largura, type: WidthType.DXA },
+    ...(mescla && mescla.colunas > 1 ? { columnSpan: mescla.colunas } : {}),
+    ...(mescla && mescla.linhas > 1
+      ? { verticalMerge: VerticalMergeType.RESTART, verticalAlign: VerticalAlign.CENTER }
+      : {}),
     borders: {
       top: bordas.top ? TRACO : SEM_TRACO,
       bottom: bordas.bottom ? TRACO : SEM_TRACO,
@@ -134,6 +155,27 @@ function celulaDocx(
         ...(respiro ? { spacing: { before: RESPIRO } } : {}),
       }),
     ],
+  });
+}
+
+// A continuação de uma mescla de várias linhas, numa linha de baixo dela.
+function continuacaoDocx(
+  mescla: Mescla,
+  largura: number,
+  bordas: { top: boolean; bottom: boolean },
+): TableCell {
+  return new TableCell({
+    width: { size: largura, type: WidthType.DXA },
+    ...(mescla.colunas > 1 ? { columnSpan: mescla.colunas } : {}),
+    verticalMerge: VerticalMergeType.CONTINUE,
+    verticalAlign: VerticalAlign.CENTER,
+    borders: {
+      top: bordas.top ? TRACO : SEM_TRACO,
+      bottom: bordas.bottom ? TRACO : SEM_TRACO,
+      left: SEM_TRACO,
+      right: SEM_TRACO,
+    },
+    children: [new Paragraph({ style: "CelulaTabela" })],
   });
 }
 
@@ -165,24 +207,44 @@ export function tabelaDocx(no: NoTabela, references: readonly Referencia[]): Tab
     Math.floor(ABNT.larguraUtil * proporcao),
   );
   const cabecalho = linhasDeCabecalho(no.linhas);
+  const { mesclas } = mapaDeMesclas(no.linhas.map((linha) => linha.celulas));
+  const larguraDe = (mescla: Mescla) =>
+    larguras.slice(mescla.coluna, mescla.coluna + mescla.colunas).reduce((a, b) => a + b, 0);
 
-  const rows = no.linhas.map(
-    (linha, indice) =>
-      new TableRow({
-        tableHeader: indice < cabecalho,
-        children: linha.celulas.map((celula, coluna) =>
+  const rows = no.linhas.map((linha, indice) => {
+    const bordas = { top: indice === 0, bottom: indice === cabecalho - 1 };
+    const celulas: TableCell[] = [];
+    linha.celulas.forEach((celula, coluna) => {
+      const mescla = mesclaEm(mesclas, indice, coluna);
+      if (!mescla) {
+        celulas.push(celulaDocx(celula, larguras[coluna], bordas, indice === 0, references, null));
+        return;
+      }
+      // Só a primeira coluna da mescla escreve algo em cada linha dela.
+      if (coluna !== mescla.coluna) return;
+      if (indice === mescla.linha) {
+        const fimDoCabecalho = mescla.linha + mescla.linhas - 1 === cabecalho - 1;
+        celulas.push(
           celulaDocx(
             celula,
-            larguras[coluna],
-            { top: indice === 0, bottom: indice === cabecalho - 1 },
+            larguraDe(mescla),
+            { top: bordas.top, bottom: bordas.bottom || fimDoCabecalho },
             // A primeira do cabeçalho, ou a primeira de todas sem cabeçalho.
             indice === 0,
             references,
+            mescla,
           ),
-        ),
-      }),
-  );
-  if (cabecalho > 0 && cabecalho < no.linhas.length) {
+        );
+      } else {
+        celulas.push(continuacaoDocx(mescla, larguraDe(mescla), bordas));
+      }
+    });
+    return new TableRow({ tableHeader: indice < cabecalho, children: celulas });
+  });
+  // A linha de respiro não entra no meio de uma mescla que atravesse o fim do
+  // cabeçalho (só uma tabela importada chega assim): ela cortaria a mescla.
+  const cortaMescla = mesclas.some((m) => m.linha < cabecalho && m.linha + m.linhas > cabecalho);
+  if (cabecalho > 0 && cabecalho < no.linhas.length && !cortaMescla) {
     rows.splice(cabecalho, 0, linhaDeRespiro(larguras));
   }
 

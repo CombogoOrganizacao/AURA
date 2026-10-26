@@ -80,6 +80,29 @@ describe("montarPrevia", () => {
     expect(tabela.cabecalho[0][0].trechos[0].texto).toBe("Grupo");
   });
 
+  it("a tabela mesclada leva o vão na âncora e não repete as células cobertas (8.5.4)", () => {
+    const documento = documentoDeTeste();
+    const tabela = documento.sections[1].content.find((no) => no.type === "tabela")!;
+    if (tabela.type !== "tabela") throw new Error("sem tabela");
+    tabela.linhas = [
+      {
+        celulas: [
+          { cabecalho: true, colspan: 2 },
+          { cabecalho: true, coberta: true },
+        ],
+      },
+      { celulas: [{ cabecalho: false, rowspan: 2 }, { cabecalho: false }] },
+      { celulas: [{ cabecalho: false, coberta: true }, { cabecalho: false }] },
+    ];
+    const previa = elemento(documento, "corpo")!.blocos.find((b) => b.tipo === "tabela");
+    if (previa?.tipo !== "tabela") throw new Error("sem tabela");
+    expect(previa.cabecalho[0]).toHaveLength(1);
+    expect(previa.cabecalho[0][0]).toMatchObject({ colspan: 2 });
+    expect(previa.corpo[0][0]).toMatchObject({ rowspan: 2 });
+    expect(previa.corpo[1]).toHaveLength(1);
+    expect(previa.proporcoes).toHaveLength(2);
+  });
+
   it("a capa e a folha de rosto levam as linhas da norma, com o espaço da distribuição", () => {
     const documento = documentoDeTeste();
     const capa = elemento(documento, "capa")!.blocos;

@@ -14,10 +14,14 @@ import {
   excluirTabela,
   inserirColuna,
   inserirLinha,
+  mesclarComVizinha,
+  mesclarSelecao,
   moverColuna,
   moverLinha,
   removerColuna,
   removerLinha,
+  separarCelulas,
+  type EstadoGrade,
 } from "@/core/editor/tabela";
 
 // Controles da grade da tabela (passo 8.5.3), no estilo do Canva: com o
@@ -31,21 +35,14 @@ import {
 // Substitui a barra de botões de texto do 6.1.3b. As operações são as mesmas
 // (`core/editor/tabela.ts`), agora também mover linha e coluna.
 //
-// **Mesclar células não existe:** a célula do AURA não tem `colspan` nem
-// `rowspan`, e o `.docx` e o `.tex` não os escrevem. Entra num passo próprio,
-// que mexe no schema e nos dois exportadores.
+// **Mesclar células** (passo 8.5.4): arrastando a seleção de uma célula a
+// outra aparece o botão "Mesclar células"; o menu da coluna mescla com a
+// célula da direita, o da linha com a de baixo, e os dois separam a célula
+// mesclada. Item que não pode agir fica desabilitado, com o motivo na dica.
 //
 // Tudo é interface, não documento: `contentEditable={false}`, fora do `.docx`.
 // `onMouseDown` com `preventDefault` segura a seleção no editor durante o
 // clique; a operação roda no `onClick`, que Enter e Espaço também disparam.
-
-export interface EstadoGrade {
-  linhas: number;
-  colunas: number;
-  linha: number;
-  coluna: number;
-  cabecalho: boolean;
-}
 
 interface Posicao {
   // Em px, relativos à área da tabela.
@@ -115,6 +112,8 @@ interface ItemDoMenu {
   icone: NomeIcone;
   operacao: (tr: Transaction) => boolean;
   desabilitado?: boolean;
+  // O motivo de estar desabilitado, na dica do item.
+  dica?: string | null;
   pressionado?: boolean;
   perigo?: boolean;
 }
@@ -140,6 +139,10 @@ export function ControlesDaTabela({
     editor.view.focus();
   }
 
+  const separar: ItemDoMenu[] = grade.mesclada
+    ? [{ rotulo: "Separar células", icone: "table-cells-split", operacao: separarCelulas }]
+    : [];
+
   const menuColuna: Grupo[] = [
     [
       {
@@ -158,14 +161,27 @@ export function ControlesDaTabela({
         rotulo: "Mover coluna para a esquerda",
         icone: "arrow-left",
         operacao: (tr) => moverColuna(tr, "esquerda"),
-        desabilitado: grade.coluna === 0,
+        desabilitado: !grade.podeMoverColuna.esquerda,
+        dica: grade.coluna > 0 && !grade.podeMoverColuna.esquerda ? DICA_MOVER : null,
       },
       {
         rotulo: "Mover coluna para a direita",
         icone: "arrow-right",
         operacao: (tr) => moverColuna(tr, "direita"),
-        desabilitado: grade.coluna >= grade.colunas - 1,
+        desabilitado: !grade.podeMoverColuna.direita,
+        dica:
+          grade.coluna < grade.colunas - 1 && !grade.podeMoverColuna.direita ? DICA_MOVER : null,
       },
+    ],
+    [
+      {
+        rotulo: "Mesclar com a célula à direita",
+        icone: "table-cells-merge",
+        operacao: (tr) => mesclarComVizinha(tr, "direita"),
+        desabilitado: grade.recusaMesclar.direita !== null,
+        dica: grade.recusaMesclar.direita,
+      },
+      ...separar,
     ],
     [
       {
@@ -197,14 +213,26 @@ export function ControlesDaTabela({
         rotulo: "Mover linha para cima",
         icone: "chevron-up",
         operacao: (tr) => moverLinha(tr, "acima"),
-        desabilitado: grade.linha === 0,
+        desabilitado: !grade.podeMoverLinha.acima,
+        dica: grade.linha > 0 && !grade.podeMoverLinha.acima ? DICA_MOVER : null,
       },
       {
         rotulo: "Mover linha para baixo",
         icone: "chevron-down",
         operacao: (tr) => moverLinha(tr, "abaixo"),
-        desabilitado: grade.linha >= grade.linhas - 1,
+        desabilitado: !grade.podeMoverLinha.abaixo,
+        dica: grade.linha < grade.linhas - 1 && !grade.podeMoverLinha.abaixo ? DICA_MOVER : null,
       },
+    ],
+    [
+      {
+        rotulo: "Mesclar com a célula de baixo",
+        icone: "table-cells-merge",
+        operacao: (tr) => mesclarComVizinha(tr, "abaixo"),
+        desabilitado: grade.recusaMesclar.abaixo !== null,
+        dica: grade.recusaMesclar.abaixo,
+      },
+      ...separar,
     ],
     [
       {
@@ -230,6 +258,17 @@ export function ControlesDaTabela({
 
   return (
     <div className="doc-tabela-controles" contentEditable={false}>
+      {grade.selecaoEntreCelulas && (
+        <BotaoMesclar
+          recusa={grade.selecaoEntreCelulas.recusa}
+          estilo={{
+            left: posicao.celulaX + posicao.celulaLargura / 2,
+            top: posicao.celulaY,
+            transform: "translate(-50%, -115%)",
+          }}
+          onClick={() => executar(mesclarSelecao)}
+        />
+      )}
       <Alca
         rotulo="Coluna"
         icone="ellipsis"
@@ -347,6 +386,38 @@ function Alca({
   );
 }
 
+const DICA_MOVER = "A linha ou coluna faz parte de uma célula mesclada: separe as células antes.";
+
+// Com a seleção de uma célula a outra, logo acima dela, como a barra do Canva.
+function BotaoMesclar({
+  recusa,
+  estilo,
+  onClick,
+}: {
+  recusa: string | null;
+  estilo: CSSProperties;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={recusa ?? "Juntar as células selecionadas numa só"}
+      disabled={recusa !== null}
+      style={estilo}
+      onMouseDown={(evento) => evento.preventDefault()}
+      onClick={onClick}
+      className={[
+        "absolute z-10 flex items-center gap-1.5 rounded-full border border-[var(--border-default)] bg-card px-2.5 py-1 font-sans text-xs whitespace-nowrap shadow-sm",
+        "text-body hover:bg-brand-soft hover:text-bordo-700 focus-visible:outline-none focus-visible:shadow-focus-ring",
+        "disabled:cursor-not-allowed disabled:text-disabled disabled:hover:bg-card",
+      ].join(" ")}
+    >
+      <Icon name="table-cells-merge" size={14} />
+      Mesclar células
+    </button>
+  );
+}
+
 function Mais({
   rotulo,
   estilo,
@@ -440,6 +511,7 @@ function Menu({
               role={item.pressionado === undefined ? "menuitem" : "menuitemcheckbox"}
               aria-checked={item.pressionado}
               disabled={item.desabilitado}
+              title={item.dica ?? undefined}
               onMouseDown={(evento) => evento.preventDefault()}
               onClick={() => onExecutar(item.operacao)}
               className={[
